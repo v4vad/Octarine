@@ -149,13 +149,21 @@ export function generateColor(
   chromaShiftAmount?: number,
   chromaShiftDirection?: ChromaShiftDirection
 ): string {
-  // If there's a manual override, use it directly
+  const bgOklch = backgroundColor ? hexToOklch(backgroundColor) : { l: 1, c: 0, h: 0 }
+
+  // If there's a manual override, optionally apply corrections
   if (stopData?.manualOverride) {
+    if (stopData.applyCorrectionsToManual && perceptualCorrections &&
+        (perceptualCorrections.hkCompensation || perceptualCorrections.bbCorrection)) {
+      // Apply perceptual corrections to the manually overridden color
+      const corrected = applyPerceptualCorrections(stopData.manualOverride, bgOklch, perceptualCorrections)
+      return oklchToHex(corrected)
+    }
+    // No corrections - use manual override directly
     return oklchToHex(stopData.manualOverride)
   }
 
   const baseOklch = hexToOklch(baseColor)
-  const bgOklch = backgroundColor ? hexToOklch(backgroundColor) : { l: 1, c: 0, h: 0 }
 
   // Determine effective mode for this stop
   const effectiveMode = stopData?.modeOverride === "global" || !stopData?.modeOverride

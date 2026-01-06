@@ -34222,11 +34222,15 @@
     return bestL;
   }
   function generateColor(baseColor, stop, stopData, globalMode, globalLightness, globalContrast, backgroundColor, perceptualCorrections, hueShiftAmount, hueShiftDirection, chromaShiftAmount, chromaShiftDirection) {
+    const bgOklch = backgroundColor ? hexToOklch(backgroundColor) : { l: 1, c: 0, h: 0 };
     if (stopData?.manualOverride) {
+      if (stopData.applyCorrectionsToManual && perceptualCorrections && (perceptualCorrections.hkCompensation || perceptualCorrections.bbCorrection)) {
+        const corrected = applyPerceptualCorrections(stopData.manualOverride, bgOklch, perceptualCorrections);
+        return oklchToHex(corrected);
+      }
       return oklchToHex(stopData.manualOverride);
     }
     const baseOklch = hexToOklch(baseColor);
-    const bgOklch = backgroundColor ? hexToOklch(backgroundColor) : { l: 1, c: 0, h: 0 };
     const effectiveMode = stopData?.modeOverride === "global" || !stopData?.modeOverride ? globalMode : stopData.modeOverride;
     let targetL;
     if (effectiveMode === "contrast" && backgroundColor) {
@@ -35005,7 +35009,7 @@
       }
     );
   }
-  function StopRow({ stop, generatedColor, onOverride, onResetOverride, onRemove }) {
+  function StopRow({ stop, generatedColor, correctionsEnabled, onOverride, onResetOverride, onRemove, onToggleApplyCorrections }) {
     const [showPicker, setShowPicker] = (0, import_react.useState)(false);
     const displayColor = stop.manualOverride ? oklchToHex(stop.manualOverride) : generatedColor;
     const isOverridden = !!stop.manualOverride;
@@ -35084,6 +35088,40 @@
         },
         /* @__PURE__ */ import_react.default.createElement(import_react_figma_plugin_ds.Icon, { name: "revert" })
       ),
+      isOverridden && correctionsEnabled && /* @__PURE__ */ import_react.default.createElement(
+        "div",
+        {
+          onClick: (e4) => {
+            e4.stopPropagation();
+            onToggleApplyCorrections();
+          },
+          style: {
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            marginLeft: "4px",
+            cursor: "pointer"
+          },
+          title: "Apply HK/BB corrections to this override"
+        },
+        /* @__PURE__ */ import_react.default.createElement(
+          "div",
+          {
+            style: {
+              width: "12px",
+              height: "12px",
+              borderRadius: "2px",
+              border: "1px solid var(--figma-color-border)",
+              background: stop.applyCorrectionsToManual ? "var(--figma-color-text-brand)" : "transparent",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }
+          },
+          stop.applyCorrectionsToManual && /* @__PURE__ */ import_react.default.createElement("span", { style: { color: "white", fontSize: "9px", fontWeight: "bold" } }, "\u2713")
+        ),
+        /* @__PURE__ */ import_react.default.createElement("span", { style: { fontSize: "10px", color: "var(--figma-color-text-secondary)" } }, "Correct")
+      ),
       /* @__PURE__ */ import_react.default.createElement("div", { style: { flex: 1 } }),
       /* @__PURE__ */ import_react.default.createElement(
         "div",
@@ -35115,26 +35153,183 @@
       )
     );
   }
+  function GlobalSettingsPanel({ settings, onUpdate }) {
+    const [showBgPicker, setShowBgPicker] = (0, import_react.useState)(false);
+    const [showDefaults, setShowDefaults] = (0, import_react.useState)(false);
+    const stopNumbers = Object.keys(settings.defaultLightness).map(Number).sort((a, b) => a - b);
+    return /* @__PURE__ */ import_react.default.createElement(
+      "div",
+      {
+        style: {
+          border: "1px solid var(--figma-color-border)",
+          borderRadius: "6px",
+          padding: "12px",
+          marginBottom: "16px",
+          background: "var(--figma-color-bg-secondary)"
+        }
+      },
+      /* @__PURE__ */ import_react.default.createElement("div", { style: { fontSize: "12px", fontWeight: 600, marginBottom: "12px" } }, "Global Settings"),
+      /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px", position: "relative" } }, /* @__PURE__ */ import_react.default.createElement(import_react_figma_plugin_ds.Label, { style: { minWidth: "80px" } }, "Background:"), /* @__PURE__ */ import_react.default.createElement(
+        ColorSwatch,
+        {
+          color: settings.backgroundColor,
+          onClick: () => setShowBgPicker(!showBgPicker),
+          size: 24
+        }
+      ), /* @__PURE__ */ import_react.default.createElement("span", { style: { fontFamily: "monospace", fontSize: "11px" } }, settings.backgroundColor.toUpperCase()), showBgPicker && /* @__PURE__ */ import_react.default.createElement(
+        ColorPickerPopup,
+        {
+          color: settings.backgroundColor,
+          onChange: (hex2) => onUpdate({ ...settings, backgroundColor: hex2 }),
+          onClose: () => setShowBgPicker(false)
+        }
+      )),
+      /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" } }, /* @__PURE__ */ import_react.default.createElement(import_react_figma_plugin_ds.Label, { style: { minWidth: "80px" } }, "Target:"), /* @__PURE__ */ import_react.default.createElement(
+        "select",
+        {
+          value: settings.mode,
+          onChange: (e4) => onUpdate({ ...settings, mode: e4.target.value }),
+          style: {
+            padding: "6px 8px",
+            borderRadius: "4px",
+            border: "1px solid var(--figma-color-border)",
+            background: "var(--figma-color-bg)",
+            color: "var(--figma-color-text)",
+            fontSize: "11px",
+            cursor: "pointer"
+          }
+        },
+        /* @__PURE__ */ import_react.default.createElement("option", { value: "lightness" }, "Lightness"),
+        /* @__PURE__ */ import_react.default.createElement("option", { value: "contrast" }, "Contrast")
+      ), /* @__PURE__ */ import_react.default.createElement("span", { style: { fontSize: "10px", color: "var(--figma-color-text-tertiary)" } }, settings.mode === "lightness" ? "(OKLCH L value)" : "(WCAG ratio)")),
+      /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px" } }, /* @__PURE__ */ import_react.default.createElement(import_react_figma_plugin_ds.Label, { style: { minWidth: "80px" } }, "Corrections:"), /* @__PURE__ */ import_react.default.createElement("label", { style: { display: "flex", alignItems: "center", gap: "4px", cursor: "pointer" } }, /* @__PURE__ */ import_react.default.createElement(
+        "input",
+        {
+          type: "checkbox",
+          checked: settings.hkCorrection,
+          onChange: (e4) => onUpdate({ ...settings, hkCorrection: e4.target.checked }),
+          style: { cursor: "pointer" }
+        }
+      ), /* @__PURE__ */ import_react.default.createElement("span", { style: { fontSize: "11px" } }, "HK")), /* @__PURE__ */ import_react.default.createElement("label", { style: { display: "flex", alignItems: "center", gap: "4px", cursor: "pointer" } }, /* @__PURE__ */ import_react.default.createElement(
+        "input",
+        {
+          type: "checkbox",
+          checked: settings.bbCorrection,
+          onChange: (e4) => onUpdate({ ...settings, bbCorrection: e4.target.checked }),
+          style: { cursor: "pointer" }
+        }
+      ), /* @__PURE__ */ import_react.default.createElement("span", { style: { fontSize: "11px" } }, "BB")), /* @__PURE__ */ import_react.default.createElement("span", { style: { fontSize: "10px", color: "var(--figma-color-text-tertiary)" } }, "(perceptual adjustments)")),
+      /* @__PURE__ */ import_react.default.createElement(
+        import_react_figma_plugin_ds.Disclosure,
+        {
+          label: "Default Stop Values",
+          isExpanded: showDefaults,
+          onExpandedChange: setShowDefaults
+        },
+        /* @__PURE__ */ import_react.default.createElement("div", { style: { marginTop: "8px" } }, /* @__PURE__ */ import_react.default.createElement("div", { style: {
+          display: "grid",
+          gridTemplateColumns: "50px 1fr 1fr",
+          gap: "4px",
+          fontSize: "10px",
+          fontWeight: 600,
+          marginBottom: "4px",
+          color: "var(--figma-color-text-secondary)"
+        } }, /* @__PURE__ */ import_react.default.createElement("span", null, "Stop"), /* @__PURE__ */ import_react.default.createElement("span", null, "Lightness"), /* @__PURE__ */ import_react.default.createElement("span", null, "Contrast")), stopNumbers.map((num3) => /* @__PURE__ */ import_react.default.createElement(
+          "div",
+          {
+            key: num3,
+            style: {
+              display: "grid",
+              gridTemplateColumns: "50px 1fr 1fr",
+              gap: "4px",
+              marginBottom: "4px"
+            }
+          },
+          /* @__PURE__ */ import_react.default.createElement("span", { style: { fontSize: "11px", color: "var(--figma-color-text-secondary)" } }, num3),
+          /* @__PURE__ */ import_react.default.createElement(
+            "input",
+            {
+              type: "text",
+              value: settings.defaultLightness[num3]?.toFixed(2) ?? "",
+              onChange: (e4) => {
+                const val = parseFloat(e4.target.value);
+                if (!isNaN(val)) {
+                  onUpdate({
+                    ...settings,
+                    defaultLightness: { ...settings.defaultLightness, [num3]: Math.max(0, Math.min(1, val)) }
+                  });
+                }
+              },
+              style: {
+                width: "100%",
+                padding: "4px",
+                border: "1px solid var(--figma-color-border)",
+                borderRadius: "3px",
+                fontSize: "10px",
+                background: "var(--figma-color-bg)",
+                color: "var(--figma-color-text)"
+              }
+            }
+          ),
+          /* @__PURE__ */ import_react.default.createElement(
+            "input",
+            {
+              type: "text",
+              value: settings.defaultContrast[num3]?.toFixed(1) ?? "",
+              onChange: (e4) => {
+                const val = parseFloat(e4.target.value);
+                if (!isNaN(val)) {
+                  onUpdate({
+                    ...settings,
+                    defaultContrast: { ...settings.defaultContrast, [num3]: Math.max(1, val) }
+                  });
+                }
+              },
+              style: {
+                width: "100%",
+                padding: "4px",
+                border: "1px solid var(--figma-color-border)",
+                borderRadius: "3px",
+                fontSize: "10px",
+                background: "var(--figma-color-bg)",
+                color: "var(--figma-color-text)"
+              }
+            }
+          )
+        )))
+      )
+    );
+  }
   function ColorCard({ color, globalSettings, onUpdate, onRemove }) {
     const [showPicker, setShowPicker] = (0, import_react.useState)(false);
     const [stopsExpanded, setStopsExpanded] = (0, import_react.useState)(true);
+    const [settingsExpanded, setSettingsExpanded] = (0, import_react.useState)(false);
     const [newStopNumber, setNewStopNumber] = (0, import_react.useState)("");
+    const effectiveHK = color.hkCorrectionOverride !== void 0 ? color.hkCorrectionOverride : globalSettings.hkCorrection;
+    const effectiveBB = color.bbCorrectionOverride !== void 0 ? color.bbCorrectionOverride : globalSettings.bbCorrection;
     const generatedColors = color.stops.map((stop) => {
-      const mode = color.modeOverride || globalSettings.mode;
+      const mode = globalSettings.mode;
       const lightness = globalSettings.defaultLightness;
       const contrast = globalSettings.defaultContrast;
+      const perceptualCorrections = {
+        hkCompensation: effectiveHK,
+        bbCorrection: effectiveBB
+      };
       return generateColor(
         color.baseColor,
         String(stop.number),
         {
           lightness: stop.lightnessOverride ?? lightness[stop.number],
           contrast: stop.contrastOverride ?? contrast[stop.number],
-          manualOverride: stop.manualOverride
+          manualOverride: stop.manualOverride,
+          applyCorrectionsToManual: stop.applyCorrectionsToManual
         },
         mode,
         lightness,
         contrast,
-        globalSettings.backgroundColor
+        globalSettings.backgroundColor,
+        perceptualCorrections
+        // Pass corrections so they can be applied
       );
     });
     const handleStopOverride = (stopIndex, newOklch) => {
@@ -35170,6 +35365,15 @@
       const newStops = color.stops.filter((_, i) => i !== stopIndex);
       onUpdate({ ...color, stops: newStops });
     };
+    const handleToggleApplyCorrections = (stopIndex) => {
+      const newStops = [...color.stops];
+      newStops[stopIndex] = {
+        ...newStops[stopIndex],
+        applyCorrectionsToManual: !newStops[stopIndex].applyCorrectionsToManual
+      };
+      onUpdate({ ...color, stops: newStops });
+    };
+    const correctionsEnabled = effectiveHK || effectiveBB;
     return /* @__PURE__ */ import_react.default.createElement(
       "div",
       {
@@ -35199,6 +35403,63 @@
       /* @__PURE__ */ import_react.default.createElement(
         import_react_figma_plugin_ds.Disclosure,
         {
+          label: "Settings",
+          isExpanded: settingsExpanded,
+          onExpandedChange: setSettingsExpanded
+        },
+        /* @__PURE__ */ import_react.default.createElement("div", { style: { padding: "8px", background: "var(--figma-color-bg-secondary)", borderRadius: "4px", marginTop: "4px" } }, /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontSize: "11px", minWidth: "60px" } }, "HK:"), /* @__PURE__ */ import_react.default.createElement(
+          "select",
+          {
+            value: color.hkCorrectionOverride === void 0 ? "global" : color.hkCorrectionOverride ? "on" : "off",
+            onChange: (e4) => {
+              const val = e4.target.value;
+              onUpdate({
+                ...color,
+                hkCorrectionOverride: val === "global" ? void 0 : val === "on"
+              });
+            },
+            style: {
+              padding: "4px 6px",
+              borderRadius: "3px",
+              border: "1px solid var(--figma-color-border)",
+              background: "var(--figma-color-bg)",
+              color: "var(--figma-color-text)",
+              fontSize: "11px",
+              cursor: "pointer"
+            }
+          },
+          /* @__PURE__ */ import_react.default.createElement("option", { value: "global" }, "Use Global (", globalSettings.hkCorrection ? "On" : "Off", ")"),
+          /* @__PURE__ */ import_react.default.createElement("option", { value: "on" }, "On"),
+          /* @__PURE__ */ import_react.default.createElement("option", { value: "off" }, "Off")
+        )), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px" } }, /* @__PURE__ */ import_react.default.createElement("span", { style: { fontSize: "11px", minWidth: "60px" } }, "BB:"), /* @__PURE__ */ import_react.default.createElement(
+          "select",
+          {
+            value: color.bbCorrectionOverride === void 0 ? "global" : color.bbCorrectionOverride ? "on" : "off",
+            onChange: (e4) => {
+              const val = e4.target.value;
+              onUpdate({
+                ...color,
+                bbCorrectionOverride: val === "global" ? void 0 : val === "on"
+              });
+            },
+            style: {
+              padding: "4px 6px",
+              borderRadius: "3px",
+              border: "1px solid var(--figma-color-border)",
+              background: "var(--figma-color-bg)",
+              color: "var(--figma-color-text)",
+              fontSize: "11px",
+              cursor: "pointer"
+            }
+          },
+          /* @__PURE__ */ import_react.default.createElement("option", { value: "global" }, "Use Global (", globalSettings.bbCorrection ? "On" : "Off", ")"),
+          /* @__PURE__ */ import_react.default.createElement("option", { value: "on" }, "On"),
+          /* @__PURE__ */ import_react.default.createElement("option", { value: "off" }, "Off")
+        )))
+      ),
+      /* @__PURE__ */ import_react.default.createElement(
+        import_react_figma_plugin_ds.Disclosure,
+        {
           label: `Stops (${color.stops.length})`,
           isExpanded: stopsExpanded,
           onExpandedChange: setStopsExpanded
@@ -35209,9 +35470,11 @@
             key: stop.number,
             stop,
             generatedColor: generatedColors[i],
+            correctionsEnabled,
             onOverride: (oklch2) => handleStopOverride(i, oklch2),
             onResetOverride: () => handleResetOverride(i),
-            onRemove: () => handleRemoveStop(i)
+            onRemove: () => handleRemoveStop(i),
+            onToggleApplyCorrections: () => handleToggleApplyCorrections(i)
           }
         )), /* @__PURE__ */ import_react.default.createElement("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" } }, /* @__PURE__ */ import_react.default.createElement(
           import_react_figma_plugin_ds.Input,
@@ -35272,7 +35535,13 @@
         "*"
       );
     };
-    return /* @__PURE__ */ import_react.default.createElement("div", { style: { padding: "12px" } }, /* @__PURE__ */ import_react.default.createElement("h2", { style: { marginBottom: "12px", fontSize: "14px" } }, "Octarine"), colors.length === 0 ? /* @__PURE__ */ import_react.default.createElement("p", { style: { color: "var(--figma-color-text-secondary)", marginBottom: "12px" } }, "No colors yet. Add one to get started.") : colors.map((color, i) => /* @__PURE__ */ import_react.default.createElement(
+    return /* @__PURE__ */ import_react.default.createElement("div", { style: { padding: "12px" } }, /* @__PURE__ */ import_react.default.createElement("h2", { style: { marginBottom: "12px", fontSize: "14px" } }, "Octarine"), /* @__PURE__ */ import_react.default.createElement(
+      GlobalSettingsPanel,
+      {
+        settings: globalSettings,
+        onUpdate: setGlobalSettings
+      }
+    ), colors.length === 0 ? /* @__PURE__ */ import_react.default.createElement("p", { style: { color: "var(--figma-color-text-secondary)", marginBottom: "12px" } }, "No colors yet. Add one to get started.") : colors.map((color, i) => /* @__PURE__ */ import_react.default.createElement(
       ColorCard,
       {
         key: color.id,

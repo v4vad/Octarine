@@ -4634,11 +4634,15 @@
   }
   function generateColor(baseColor, stop, stopData, globalMode, globalLightness, globalContrast, backgroundColor, perceptualCorrections, hueShiftAmount, hueShiftDirection, chromaShiftAmount, chromaShiftDirection) {
     var _a, _b;
+    const bgOklch = backgroundColor ? hexToOklch(backgroundColor) : { l: 1, c: 0, h: 0 };
     if (stopData == null ? void 0 : stopData.manualOverride) {
+      if (stopData.applyCorrectionsToManual && perceptualCorrections && (perceptualCorrections.hkCompensation || perceptualCorrections.bbCorrection)) {
+        const corrected = applyPerceptualCorrections(stopData.manualOverride, bgOklch, perceptualCorrections);
+        return oklchToHex(corrected);
+      }
       return oklchToHex(stopData.manualOverride);
     }
     const baseOklch = hexToOklch(baseColor);
-    const bgOklch = backgroundColor ? hexToOklch(backgroundColor) : { l: 1, c: 0, h: 0 };
     const effectiveMode = (stopData == null ? void 0 : stopData.modeOverride) === "global" || !(stopData == null ? void 0 : stopData.modeOverride) ? globalMode : stopData.modeOverride;
     let targetL;
     if (effectiveMode === "contrast" && backgroundColor) {

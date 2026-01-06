@@ -37,7 +37,22 @@ export const DEFAULT_CONTRAST: Record<number, number> = {
 }
 
 // ============================================
-// STOP
+// COLOR STOP (used by generateColor function)
+// ============================================
+export type ColorStop = {
+  lightness?: number
+  contrast?: number
+  manualOverride?: {
+    l: number
+    c: number
+    h: number
+  }
+  modeOverride?: ColorMode | "global"
+  applyCorrectionsToManual?: boolean
+}
+
+// ============================================
+// STOP (UI data model with full features)
 // ============================================
 export type Stop = {
   number: number  // e.g., 50, 100, 200

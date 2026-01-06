@@ -716,12 +716,14 @@ function ColorSwatch({ color, onClick, size = 32 }: ColorSwatchProps) {
 interface StopRowProps {
   stop: Stop;
   generatedColor: string;
+  correctionsEnabled: boolean;             // Whether HK or BB corrections are on globally
   onOverride: (oklch: OKLCH) => void;      // Called when user picks a new color
   onResetOverride: () => void;             // Called when user wants to reset to auto
   onRemove: () => void;                    // Called when user removes this stop
+  onToggleApplyCorrections: () => void;    // Toggle applyCorrectionsToManual
 }
 
-function StopRow({ stop, generatedColor, onOverride, onResetOverride, onRemove }: StopRowProps) {
+function StopRow({ stop, generatedColor, correctionsEnabled, onOverride, onResetOverride, onRemove, onToggleApplyCorrections }: StopRowProps) {
   const [showPicker, setShowPicker] = useState(false);
 
   const displayColor = stop.manualOverride
@@ -815,6 +817,46 @@ function StopRow({ stop, generatedColor, onOverride, onResetOverride, onRemove }
         </div>
       )}
 
+      {/* Apply corrections toggle - only shown when overridden AND global corrections are on */}
+      {isOverridden && correctionsEnabled && (
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleApplyCorrections();
+          }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            marginLeft: '4px',
+            cursor: 'pointer',
+          }}
+          title="Apply HK/BB corrections to this override"
+        >
+          <div
+            style={{
+              width: '12px',
+              height: '12px',
+              borderRadius: '2px',
+              border: '1px solid var(--figma-color-border)',
+              background: stop.applyCorrectionsToManual
+                ? 'var(--figma-color-text-brand)'
+                : 'transparent',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {stop.applyCorrectionsToManual && (
+              <span style={{ color: 'white', fontSize: '9px', fontWeight: 'bold' }}>✓</span>
+            )}
+          </div>
+          <span style={{ fontSize: '10px', color: 'var(--figma-color-text-secondary)' }}>
+            Correct
+          </span>
+        </div>
+      )}
+
       {/* Spacer to push remove button to the right */}
       <div style={{ flex: 1 }} />
 
@@ -851,6 +893,192 @@ function StopRow({ stop, generatedColor, onOverride, onResetOverride, onRemove }
 }
 
 // ============================================
+// GLOBAL SETTINGS PANEL
+// ============================================
+interface GlobalSettingsProps {
+  settings: GlobalSettings;
+  onUpdate: (settings: GlobalSettings) => void;
+}
+
+function GlobalSettingsPanel({ settings, onUpdate }: GlobalSettingsProps) {
+  const [showBgPicker, setShowBgPicker] = useState(false);
+  const [showDefaults, setShowDefaults] = useState(false);
+
+  // Get all unique stop numbers from default lightness keys
+  const stopNumbers = Object.keys(settings.defaultLightness)
+    .map(Number)
+    .sort((a, b) => a - b);
+
+  return (
+    <div
+      style={{
+        border: '1px solid var(--figma-color-border)',
+        borderRadius: '6px',
+        padding: '12px',
+        marginBottom: '16px',
+        background: 'var(--figma-color-bg-secondary)',
+      }}
+    >
+      <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '12px' }}>
+        Global Settings
+      </div>
+
+      {/* Background Color */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', position: 'relative' }}>
+        <Label style={{ minWidth: '80px' }}>Background:</Label>
+        <ColorSwatch
+          color={settings.backgroundColor}
+          onClick={() => setShowBgPicker(!showBgPicker)}
+          size={24}
+        />
+        <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>
+          {settings.backgroundColor.toUpperCase()}
+        </span>
+        {showBgPicker && (
+          <ColorPickerPopup
+            color={settings.backgroundColor}
+            onChange={(hex) => onUpdate({ ...settings, backgroundColor: hex })}
+            onClose={() => setShowBgPicker(false)}
+          />
+        )}
+      </div>
+
+      {/* Target Toggle */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+        <Label style={{ minWidth: '80px' }}>Target:</Label>
+        <select
+          value={settings.mode}
+          onChange={(e) => onUpdate({ ...settings, mode: e.target.value as 'lightness' | 'contrast' })}
+          style={{
+            padding: '6px 8px',
+            borderRadius: '4px',
+            border: '1px solid var(--figma-color-border)',
+            background: 'var(--figma-color-bg)',
+            color: 'var(--figma-color-text)',
+            fontSize: '11px',
+            cursor: 'pointer',
+          }}
+        >
+          <option value="lightness">Lightness</option>
+          <option value="contrast">Contrast</option>
+        </select>
+        <span style={{ fontSize: '10px', color: 'var(--figma-color-text-tertiary)' }}>
+          {settings.mode === 'lightness' ? '(OKLCH L value)' : '(WCAG ratio)'}
+        </span>
+      </div>
+
+      {/* HK/BB Corrections */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
+        <Label style={{ minWidth: '80px' }}>Corrections:</Label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={settings.hkCorrection}
+            onChange={(e) => onUpdate({ ...settings, hkCorrection: e.target.checked })}
+            style={{ cursor: 'pointer' }}
+          />
+          <span style={{ fontSize: '11px' }}>HK</span>
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={settings.bbCorrection}
+            onChange={(e) => onUpdate({ ...settings, bbCorrection: e.target.checked })}
+            style={{ cursor: 'pointer' }}
+          />
+          <span style={{ fontSize: '11px' }}>BB</span>
+        </label>
+        <span style={{ fontSize: '10px', color: 'var(--figma-color-text-tertiary)' }}>
+          (perceptual adjustments)
+        </span>
+      </div>
+
+      {/* Default Values (expandable) */}
+      <Disclosure
+        label="Default Stop Values"
+        isExpanded={showDefaults}
+        onExpandedChange={setShowDefaults}
+      >
+        <div style={{ marginTop: '8px' }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '50px 1fr 1fr',
+            gap: '4px',
+            fontSize: '10px',
+            fontWeight: 600,
+            marginBottom: '4px',
+            color: 'var(--figma-color-text-secondary)',
+          }}>
+            <span>Stop</span>
+            <span>Lightness</span>
+            <span>Contrast</span>
+          </div>
+          {stopNumbers.map((num) => (
+            <div
+              key={num}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '50px 1fr 1fr',
+                gap: '4px',
+                marginBottom: '4px',
+              }}
+            >
+              <span style={{ fontSize: '11px', color: 'var(--figma-color-text-secondary)' }}>
+                {num}
+              </span>
+              <input
+                type="text"
+                value={settings.defaultLightness[num]?.toFixed(2) ?? ''}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  if (!isNaN(val)) {
+                    onUpdate({
+                      ...settings,
+                      defaultLightness: { ...settings.defaultLightness, [num]: Math.max(0, Math.min(1, val)) },
+                    });
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '4px',
+                  border: '1px solid var(--figma-color-border)',
+                  borderRadius: '3px',
+                  fontSize: '10px',
+                  background: 'var(--figma-color-bg)',
+                  color: 'var(--figma-color-text)',
+                }}
+              />
+              <input
+                type="text"
+                value={settings.defaultContrast[num]?.toFixed(1) ?? ''}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  if (!isNaN(val)) {
+                    onUpdate({
+                      ...settings,
+                      defaultContrast: { ...settings.defaultContrast, [num]: Math.max(1, val) },
+                    });
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '4px',
+                  border: '1px solid var(--figma-color-border)',
+                  borderRadius: '3px',
+                  fontSize: '10px',
+                  background: 'var(--figma-color-bg)',
+                  color: 'var(--figma-color-text)',
+                }}
+              />
+            </div>
+          ))}
+        </div>
+      </Disclosure>
+    </div>
+  );
+}
+
+// ============================================
 // COLOR CARD
 // ============================================
 interface ColorCardProps {
@@ -863,13 +1091,28 @@ interface ColorCardProps {
 function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps) {
   const [showPicker, setShowPicker] = useState(false);
   const [stopsExpanded, setStopsExpanded] = useState(true);
+  const [settingsExpanded, setSettingsExpanded] = useState(false);  // Color-level settings
   const [newStopNumber, setNewStopNumber] = useState('');  // For "Add Stop" input
+
+  // Determine effective settings (color-level can override HK/BB only)
+  const effectiveHK = color.hkCorrectionOverride !== undefined
+    ? color.hkCorrectionOverride
+    : globalSettings.hkCorrection;
+  const effectiveBB = color.bbCorrectionOverride !== undefined
+    ? color.bbCorrectionOverride
+    : globalSettings.bbCorrection;
 
   // Generate colors for all stops
   const generatedColors = color.stops.map((stop) => {
-    const mode = color.modeOverride || globalSettings.mode;
+    const mode = globalSettings.mode;
     const lightness = globalSettings.defaultLightness;
     const contrast = globalSettings.defaultContrast;
+
+    // Build perceptual corrections object (using effective values)
+    const perceptualCorrections = {
+      hkCompensation: effectiveHK,
+      bbCorrection: effectiveBB,
+    };
 
     return generateColor(
       color.baseColor,
@@ -878,11 +1121,13 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
         lightness: stop.lightnessOverride ?? lightness[stop.number],
         contrast: stop.contrastOverride ?? contrast[stop.number],
         manualOverride: stop.manualOverride,
+        applyCorrectionsToManual: stop.applyCorrectionsToManual,
       },
       mode,
       lightness,
       contrast,
-      globalSettings.backgroundColor
+      globalSettings.backgroundColor,
+      perceptualCorrections  // Pass corrections so they can be applied
     );
   });
 
@@ -936,6 +1181,19 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
     onUpdate({ ...color, stops: newStops });
   };
 
+  // Handler: toggle applyCorrectionsToManual for a stop
+  const handleToggleApplyCorrections = (stopIndex: number) => {
+    const newStops = [...color.stops];
+    newStops[stopIndex] = {
+      ...newStops[stopIndex],
+      applyCorrectionsToManual: !newStops[stopIndex].applyCorrectionsToManual,
+    };
+    onUpdate({ ...color, stops: newStops });
+  };
+
+  // Are corrections enabled (using effective values for this color)?
+  const correctionsEnabled = effectiveHK || effectiveBB;
+
   return (
     <div
       style={{
@@ -973,6 +1231,71 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
         )}
       </div>
 
+      {/* Color-level Settings */}
+      <Disclosure
+        label="Settings"
+        isExpanded={settingsExpanded}
+        onExpandedChange={setSettingsExpanded}
+      >
+        <div style={{ padding: '8px', background: 'var(--figma-color-bg-secondary)', borderRadius: '4px', marginTop: '4px' }}>
+          {/* HK Correction Override */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <span style={{ fontSize: '11px', minWidth: '60px' }}>HK:</span>
+            <select
+              value={color.hkCorrectionOverride === undefined ? 'global' : color.hkCorrectionOverride ? 'on' : 'off'}
+              onChange={(e) => {
+                const val = e.target.value;
+                onUpdate({
+                  ...color,
+                  hkCorrectionOverride: val === 'global' ? undefined : val === 'on',
+                });
+              }}
+              style={{
+                padding: '4px 6px',
+                borderRadius: '3px',
+                border: '1px solid var(--figma-color-border)',
+                background: 'var(--figma-color-bg)',
+                color: 'var(--figma-color-text)',
+                fontSize: '11px',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="global">Use Global ({globalSettings.hkCorrection ? 'On' : 'Off'})</option>
+              <option value="on">On</option>
+              <option value="off">Off</option>
+            </select>
+          </div>
+
+          {/* BB Correction Override */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '11px', minWidth: '60px' }}>BB:</span>
+            <select
+              value={color.bbCorrectionOverride === undefined ? 'global' : color.bbCorrectionOverride ? 'on' : 'off'}
+              onChange={(e) => {
+                const val = e.target.value;
+                onUpdate({
+                  ...color,
+                  bbCorrectionOverride: val === 'global' ? undefined : val === 'on',
+                });
+              }}
+              style={{
+                padding: '4px 6px',
+                borderRadius: '3px',
+                border: '1px solid var(--figma-color-border)',
+                background: 'var(--figma-color-bg)',
+                color: 'var(--figma-color-text)',
+                fontSize: '11px',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="global">Use Global ({globalSettings.bbCorrection ? 'On' : 'Off'})</option>
+              <option value="on">On</option>
+              <option value="off">Off</option>
+            </select>
+          </div>
+        </div>
+      </Disclosure>
+
       {/* Stops */}
       <Disclosure
         label={`Stops (${color.stops.length})`}
@@ -985,9 +1308,11 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
               key={stop.number}
               stop={stop}
               generatedColor={generatedColors[i]}
+              correctionsEnabled={correctionsEnabled}
               onOverride={(oklch) => handleStopOverride(i, oklch)}
               onResetOverride={() => handleResetOverride(i)}
               onRemove={() => handleRemoveStop(i)}
+              onToggleApplyCorrections={() => handleToggleApplyCorrections(i)}
             />
           ))}
 
@@ -1068,6 +1393,12 @@ function App() {
   return (
     <div style={{ padding: '12px' }}>
       <h2 style={{ marginBottom: '12px', fontSize: '14px' }}>Octarine</h2>
+
+      {/* Global Settings */}
+      <GlobalSettingsPanel
+        settings={globalSettings}
+        onUpdate={setGlobalSettings}
+      />
 
       {/* Colors list */}
       {colors.length === 0 ? (
