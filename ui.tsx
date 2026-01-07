@@ -723,14 +723,36 @@ interface StopRowProps {
   generatedColor: string;
   correctionsEnabled: boolean;             // Whether HK or BB corrections are on globally
   wasNudged?: boolean;                     // Was this color auto-adjusted for uniqueness?
+  effectiveMode: 'lightness' | 'contrast'; // Current mode (for showing correct override type)
+  defaultLightness: number;                // Default lightness for this stop number
+  defaultContrast: number;                 // Default contrast for this stop number
+  colorHueShift: number;                   // Color-level hue shift (for reference)
+  colorSaturationShift: number;            // Color-level saturation shift (for reference)
   onOverride: (oklch: OKLCH) => void;      // Called when user picks a new color
   onResetOverride: () => void;             // Called when user wants to reset to auto
   onRemove: () => void;                    // Called when user removes this stop
   onToggleApplyCorrections: () => void;    // Toggle applyCorrectionsToManual
+  onUpdateStop: (updates: Partial<Stop>) => void;  // Called when stop settings change
 }
 
-function StopRow({ stop, generatedColor, correctionsEnabled, wasNudged, onOverride, onResetOverride, onRemove, onToggleApplyCorrections }: StopRowProps) {
+function StopRow({
+  stop,
+  generatedColor,
+  correctionsEnabled,
+  wasNudged,
+  effectiveMode,
+  defaultLightness,
+  defaultContrast,
+  colorHueShift,
+  colorSaturationShift,
+  onOverride,
+  onResetOverride,
+  onRemove,
+  onToggleApplyCorrections,
+  onUpdateStop
+}: StopRowProps) {
   const [showPicker, setShowPicker] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const displayColor = stop.manualOverride
     ? oklchToHex(stop.manualOverride)
@@ -739,6 +761,12 @@ function StopRow({ stop, generatedColor, correctionsEnabled, wasNudged, onOverri
   const isOverridden = !!stop.manualOverride;
   const showNudgeIndicator = !isOverridden && wasNudged;
 
+  // Check if this stop has any overrides set
+  const hasStopOverrides = stop.lightnessOverride !== undefined ||
+    stop.contrastOverride !== undefined ||
+    stop.hueShiftOverride !== undefined ||
+    stop.saturationShiftOverride !== undefined;
+
   // When user picks a color in the popup, convert hex to OKLCH and call onOverride
   const handleColorChange = (hex: string) => {
     const oklch = hexToOklch(hex);
@@ -746,78 +774,170 @@ function StopRow({ stop, generatedColor, correctionsEnabled, wasNudged, onOverri
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '4px 0',
-        position: 'relative',  // For positioning the popup
-      }}
-    >
-      {/* Stop number - shows asterisk if overridden */}
-      <span style={{ width: '32px', fontSize: '11px', color: 'var(--figma-color-text-secondary)' }}>
-        {stop.number}{isOverridden ? '*' : ''}
-      </span>
-
-      {/* Clickable color swatch with override indicator */}
+    <div style={{ marginBottom: '4px' }}>
+      {/* Main row */}
       <div
-        onClick={() => setShowPicker(!showPicker)}
         style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '4px 0',
           position: 'relative',
-          width: '24px',
-          height: '24px',
-          cursor: 'pointer',
         }}
       >
-        {/* The color swatch itself */}
+        {/* Stop number - shows asterisk if manually overridden */}
+        <span style={{
+          width: '36px',
+          fontSize: '11px',
+          color: hasStopOverrides ? 'var(--figma-color-text-brand)' : 'var(--figma-color-text-secondary)',
+          fontWeight: hasStopOverrides ? 600 : 400,
+        }}>
+          {stop.number}{isOverridden ? '*' : ''}
+        </span>
+
+        {/* Clickable color swatch with override indicator */}
         <div
+          onClick={() => setShowPicker(!showPicker)}
           style={{
+            position: 'relative',
             width: '24px',
             height: '24px',
-            backgroundColor: displayColor,
-            borderRadius: '3px',
-            border: isOverridden
-              ? '2px solid var(--figma-color-text-brand)'
-              : '1px solid var(--figma-color-border)',
+            cursor: 'pointer',
           }}
-        />
-        {/* Small dot indicator for overridden colors */}
-        {isOverridden && (
+        >
+          {/* The color swatch itself */}
           <div
             style={{
-              position: 'absolute',
-              top: -3,
-              right: -3,
-              width: 8,
-              height: 8,
-              backgroundColor: 'var(--figma-color-text-brand)',
-              borderRadius: '50%',
-              border: '1px solid var(--figma-color-bg)',
+              width: '24px',
+              height: '24px',
+              backgroundColor: displayColor,
+              borderRadius: '3px',
+              border: isOverridden
+                ? '2px solid var(--figma-color-text-brand)'
+                : '1px solid var(--figma-color-border)',
             }}
           />
-        )}
-      </div>
+          {/* Small dot indicator for overridden colors */}
+          {isOverridden && (
+            <div
+              style={{
+                position: 'absolute',
+                top: -3,
+                right: -3,
+                width: 8,
+                height: 8,
+                backgroundColor: 'var(--figma-color-text-brand)',
+                borderRadius: '50%',
+                border: '1px solid var(--figma-color-bg)',
+              }}
+            />
+          )}
+        </div>
 
-      {/* Hex color value with nudge indicator */}
-      <span style={{ fontSize: '11px', fontFamily: 'monospace' }}>
-        {displayColor.toUpperCase()}
-        {showNudgeIndicator && (
-          <span
-            style={{ color: 'var(--figma-color-text-warning)', marginLeft: '2px' }}
-            title="Auto-adjusted for uniqueness"
+        {/* Hex color value with nudge indicator */}
+        <span style={{ fontSize: '11px', fontFamily: 'monospace' }}>
+          {displayColor.toUpperCase()}
+          {showNudgeIndicator && (
+            <span
+              style={{ color: 'var(--figma-color-text-warning)', marginLeft: '2px' }}
+              title="Auto-adjusted for uniqueness"
+            >
+              ~
+            </span>
+          )}
+        </span>
+
+        {/* Reset icon - only shown when overridden */}
+        {isOverridden && (
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              onResetOverride();
+            }}
+            style={{
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              padding: '2px',
+              borderRadius: '2px',
+            }}
+            title="Reset to auto-generated color"
           >
-            ~
-          </span>
+            <Icon name="revert" />
+          </div>
         )}
-      </span>
 
-      {/* Reset icon - only shown when overridden */}
-      {isOverridden && (
+        {/* Apply corrections toggle - only shown when overridden AND global corrections are on */}
+        {isOverridden && correctionsEnabled && (
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleApplyCorrections();
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              marginLeft: '4px',
+              cursor: 'pointer',
+            }}
+            title="Apply HK/BB corrections to this override"
+          >
+            <div
+              style={{
+                width: '12px',
+                height: '12px',
+                borderRadius: '2px',
+                border: '1px solid var(--figma-color-border)',
+                background: stop.applyCorrectionsToManual
+                  ? 'var(--figma-color-text-brand)'
+                  : 'transparent',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {stop.applyCorrectionsToManual && (
+                <span style={{ color: 'white', fontSize: '9px', fontWeight: 'bold' }}>✓</span>
+              )}
+            </div>
+            <span style={{ fontSize: '10px', color: 'var(--figma-color-text-secondary)' }}>
+              Correct
+            </span>
+          </div>
+        )}
+
+        {/* Spacer to push buttons to the right */}
+        <div style={{ flex: 1 }} />
+
+        {/* Settings toggle button */}
         <div
           onClick={(e) => {
-            e.stopPropagation();  // Prevent opening picker
-            onResetOverride();
+            e.stopPropagation();
+            setShowSettings(!showSettings);
+          }}
+          style={{
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '2px 6px',
+            borderRadius: '3px',
+            fontSize: '10px',
+            border: '1px solid var(--figma-color-border)',
+            background: showSettings || hasStopOverrides ? 'var(--figma-color-bg-brand-tertiary)' : 'transparent',
+            color: hasStopOverrides ? 'var(--figma-color-text-brand)' : 'var(--figma-color-text-secondary)',
+          }}
+          title="Stop-level settings"
+        >
+          {showSettings ? '▼' : '▶'}
+        </div>
+
+        {/* Remove stop button */}
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
           }}
           style={{
             cursor: 'pointer',
@@ -825,83 +945,249 @@ function StopRow({ stop, generatedColor, correctionsEnabled, wasNudged, onOverri
             alignItems: 'center',
             padding: '2px',
             borderRadius: '2px',
+            opacity: 0.5,
           }}
-          title="Reset to auto-generated color"
+          title="Remove this stop"
         >
-          <Icon name="revert" />
+          <Icon name="close" />
         </div>
-      )}
 
-      {/* Apply corrections toggle - only shown when overridden AND global corrections are on */}
-      {isOverridden && correctionsEnabled && (
-        <div
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleApplyCorrections();
-          }}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            marginLeft: '4px',
-            cursor: 'pointer',
-          }}
-          title="Apply HK/BB corrections to this override"
-        >
-          <div
-            style={{
-              width: '12px',
-              height: '12px',
-              borderRadius: '2px',
-              border: '1px solid var(--figma-color-border)',
-              background: stop.applyCorrectionsToManual
-                ? 'var(--figma-color-text-brand)'
-                : 'transparent',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {stop.applyCorrectionsToManual && (
-              <span style={{ color: 'white', fontSize: '9px', fontWeight: 'bold' }}>✓</span>
-            )}
-          </div>
-          <span style={{ fontSize: '10px', color: 'var(--figma-color-text-secondary)' }}>
-            Correct
-          </span>
-        </div>
-      )}
-
-      {/* Spacer to push remove button to the right */}
-      <div style={{ flex: 1 }} />
-
-      {/* Remove stop button */}
-      <div
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemove();
-        }}
-        style={{
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          padding: '2px',
-          borderRadius: '2px',
-          opacity: 0.5,
-        }}
-        title="Remove this stop"
-      >
-        <Icon name="close" />
+        {/* Color picker popup */}
+        {showPicker && (
+          <ColorPickerPopup
+            color={displayColor}
+            onChange={handleColorChange}
+            onClose={() => setShowPicker(false)}
+            onReset={isOverridden ? onResetOverride : undefined}
+          />
+        )}
       </div>
 
-      {/* Color picker popup */}
-      {showPicker && (
-        <ColorPickerPopup
-          color={displayColor}
-          onChange={handleColorChange}
-          onClose={() => setShowPicker(false)}
-          onReset={isOverridden ? onResetOverride : undefined}  // Only show reset in popup if overridden
-        />
+      {/* Expandable Stop-Level Settings */}
+      {showSettings && (
+        <div
+          style={{
+            marginLeft: '40px',
+            padding: '8px',
+            background: 'var(--figma-color-bg-secondary)',
+            borderRadius: '4px',
+            marginTop: '4px',
+            marginBottom: '8px',
+          }}
+        >
+          {/* Lightness/Contrast Override */}
+          <div style={{ marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '10px', minWidth: '70px', color: 'var(--figma-color-text-secondary)' }}>
+                {effectiveMode === 'lightness' ? 'Lightness:' : 'Contrast:'}
+              </span>
+              {effectiveMode === 'lightness' ? (
+                <>
+                  <select
+                    value={stop.lightnessOverride === undefined ? 'default' : 'custom'}
+                    onChange={(e) => {
+                      if (e.target.value === 'default') {
+                        onUpdateStop({ lightnessOverride: undefined });
+                      } else {
+                        onUpdateStop({ lightnessOverride: defaultLightness });
+                      }
+                    }}
+                    style={{
+                      padding: '3px 6px',
+                      borderRadius: '3px',
+                      border: '1px solid var(--figma-color-border)',
+                      background: 'var(--figma-color-bg)',
+                      color: 'var(--figma-color-text)',
+                      fontSize: '10px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <option value="default">Default ({defaultLightness.toFixed(2)})</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                  {stop.lightnessOverride !== undefined && (
+                    <RefBasedNumericInput
+                      value={stop.lightnessOverride}
+                      onChange={(val) => onUpdateStop({ lightnessOverride: val })}
+                      min={0}
+                      max={1}
+                      decimals={2}
+                      style={{
+                        width: '50px',
+                        padding: '3px',
+                        border: '1px solid var(--figma-color-border)',
+                        borderRadius: '3px',
+                        fontSize: '10px',
+                        background: 'var(--figma-color-bg)',
+                        color: 'var(--figma-color-text)',
+                      }}
+                    />
+                  )}
+                </>
+              ) : (
+                <>
+                  <select
+                    value={stop.contrastOverride === undefined ? 'default' : 'custom'}
+                    onChange={(e) => {
+                      if (e.target.value === 'default') {
+                        onUpdateStop({ contrastOverride: undefined });
+                      } else {
+                        onUpdateStop({ contrastOverride: defaultContrast });
+                      }
+                    }}
+                    style={{
+                      padding: '3px 6px',
+                      borderRadius: '3px',
+                      border: '1px solid var(--figma-color-border)',
+                      background: 'var(--figma-color-bg)',
+                      color: 'var(--figma-color-text)',
+                      fontSize: '10px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <option value="default">Default ({defaultContrast.toFixed(1)})</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                  {stop.contrastOverride !== undefined && (
+                    <RefBasedNumericInput
+                      value={stop.contrastOverride}
+                      onChange={(val) => onUpdateStop({ contrastOverride: val })}
+                      min={1}
+                      max={21}
+                      decimals={1}
+                      style={{
+                        width: '50px',
+                        padding: '3px',
+                        border: '1px solid var(--figma-color-border)',
+                        borderRadius: '3px',
+                        fontSize: '10px',
+                        background: 'var(--figma-color-bg)',
+                        color: 'var(--figma-color-text)',
+                      }}
+                    />
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Hue Shift Override */}
+          <div style={{ marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '10px', minWidth: '70px', color: 'var(--figma-color-text-secondary)' }}>
+                Hue Shift:
+              </span>
+              <select
+                value={stop.hueShiftOverride === undefined ? 'default' : 'custom'}
+                onChange={(e) => {
+                  if (e.target.value === 'default') {
+                    onUpdateStop({ hueShiftOverride: undefined });
+                  } else {
+                    onUpdateStop({ hueShiftOverride: colorHueShift });
+                  }
+                }}
+                style={{
+                  padding: '3px 6px',
+                  borderRadius: '3px',
+                  border: '1px solid var(--figma-color-border)',
+                  background: 'var(--figma-color-bg)',
+                  color: 'var(--figma-color-text)',
+                  fontSize: '10px',
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="default">Use Color ({colorHueShift})</option>
+                <option value="custom">Custom</option>
+              </select>
+              {stop.hueShiftOverride !== undefined && (
+                <>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={stop.hueShiftOverride}
+                    onChange={(e) => onUpdateStop({ hueShiftOverride: parseInt(e.target.value) })}
+                    style={{ flex: 1, cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: '10px', minWidth: '24px', textAlign: 'right' }}>
+                    {stop.hueShiftOverride}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Saturation Shift Override */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '10px', minWidth: '70px', color: 'var(--figma-color-text-secondary)' }}>
+                Sat Shift:
+              </span>
+              <select
+                value={stop.saturationShiftOverride === undefined ? 'default' : 'custom'}
+                onChange={(e) => {
+                  if (e.target.value === 'default') {
+                    onUpdateStop({ saturationShiftOverride: undefined });
+                  } else {
+                    onUpdateStop({ saturationShiftOverride: colorSaturationShift });
+                  }
+                }}
+                style={{
+                  padding: '3px 6px',
+                  borderRadius: '3px',
+                  border: '1px solid var(--figma-color-border)',
+                  background: 'var(--figma-color-bg)',
+                  color: 'var(--figma-color-text)',
+                  fontSize: '10px',
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="default">Use Color ({colorSaturationShift})</option>
+                <option value="custom">Custom</option>
+              </select>
+              {stop.saturationShiftOverride !== undefined && (
+                <>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={stop.saturationShiftOverride}
+                    onChange={(e) => onUpdateStop({ saturationShiftOverride: parseInt(e.target.value) })}
+                    style={{ flex: 1, cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: '10px', minWidth: '24px', textAlign: 'right' }}>
+                    {stop.saturationShiftOverride}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Reset all stop overrides */}
+          {hasStopOverrides && (
+            <button
+              onClick={() => onUpdateStop({
+                lightnessOverride: undefined,
+                contrastOverride: undefined,
+                hueShiftOverride: undefined,
+                saturationShiftOverride: undefined,
+              })}
+              style={{
+                marginTop: '8px',
+                padding: '4px 8px',
+                border: '1px solid var(--figma-color-border)',
+                borderRadius: '3px',
+                background: 'var(--figma-color-bg)',
+                color: 'var(--figma-color-text-secondary)',
+                fontSize: '10px',
+                cursor: 'pointer',
+                width: '100%',
+              }}
+            >
+              Reset All Overrides
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
@@ -1279,6 +1565,16 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
     onUpdate({ ...color, stops: newStops });
   };
 
+  // Handler: update a stop's settings (for Phase 7 stop-level overrides)
+  const handleUpdateStop = (stopIndex: number, updates: Partial<Stop>) => {
+    const newStops = [...color.stops];
+    newStops[stopIndex] = {
+      ...newStops[stopIndex],
+      ...updates,
+    };
+    onUpdate({ ...color, stops: newStops });
+  };
+
   // Are corrections enabled (using effective values for this color)?
   const correctionsEnabled = effectiveHK || effectiveBB;
 
@@ -1574,10 +1870,16 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
               generatedColor={generatedColors[i]}
               correctionsEnabled={correctionsEnabled}
               wasNudged={paletteResult.stops[i]?.wasNudged}
+              effectiveMode={effectiveMode}
+              defaultLightness={globalSettings.defaultLightness[stop.number] ?? 0.5}
+              defaultContrast={globalSettings.defaultContrast[stop.number] ?? 4.5}
+              colorHueShift={color.hueShift ?? 0}
+              colorSaturationShift={color.saturationShift ?? 0}
               onOverride={(oklch) => handleStopOverride(i, oklch)}
               onResetOverride={() => handleResetOverride(i)}
               onRemove={() => handleRemoveStop(i)}
               onToggleApplyCorrections={() => handleToggleApplyCorrections(i)}
+              onUpdateStop={(updates) => handleUpdateStop(i, updates)}
             />
           ))}
 
