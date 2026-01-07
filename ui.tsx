@@ -9,6 +9,7 @@ import {
   Icon,
 } from 'react-figma-plugin-ds';
 import 'react-figma-plugin-ds/figma-plugin-ds.css';
+import './styles.css';
 
 import {
   Color,
@@ -140,13 +141,7 @@ function GradientPicker({ hue, saturation, brightness, mode, onChange }: Gradien
       ref={canvasRef}
       width={200}
       height={200}
-      style={{
-        width: '100%',
-        height: '160px',
-        borderRadius: '4px',
-        cursor: 'crosshair',
-        display: 'block',
-      }}
+      className="gradient-canvas"
       onMouseDown={(e) => { setIsDragging(true); handleMouse(e); }}
       onMouseMove={(e) => { if (isDragging) handleMouse(e); }}
       onMouseUp={() => setIsDragging(false)}
@@ -178,35 +173,13 @@ function HueSlider({ hue, onChange }: HueSliderProps) {
   return (
     <div
       ref={sliderRef}
-      style={{
-        width: '100%',
-        height: '16px',
-        borderRadius: '4px',
-        background: 'linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)',
-        cursor: 'pointer',
-        position: 'relative',
-        marginTop: '8px',
-      }}
+      className="hue-slider"
       onMouseDown={(e) => { setIsDragging(true); handleMouse(e); }}
       onMouseMove={(e) => { if (isDragging) handleMouse(e); }}
       onMouseUp={() => setIsDragging(false)}
       onMouseLeave={() => setIsDragging(false)}
     >
-      {/* Hue position indicator */}
-      <div
-        style={{
-          position: 'absolute',
-          left: `${(hue / 360) * 100}%`,
-          top: '-2px',
-          width: '4px',
-          height: '20px',
-          background: 'white',
-          border: '1px solid black',
-          borderRadius: '2px',
-          transform: 'translateX(-50%)',
-          pointerEvents: 'none',
-        }}
-      />
+      <div className="hue-handle" style={{ left: `${(hue / 360) * 100}%` }} />
     </div>
   );
 }
@@ -404,42 +377,14 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
   };
 
   return (
-    <div
-      ref={popupRef}
-      style={{
-        position: 'absolute',
-        top: '100%',
-        left: 0,
-        zIndex: 1000,
-        background: 'var(--figma-color-bg)',
-        border: '1px solid var(--figma-color-border)',
-        borderRadius: '4px',
-        padding: '12px',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-        width: '280px',
-      }}
-    >
+    <div ref={popupRef} className="popup">
       {/* Tab bar */}
-      <div style={{
-        display: 'flex',
-        marginBottom: '12px',
-        borderBottom: '1px solid var(--figma-color-border)',
-      }}>
+      <div className="tab-bar">
         {(['hsb', 'oklch', 'hex'] as const).map((tab) => (
           <div
             key={tab}
             onClick={() => setActiveTab(tab)}
-            style={{
-              flex: 1,
-              padding: '8px',
-              textAlign: 'center',
-              cursor: 'pointer',
-              fontSize: '11px',
-              fontWeight: activeTab === tab ? 600 : 400,
-              color: activeTab === tab ? 'var(--figma-color-text)' : 'var(--figma-color-text-secondary)',
-              borderBottom: activeTab === tab ? '2px solid var(--figma-color-text-brand)' : '2px solid transparent',
-              marginBottom: '-1px',
-            }}
+            className={`tab ${activeTab === tab ? 'tab-active' : ''}`}
           >
             {tab.toUpperCase()}
           </div>
@@ -474,20 +419,7 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
       {/* Pick color from selected shape */}
       <button
         onClick={() => parent.postMessage({ pluginMessage: { type: 'get-selection-color' } }, '*')}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          padding: '6px 8px',
-          marginTop: '8px',
-          border: '1px solid var(--figma-color-border)',
-          borderRadius: '4px',
-          background: 'var(--figma-color-bg)',
-          color: 'var(--figma-color-text)',
-          cursor: 'pointer',
-          fontSize: '11px',
-          width: '100%',
-        }}
+        className="btn btn-full mt-2"
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="12" cy="12" r="4"/>
@@ -500,7 +432,7 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
       </button>
 
       {/* Tab-specific inputs */}
-      <div style={{ marginTop: '12px' }}>
+      <div className="mt-3">
         {activeTab === 'hex' && (
           <div>
             <input
@@ -510,140 +442,82 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
               onBlur={() => applyHex(hexInput)}
               onKeyDown={(e) => { if (e.key === 'Enter') applyHex(hexInput); }}
               placeholder="#000000"
-              style={{
-                width: '100%',
-                padding: '6px',
-                border: '1px solid var(--figma-color-border)',
-                borderRadius: '4px',
-                fontFamily: 'monospace',
-                fontSize: '11px',
-                textAlign: 'center',
-                background: 'var(--figma-color-bg)',
-                color: 'var(--figma-color-text)',
-              }}
+              className="input input-mono input-center w-full"
             />
           </div>
         )}
 
         {activeTab === 'oklch' && (
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '10px', display: 'block', marginBottom: '4px' }}>L</label>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="form-label-sm">L</label>
               <input
                 type="text"
                 value={lInput}
                 onChange={(e) => setLInput(e.target.value)}
                 onBlur={handleLBlur}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleLBlur(); }}
-                style={{
-                  width: '100%',
-                  padding: '6px',
-                  border: '1px solid var(--figma-color-border)',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  background: 'var(--figma-color-bg)',
-                  color: 'var(--figma-color-text)',
-                }}
+                className="input w-full"
               />
             </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '10px', display: 'block', marginBottom: '4px' }}>C</label>
+            <div className="flex-1">
+              <label className="form-label-sm">C</label>
               <input
                 type="text"
                 value={cInput}
                 onChange={(e) => setCInput(e.target.value)}
                 onBlur={handleCBlur}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleCBlur(); }}
-                style={{
-                  width: '100%',
-                  padding: '6px',
-                  border: '1px solid var(--figma-color-border)',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  background: 'var(--figma-color-bg)',
-                  color: 'var(--figma-color-text)',
-                }}
+                className="input w-full"
               />
             </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '10px', display: 'block', marginBottom: '4px' }}>H</label>
+            <div className="flex-1">
+              <label className="form-label-sm">H</label>
               <input
                 type="text"
                 value={hInput}
                 onChange={(e) => setHInput(e.target.value)}
                 onBlur={handleHBlur}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleHBlur(); }}
-                style={{
-                  width: '100%',
-                  padding: '6px',
-                  border: '1px solid var(--figma-color-border)',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  background: 'var(--figma-color-bg)',
-                  color: 'var(--figma-color-text)',
-                }}
+                className="input w-full"
               />
             </div>
           </div>
         )}
 
         {activeTab === 'hsb' && (
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '10px', display: 'block', marginBottom: '4px' }}>H</label>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="form-label-sm">H</label>
               <input
                 type="text"
                 value={hsbHInput}
                 onChange={(e) => setHsbHInput(e.target.value)}
                 onBlur={handleHsbHBlur}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleHsbHBlur(); }}
-                style={{
-                  width: '100%',
-                  padding: '6px',
-                  border: '1px solid var(--figma-color-border)',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  background: 'var(--figma-color-bg)',
-                  color: 'var(--figma-color-text)',
-                }}
+                className="input w-full"
               />
             </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '10px', display: 'block', marginBottom: '4px' }}>S</label>
+            <div className="flex-1">
+              <label className="form-label-sm">S</label>
               <input
                 type="text"
                 value={hsbSInput}
                 onChange={(e) => setHsbSInput(e.target.value)}
                 onBlur={handleHsbSBlur}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleHsbSBlur(); }}
-                style={{
-                  width: '100%',
-                  padding: '6px',
-                  border: '1px solid var(--figma-color-border)',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  background: 'var(--figma-color-bg)',
-                  color: 'var(--figma-color-text)',
-                }}
+                className="input w-full"
               />
             </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '10px', display: 'block', marginBottom: '4px' }}>B</label>
+            <div className="flex-1">
+              <label className="form-label-sm">B</label>
               <input
                 type="text"
                 value={hsbBInput}
                 onChange={(e) => setHsbBInput(e.target.value)}
                 onBlur={handleHsbBBlur}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleHsbBBlur(); }}
-                style={{
-                  width: '100%',
-                  padding: '6px',
-                  border: '1px solid var(--figma-color-border)',
-                  borderRadius: '4px',
-                  fontSize: '11px',
-                  background: 'var(--figma-color-bg)',
-                  color: 'var(--figma-color-text)',
-                }}
+                className="input w-full"
               />
             </div>
           </div>
@@ -651,26 +525,9 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
       </div>
 
       {/* Color preview with hex */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        marginTop: '12px',
-        padding: '8px',
-        background: 'var(--figma-color-bg-secondary)',
-        borderRadius: '4px',
-      }}>
-        <div
-          style={{
-            width: '32px',
-            height: '32px',
-            backgroundColor: hex,
-            borderRadius: '4px',
-            border: '1px solid var(--figma-color-border)',
-            flexShrink: 0,
-          }}
-        />
-        <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>{hex}</span>
+      <div className="color-preview">
+        <div className="color-preview-swatch" style={{ backgroundColor: hex }} />
+        <span className="color-preview-hex">{hex}</span>
       </div>
 
       {/* Reset button - only shown when onReset is provided */}
@@ -681,7 +538,7 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
             onClose();
           }}
           isSecondary
-          style={{ marginTop: '12px', width: '100%' }}
+          className="mt-3 w-full"
         >
           Reset to Auto
         </Button>
@@ -774,76 +631,33 @@ function StopRow({
   };
 
   return (
-    <div style={{ marginBottom: '4px' }}>
+    <div className="stop-row-wrapper">
       {/* Main row */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '4px 0',
-          position: 'relative',
-        }}
-      >
+      <div className="stop-row">
         {/* Stop number - shows asterisk if manually overridden */}
-        <span style={{
-          width: '36px',
-          fontSize: '11px',
-          color: hasStopOverrides ? 'var(--figma-color-text-brand)' : 'var(--figma-color-text-secondary)',
-          fontWeight: hasStopOverrides ? 600 : 400,
-        }}>
+        <span className={`stop-number ${hasStopOverrides ? 'stop-number-override' : ''}`}>
           {stop.number}{isOverridden ? '*' : ''}
         </span>
 
         {/* Clickable color swatch with override indicator */}
         <div
           onClick={() => setShowPicker(!showPicker)}
-          style={{
-            position: 'relative',
-            width: '24px',
-            height: '24px',
-            cursor: 'pointer',
-          }}
+          className="stop-swatch-wrapper"
         >
           {/* The color swatch itself */}
           <div
-            style={{
-              width: '24px',
-              height: '24px',
-              backgroundColor: displayColor,
-              borderRadius: '3px',
-              border: isOverridden
-                ? '2px solid var(--figma-color-text-brand)'
-                : '1px solid var(--figma-color-border)',
-            }}
+            className={`stop-swatch-inner ${isOverridden ? 'override' : ''}`}
+            style={{ backgroundColor: displayColor }}
           />
           {/* Small dot indicator for overridden colors */}
-          {isOverridden && (
-            <div
-              style={{
-                position: 'absolute',
-                top: -3,
-                right: -3,
-                width: 8,
-                height: 8,
-                backgroundColor: 'var(--figma-color-text-brand)',
-                borderRadius: '50%',
-                border: '1px solid var(--figma-color-bg)',
-              }}
-            />
-          )}
+          {isOverridden && <div className="swatch-indicator" />}
         </div>
 
         {/* Hex color value with nudge indicator */}
-        <span style={{ fontSize: '11px', fontFamily: 'monospace' }}>
+        <span className="stop-hex">
           {displayColor.toUpperCase()}
           {showNudgeIndicator && (
-            <span
-              style={{ color: 'var(--figma-color-text-warning)', marginLeft: '2px' }}
-              title="Auto-adjusted for uniqueness"
-            >
-              ~
-            </span>
+            <span className="nudge-indicator" title="Auto-adjusted for uniqueness">~</span>
           )}
         </span>
 
@@ -854,13 +668,7 @@ function StopRow({
               e.stopPropagation();
               onResetOverride();
             }}
-            style={{
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              padding: '2px',
-              borderRadius: '2px',
-            }}
+            className="btn-icon"
             title="Reset to auto-generated color"
           >
             <Icon name="revert" />
@@ -874,41 +682,20 @@ function StopRow({
               e.stopPropagation();
               onToggleApplyCorrections();
             }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              marginLeft: '4px',
-              cursor: 'pointer',
-            }}
+            className="mini-checkbox-wrapper"
             title="Apply HK/BB corrections to this override"
           >
-            <div
-              style={{
-                width: '12px',
-                height: '12px',
-                borderRadius: '2px',
-                border: '1px solid var(--figma-color-border)',
-                background: stop.applyCorrectionsToManual
-                  ? 'var(--figma-color-text-brand)'
-                  : 'transparent',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
+            <div className={`mini-checkbox ${stop.applyCorrectionsToManual ? 'checked' : ''}`}>
               {stop.applyCorrectionsToManual && (
                 <span style={{ color: 'white', fontSize: '9px', fontWeight: 'bold' }}>✓</span>
               )}
             </div>
-            <span style={{ fontSize: '10px', color: 'var(--figma-color-text-secondary)' }}>
-              Correct
-            </span>
+            <span className="mini-checkbox-label">Correct</span>
           </div>
         )}
 
         {/* Spacer to push buttons to the right */}
-        <div style={{ flex: 1 }} />
+        <div className="flex-1" />
 
         {/* Settings toggle button */}
         <div
@@ -916,18 +703,7 @@ function StopRow({
             e.stopPropagation();
             setShowSettings(!showSettings);
           }}
-          style={{
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '2px 6px',
-            borderRadius: '3px',
-            fontSize: '10px',
-            border: '1px solid var(--figma-color-border)',
-            background: showSettings || hasStopOverrides ? 'var(--figma-color-bg-brand-tertiary)' : 'transparent',
-            color: hasStopOverrides ? 'var(--figma-color-text-brand)' : 'var(--figma-color-text-secondary)',
-          }}
+          className={`settings-toggle ${showSettings || hasStopOverrides ? 'active' : ''}`}
           title="Stop-level settings"
         >
           {showSettings ? '▼' : '▶'}
@@ -1273,30 +1049,18 @@ function GlobalSettingsPanel({ settings, onUpdate }: GlobalSettingsProps) {
   );
 
   return (
-    <div
-      style={{
-        border: '1px solid var(--figma-color-border)',
-        borderRadius: '6px',
-        padding: '12px',
-        marginBottom: '16px',
-        background: 'var(--figma-color-bg-secondary)',
-      }}
-    >
-      <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '12px' }}>
-        Global Settings
-      </div>
+    <div className="section-card">
+      <div className="section-header">Global Settings</div>
 
       {/* Background Color */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', position: 'relative' }}>
-        <Label style={{ minWidth: '80px' }}>Background:</Label>
+      <div className="form-row">
+        <Label className="form-label">Background:</Label>
         <ColorSwatch
           color={settings.backgroundColor}
           onClick={() => setShowBgPicker(!showBgPicker)}
           size={24}
         />
-        <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>
-          {settings.backgroundColor.toUpperCase()}
-        </span>
+        <span className="font-mono text-md">{settings.backgroundColor.toUpperCase()}</span>
         {showBgPicker && (
           <ColorPickerPopup
             color={settings.backgroundColor}
@@ -1307,58 +1071,46 @@ function GlobalSettingsPanel({ settings, onUpdate }: GlobalSettingsProps) {
       </div>
 
       {/* Target Toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-        <Label style={{ minWidth: '80px' }}>Target:</Label>
+      <div className="form-row">
+        <Label className="form-label">Target:</Label>
         <select
           value={settings.mode}
           onChange={(e) => onUpdate({ ...settings, mode: e.target.value as 'lightness' | 'contrast' })}
-          style={{
-            padding: '6px 8px',
-            borderRadius: '4px',
-            border: '1px solid var(--figma-color-border)',
-            background: 'var(--figma-color-bg)',
-            color: 'var(--figma-color-text)',
-            fontSize: '11px',
-            cursor: 'pointer',
-          }}
+          className="select"
         >
           <option value="lightness">Lightness</option>
           <option value="contrast">Contrast</option>
         </select>
-        <span style={{ fontSize: '10px', color: 'var(--figma-color-text-tertiary)' }}>
+        <span className="hint-sm">
           {settings.mode === 'lightness' ? '(OKLCH L value)' : '(WCAG ratio)'}
         </span>
       </div>
 
       {/* HK/BB Corrections */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
-        <Label style={{ minWidth: '80px' }}>Corrections:</Label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+      <div className="form-row" style={{ gap: '16px' }}>
+        <Label className="form-label">Corrections:</Label>
+        <label className="checkbox-label">
           <input
             type="checkbox"
             checked={settings.hkCorrection}
             onChange={(e) => onUpdate({ ...settings, hkCorrection: e.target.checked })}
-            style={{ cursor: 'pointer' }}
           />
-          <span style={{ fontSize: '11px' }}>HK</span>
+          <span>HK</span>
         </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+        <label className="checkbox-label">
           <input
             type="checkbox"
             checked={settings.bbCorrection}
             onChange={(e) => onUpdate({ ...settings, bbCorrection: e.target.checked })}
-            style={{ cursor: 'pointer' }}
           />
-          <span style={{ fontSize: '11px' }}>BB</span>
+          <span>BB</span>
         </label>
-        <span style={{ fontSize: '10px', color: 'var(--figma-color-text-tertiary)' }}>
-          (perceptual adjustments)
-        </span>
+        <span className="hint-sm">(perceptual adjustments)</span>
       </div>
 
       {/* Lightness Expansion */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-        <Label style={{ minWidth: '80px' }}>L Expansion:</Label>
+      <div className="form-row">
+        <Label className="form-label">L Expansion:</Label>
         <input
           type="range"
           min="0.5"
@@ -1366,7 +1118,7 @@ function GlobalSettingsPanel({ settings, onUpdate }: GlobalSettingsProps) {
           step="0.05"
           value={settings.lightnessExpansion}
           onChange={(e) => onUpdate({ ...settings, lightnessExpansion: parseFloat(e.target.value) })}
-          style={{ flex: 1, cursor: 'pointer' }}
+          className="slider"
         />
         <RefBasedNumericInput
           value={settings.lightnessExpansion}
@@ -1374,17 +1126,9 @@ function GlobalSettingsPanel({ settings, onUpdate }: GlobalSettingsProps) {
           min={0.5}
           max={2}
           decimals={2}
-          style={{
-            width: '50px',
-            padding: '4px',
-            border: '1px solid var(--figma-color-border)',
-            borderRadius: '3px',
-            fontSize: '10px',
-            background: 'var(--figma-color-bg)',
-            color: 'var(--figma-color-text)',
-          }}
+          className="input-sm"
         />
-        <span style={{ fontSize: '9px', color: 'var(--figma-color-text-tertiary)', minWidth: '60px' }}>
+        <span className="hint" style={{ minWidth: '60px' }}>
           {settings.lightnessExpansion < 0.95 ? 'Compress' : settings.lightnessExpansion > 1.05 ? 'Spread' : 'Normal'}
         </span>
       </div>
@@ -1395,33 +1139,15 @@ function GlobalSettingsPanel({ settings, onUpdate }: GlobalSettingsProps) {
         isExpanded={showDefaults}
         onExpandedChange={setShowDefaults}
       >
-        <div style={{ marginTop: '8px' }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '50px 1fr 1fr',
-            gap: '4px',
-            fontSize: '10px',
-            fontWeight: 600,
-            marginBottom: '4px',
-            color: 'var(--figma-color-text-secondary)',
-          }}>
+        <div className="mt-2">
+          <div className="grid-stops grid-stops-header">
             <span>Stop</span>
             <span>Lightness</span>
             <span>Contrast</span>
           </div>
           {stopNumbers.map((num) => (
-            <div
-              key={num}
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '50px 1fr 1fr',
-                gap: '4px',
-                marginBottom: '4px',
-              }}
-            >
-              <span style={{ fontSize: '11px', color: 'var(--figma-color-text-secondary)' }}>
-                {num}
-              </span>
+            <div key={num} className="grid-stops mb-1">
+              <span className="text-md text-secondary">{num}</span>
               <RefBasedNumericInput
                 value={settings.defaultLightness[num] ?? 0.5}
                 onChange={(val) => {
@@ -1433,15 +1159,7 @@ function GlobalSettingsPanel({ settings, onUpdate }: GlobalSettingsProps) {
                 min={0}
                 max={1}
                 decimals={2}
-                style={{
-                  width: '100%',
-                  padding: '4px',
-                  border: '1px solid var(--figma-color-border)',
-                  borderRadius: '3px',
-                  fontSize: '10px',
-                  background: 'var(--figma-color-bg)',
-                  color: 'var(--figma-color-text)',
-                }}
+                className="input-sm w-full"
               />
               <RefBasedNumericInput
                 value={settings.defaultContrast[num] ?? 1}
@@ -1454,15 +1172,7 @@ function GlobalSettingsPanel({ settings, onUpdate }: GlobalSettingsProps) {
                 min={1}
                 max={21}
                 decimals={2}
-                style={{
-                  width: '100%',
-                  padding: '4px',
-                  border: '1px solid var(--figma-color-border)',
-                  borderRadius: '3px',
-                  fontSize: '10px',
-                  background: 'var(--figma-color-bg)',
-                  color: 'var(--figma-color-text)',
-                }}
+                className="input-sm w-full"
               />
             </div>
           ))}
@@ -1621,10 +1331,10 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
         isExpanded={settingsExpanded}
         onExpandedChange={setSettingsExpanded}
       >
-        <div style={{ padding: '8px', background: 'var(--figma-color-bg-secondary)', borderRadius: '4px', marginTop: '4px' }}>
+        <div className="settings-panel">
           {/* Mode Override */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <span style={{ fontSize: '11px', minWidth: '60px' }}>Mode:</span>
+          <div className="settings-row">
+            <span className="settings-label">Mode:</span>
             <select
               value={color.modeOverride ?? 'global'}
               onChange={(e) => {
@@ -1634,15 +1344,7 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
                   modeOverride: val === 'global' ? undefined : val as 'lightness' | 'contrast',
                 });
               }}
-              style={{
-                padding: '4px 6px',
-                borderRadius: '3px',
-                border: '1px solid var(--figma-color-border)',
-                background: 'var(--figma-color-bg)',
-                color: 'var(--figma-color-text)',
-                fontSize: '11px',
-                cursor: 'pointer',
-              }}
+              className="select-sm"
             >
               <option value="global">Use Global ({globalSettings.mode})</option>
               <option value="lightness">Lightness</option>
@@ -1651,8 +1353,8 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
           </div>
 
           {/* HK Correction Override */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <span style={{ fontSize: '11px', minWidth: '60px' }}>HK:</span>
+          <div className="settings-row">
+            <span className="settings-label">HK:</span>
             <select
               value={color.hkCorrectionOverride === undefined ? 'global' : color.hkCorrectionOverride ? 'on' : 'off'}
               onChange={(e) => {
@@ -1662,15 +1364,7 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
                   hkCorrectionOverride: val === 'global' ? undefined : val === 'on',
                 });
               }}
-              style={{
-                padding: '4px 6px',
-                borderRadius: '3px',
-                border: '1px solid var(--figma-color-border)',
-                background: 'var(--figma-color-bg)',
-                color: 'var(--figma-color-text)',
-                fontSize: '11px',
-                cursor: 'pointer',
-              }}
+              className="select-sm"
             >
               <option value="global">Use Global ({globalSettings.hkCorrection ? 'On' : 'Off'})</option>
               <option value="on">On</option>
@@ -1679,8 +1373,8 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
           </div>
 
           {/* BB Correction Override */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            <span style={{ fontSize: '11px', minWidth: '60px' }}>BB:</span>
+          <div className="settings-row mb-3">
+            <span className="settings-label">BB:</span>
             <select
               value={color.bbCorrectionOverride === undefined ? 'global' : color.bbCorrectionOverride ? 'on' : 'off'}
               onChange={(e) => {
@@ -1690,15 +1384,7 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
                   bbCorrectionOverride: val === 'global' ? undefined : val === 'on',
                 });
               }}
-              style={{
-                padding: '4px 6px',
-                borderRadius: '3px',
-                border: '1px solid var(--figma-color-border)',
-                background: 'var(--figma-color-bg)',
-                color: 'var(--figma-color-text)',
-                fontSize: '11px',
-                cursor: 'pointer',
-              }}
+              className="select-sm"
             >
               <option value="global">Use Global ({globalSettings.bbCorrection ? 'On' : 'Off'})</option>
               <option value="on">On</option>
@@ -1707,8 +1393,8 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
           </div>
 
           {/* L Expansion Override */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            <span style={{ fontSize: '11px', minWidth: '60px' }}>L Expand:</span>
+          <div className="settings-row mb-3">
+            <span className="settings-label">L Expand:</span>
             <select
               value={color.lightnessExpansionOverride === undefined ? 'global' : 'custom'}
               onChange={(e) => {
@@ -1718,15 +1404,7 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
                   onUpdate({ ...color, lightnessExpansionOverride: globalSettings.lightnessExpansion });
                 }
               }}
-              style={{
-                padding: '4px 6px',
-                borderRadius: '3px',
-                border: '1px solid var(--figma-color-border)',
-                background: 'var(--figma-color-bg)',
-                color: 'var(--figma-color-text)',
-                fontSize: '11px',
-                cursor: 'pointer',
-              }}
+              className="select-sm"
             >
               <option value="global">Use Global ({globalSettings.lightnessExpansion.toFixed(2)})</option>
               <option value="custom">Custom</option>
@@ -1738,37 +1416,21 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
                 min={0.5}
                 max={2}
                 decimals={2}
-                style={{
-                  width: '50px',
-                  padding: '4px',
-                  border: '1px solid var(--figma-color-border)',
-                  borderRadius: '3px',
-                  fontSize: '10px',
-                  background: 'var(--figma-color-bg)',
-                  color: 'var(--figma-color-text)',
-                }}
+                className="input-sm"
               />
             )}
           </div>
 
           {/* Divider */}
-          <div style={{
-            borderTop: '1px solid var(--figma-color-border)',
-            marginBottom: '12px',
-            paddingTop: '4px',
-          }}>
-            <span style={{ fontSize: '10px', color: 'var(--figma-color-text-tertiary)' }}>
-              Artistic Shifts
-            </span>
+          <div className="divider">
+            <span className="hint-sm">Artistic Shifts</span>
           </div>
 
           {/* Hue Shift Slider */}
-          <div style={{ marginBottom: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <span style={{ fontSize: '11px' }}>Hue Shift</span>
-              <span style={{ fontSize: '10px', color: 'var(--figma-color-text-secondary)' }}>
-                {color.hueShift ?? 0}
-              </span>
+          <div className="slider-row">
+            <div className="slider-header">
+              <span className="slider-label">Hue Shift</span>
+              <span className="slider-value">{color.hueShift ?? 0}</span>
             </div>
             <input
               type="range"
@@ -1776,37 +1438,35 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
               max="100"
               value={color.hueShift ?? 0}
               onChange={(e) => onUpdate({ ...color, hueShift: parseInt(e.target.value) })}
-              style={{ width: '100%', cursor: 'pointer' }}
+              className="slider w-full"
             />
-            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+            <div className="radio-group">
+              <label className="radio-label">
                 <input
                   type="radio"
                   name={`hue-dir-${color.id}`}
                   checked={(color.hueShiftDirection ?? 'warm-cool') === 'warm-cool'}
                   onChange={() => onUpdate({ ...color, hueShiftDirection: 'warm-cool' })}
                 />
-                <span style={{ fontSize: '10px' }}>Warm→Cool</span>
+                <span>Warm→Cool</span>
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+              <label className="radio-label">
                 <input
                   type="radio"
                   name={`hue-dir-${color.id}`}
                   checked={color.hueShiftDirection === 'cool-warm'}
                   onChange={() => onUpdate({ ...color, hueShiftDirection: 'cool-warm' })}
                 />
-                <span style={{ fontSize: '10px' }}>Cool→Warm</span>
+                <span>Cool→Warm</span>
               </label>
             </div>
           </div>
 
           {/* Saturation Shift Slider */}
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <span style={{ fontSize: '11px' }}>Saturation Shift</span>
-              <span style={{ fontSize: '10px', color: 'var(--figma-color-text-secondary)' }}>
-                {color.saturationShift ?? 0}
-              </span>
+            <div className="slider-header">
+              <span className="slider-label">Saturation Shift</span>
+              <span className="slider-value">{color.saturationShift ?? 0}</span>
             </div>
             <input
               type="range"
@@ -1814,26 +1474,26 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
               max="100"
               value={color.saturationShift ?? 0}
               onChange={(e) => onUpdate({ ...color, saturationShift: parseInt(e.target.value) })}
-              style={{ width: '100%', cursor: 'pointer' }}
+              className="slider w-full"
             />
-            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+            <div className="radio-group">
+              <label className="radio-label">
                 <input
                   type="radio"
                   name={`sat-dir-${color.id}`}
                   checked={(color.saturationShiftDirection ?? 'vivid-muted') === 'vivid-muted'}
                   onChange={() => onUpdate({ ...color, saturationShiftDirection: 'vivid-muted' })}
                 />
-                <span style={{ fontSize: '10px' }}>Vivid→Muted</span>
+                <span>Vivid→Muted</span>
               </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+              <label className="radio-label">
                 <input
                   type="radio"
                   name={`sat-dir-${color.id}`}
                   checked={color.saturationShiftDirection === 'muted-vivid'}
                   onChange={() => onUpdate({ ...color, saturationShiftDirection: 'muted-vivid' })}
                 />
-                <span style={{ fontSize: '10px' }}>Muted→Vivid</span>
+                <span>Muted→Vivid</span>
               </label>
             </div>
           </div>
@@ -1842,16 +1502,7 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
 
       {/* Warning banner when duplicates were auto-fixed */}
       {paletteResult.hadDuplicates && (
-        <div
-          style={{
-            backgroundColor: 'var(--figma-color-bg-warning)',
-            color: 'var(--figma-color-text-warning)',
-            padding: '8px 12px',
-            borderRadius: '4px',
-            fontSize: '10px',
-            marginBottom: '8px',
-          }}
-        >
+        <div className="warning-banner">
           Some colors were auto-adjusted for uniqueness. Look for ~ markers.
         </div>
       )}
@@ -1958,8 +1609,8 @@ function App() {
   };
 
   return (
-    <div style={{ padding: '12px' }}>
-      <h2 style={{ marginBottom: '12px', fontSize: '14px' }}>Octarine</h2>
+    <div className="app-container">
+      <h2 className="app-title">Octarine</h2>
 
       {/* Global Settings */}
       <GlobalSettingsPanel
@@ -1969,9 +1620,7 @@ function App() {
 
       {/* Colors list */}
       {colors.length === 0 ? (
-        <p style={{ color: 'var(--figma-color-text-secondary)', marginBottom: '12px' }}>
-          No colors yet. Add one to get started.
-        </p>
+        <p className="empty-state">No colors yet. Add one to get started.</p>
       ) : (
         colors.map((color, i) => (
           <ColorCard
@@ -1985,7 +1634,7 @@ function App() {
       )}
 
       {/* Add color button */}
-      <Button onClick={addColor} style={{ marginBottom: '16px' }}>
+      <Button onClick={addColor} className="mb-4">
         + Add Color
       </Button>
 

@@ -1,0 +1,689 @@
+/* ============================================
+   OCTARINE - Custom Styles
+   ============================================
+   This file organizes all UI styling in one place.
+   Uses Figma's CSS variables for theme compatibility.
+   ============================================ */
+
+/* --------------------------------------------
+   DESIGN TOKENS
+   -------------------------------------------- */
+:root {
+  /* Spacing scale (8px base) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* Border radius */
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+
+  /* Font sizes */
+  --text-xs: 9px;
+  --text-sm: 10px;
+  --text-md: 11px;
+  --text-lg: 12px;
+  --text-xl: 14px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+  /* Transitions */
+  --transition-fast: 0.1s ease;
+  --transition-normal: 0.15s ease;
+}
+
+/* --------------------------------------------
+   LAYOUT UTILITIES
+   -------------------------------------------- */
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.gap-1 { gap: var(--space-1); }
+.gap-2 { gap: var(--space-2); }
+.gap-3 { gap: var(--space-3); }
+.gap-4 { gap: var(--space-4); }
+
+.mb-1 { margin-bottom: var(--space-1); }
+.mb-2 { margin-bottom: var(--space-2); }
+.mb-3 { margin-bottom: var(--space-3); }
+.mb-4 { margin-bottom: var(--space-4); }
+
+.mt-2 { margin-top: var(--space-2); }
+.mt-3 { margin-top: var(--space-3); }
+
+.p-2 { padding: var(--space-2); }
+.p-3 { padding: var(--space-3); }
+.p-4 { padding: var(--space-4); }
+
+.w-full { width: 100%; }
+
+.relative { position: relative; }
+.absolute { position: absolute; }
+
+/* --------------------------------------------
+   TYPOGRAPHY
+   -------------------------------------------- */
+.text-xs {
+  font-size: var(--text-xs);
+}
+
+.text-sm {
+  font-size: var(--text-sm);
+}
+
+.text-md {
+  font-size: var(--text-md);
+}
+
+.text-lg {
+  font-size: var(--text-lg);
+}
+
+.text-xl {
+  font-size: var(--text-xl);
+}
+
+.font-mono {
+  font-family: monospace;
+}
+
+.font-semibold {
+  font-weight: 600;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-primary {
+  color: var(--figma-color-text);
+}
+
+.text-secondary {
+  color: var(--figma-color-text-secondary);
+}
+
+.text-tertiary {
+  color: var(--figma-color-text-tertiary);
+}
+
+.text-brand {
+  color: var(--figma-color-text-brand);
+}
+
+.text-warning {
+  color: var(--figma-color-text-warning);
+}
+
+/* --------------------------------------------
+   APP CONTAINER
+   -------------------------------------------- */
+.app-container {
+  padding: var(--space-3);
+}
+
+.app-title {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  margin-bottom: var(--space-3);
+}
+
+/* --------------------------------------------
+   SECTIONS & CARDS
+   -------------------------------------------- */
+.section-card {
+  border: 1px solid var(--figma-color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  margin-bottom: var(--space-4);
+  background: var(--figma-color-bg-secondary);
+}
+
+.section-header {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  margin-bottom: var(--space-3);
+}
+
+.color-card {
+  border: 1px solid var(--figma-color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+  background: var(--figma-color-bg);
+  transition: background var(--transition-normal);
+}
+
+.color-card:hover {
+  background: var(--figma-color-bg-hover);
+}
+
+/* --------------------------------------------
+   FORM CONTROLS
+   -------------------------------------------- */
+
+/* Form row - horizontal layout for label + control */
+.form-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  position: relative;
+}
+
+/* Labels */
+.form-label {
+  min-width: 80px;
+  font-size: var(--text-md);
+  color: var(--figma-color-text-secondary);
+}
+
+.form-label-sm {
+  font-size: var(--text-sm);
+  display: block;
+  margin-bottom: var(--space-1);
+  color: var(--figma-color-text-secondary);
+}
+
+/* Standard input */
+.input {
+  padding: 6px;
+  border: 1px solid var(--figma-color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-md);
+  background: var(--figma-color-bg);
+  color: var(--figma-color-text);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--figma-color-border-brand);
+}
+
+.input-mono {
+  font-family: monospace;
+}
+
+.input-center {
+  text-align: center;
+}
+
+/* Small numeric input */
+.input-sm {
+  width: 50px;
+  padding: var(--space-1);
+  border: 1px solid var(--figma-color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  background: var(--figma-color-bg);
+  color: var(--figma-color-text);
+}
+
+/* Select dropdown */
+.select {
+  padding: 6px 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--figma-color-border);
+  background: var(--figma-color-bg);
+  color: var(--figma-color-text);
+  font-size: var(--text-md);
+  cursor: pointer;
+}
+
+/* Checkbox label wrapper */
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+  font-size: var(--text-md);
+}
+
+/* Range slider */
+.slider {
+  flex: 1;
+  cursor: pointer;
+}
+
+/* --------------------------------------------
+   BUTTONS
+   -------------------------------------------- */
+.btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 6px 8px;
+  border: 1px solid var(--figma-color-border);
+  border-radius: var(--radius-md);
+  background: var(--figma-color-bg);
+  color: var(--figma-color-text);
+  cursor: pointer;
+  font-size: var(--text-md);
+  transition: background var(--transition-fast);
+}
+
+.btn:hover {
+  background: var(--figma-color-bg-hover);
+}
+
+.btn-full {
+  width: 100%;
+}
+
+.btn-icon {
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.btn-icon:hover {
+  background: var(--figma-color-bg-hover);
+}
+
+/* --------------------------------------------
+   COLOR SWATCHES
+   -------------------------------------------- */
+.swatch {
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--figma-color-border);
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.swatch:hover {
+  transform: scale(1.05);
+}
+
+.swatch-sm {
+  width: 24px;
+  height: 24px;
+}
+
+.swatch-md {
+  width: 32px;
+  height: 32px;
+}
+
+.swatch-override {
+  border: 2px solid var(--figma-color-text-brand);
+}
+
+/* Override indicator dot */
+.swatch-indicator {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 8px;
+  height: 8px;
+  background-color: var(--figma-color-text-brand);
+  border-radius: 50%;
+  border: 1px solid var(--figma-color-bg);
+}
+
+/* --------------------------------------------
+   STOP ROW
+   -------------------------------------------- */
+.stop-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  position: relative;
+}
+
+.stop-number {
+  width: 36px;
+  font-size: var(--text-md);
+  color: var(--figma-color-text-secondary);
+}
+
+.stop-number-override {
+  color: var(--figma-color-text-brand);
+  font-weight: 600;
+}
+
+.stop-hex {
+  font-size: var(--text-md);
+  font-family: monospace;
+}
+
+/* --------------------------------------------
+   POPUP / MODAL
+   -------------------------------------------- */
+.popup {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1000;
+  background: var(--figma-color-bg);
+  border: 1px solid var(--figma-color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-md);
+  width: 280px;
+}
+
+/* --------------------------------------------
+   TAB BAR
+   -------------------------------------------- */
+.tab-bar {
+  display: flex;
+  margin-bottom: var(--space-3);
+  border-bottom: 1px solid var(--figma-color-border);
+}
+
+.tab {
+  flex: 1;
+  padding: var(--space-2);
+  text-align: center;
+  cursor: pointer;
+  font-size: var(--text-md);
+  font-weight: 400;
+  color: var(--figma-color-text-secondary);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color var(--transition-fast);
+}
+
+.tab:hover {
+  color: var(--figma-color-text);
+}
+
+.tab-active {
+  font-weight: 600;
+  color: var(--figma-color-text);
+  border-bottom-color: var(--figma-color-text-brand);
+}
+
+/* --------------------------------------------
+   COLOR PICKER COMPONENTS
+   -------------------------------------------- */
+.gradient-canvas {
+  width: 100%;
+  height: 160px;
+  border-radius: var(--radius-md);
+  cursor: crosshair;
+  display: block;
+}
+
+.hue-slider {
+  width: 100%;
+  height: 16px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
+  cursor: pointer;
+  position: relative;
+  margin-top: var(--space-2);
+}
+
+.hue-handle {
+  position: absolute;
+  top: -2px;
+  width: 4px;
+  height: 20px;
+  background: white;
+  border: 1px solid black;
+  border-radius: 2px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+/* --------------------------------------------
+   GRID LAYOUTS
+   -------------------------------------------- */
+.grid-stops {
+  display: grid;
+  grid-template-columns: 50px 1fr 1fr;
+  gap: var(--space-1);
+}
+
+.grid-stops-header {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--figma-color-text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+/* --------------------------------------------
+   HELPER TEXT
+   -------------------------------------------- */
+.hint {
+  font-size: var(--text-xs);
+  color: var(--figma-color-text-tertiary);
+}
+
+.hint-sm {
+  font-size: var(--text-sm);
+  color: var(--figma-color-text-tertiary);
+}
+
+/* Empty state */
+.empty-state {
+  color: var(--figma-color-text-secondary);
+  margin-bottom: var(--space-3);
+}
+
+/* Nudge indicator */
+.nudge-indicator {
+  color: var(--figma-color-text-warning);
+  margin-left: 2px;
+}
+
+/* --------------------------------------------
+   COLOR PREVIEW
+   -------------------------------------------- */
+.color-preview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding: var(--space-2);
+  background: var(--figma-color-bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.color-preview-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--figma-color-border);
+  flex-shrink: 0;
+}
+
+.color-preview-hex {
+  font-family: monospace;
+  font-size: var(--text-lg);
+}
+
+/* --------------------------------------------
+   SETTINGS PANELS (inside disclosures)
+   -------------------------------------------- */
+.settings-panel {
+  padding: var(--space-2);
+  background: var(--figma-color-bg-secondary);
+  border-radius: var(--radius-md);
+  margin-top: var(--space-1);
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.settings-label {
+  font-size: var(--text-md);
+  min-width: 60px;
+}
+
+.select-sm {
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--figma-color-border);
+  background: var(--figma-color-bg);
+  color: var(--figma-color-text);
+  font-size: var(--text-md);
+  cursor: pointer;
+}
+
+/* Dividers */
+.divider {
+  border-top: 1px solid var(--figma-color-border);
+  margin-bottom: var(--space-3);
+  padding-top: var(--space-1);
+}
+
+.divider-label {
+  font-size: var(--text-sm);
+  color: var(--figma-color-text-secondary);
+  margin-bottom: var(--space-2);
+}
+
+/* --------------------------------------------
+   SLIDER ROWS
+   -------------------------------------------- */
+.slider-row {
+  margin-bottom: var(--space-3);
+}
+
+.slider-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-1);
+}
+
+.slider-label {
+  font-size: var(--text-md);
+}
+
+.slider-value {
+  font-size: var(--text-sm);
+  color: var(--figma-color-text-secondary);
+}
+
+/* Radio button groups */
+.radio-group {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+  font-size: var(--text-sm);
+}
+
+/* --------------------------------------------
+   WARNING BANNER
+   -------------------------------------------- */
+.warning-banner {
+  background-color: var(--figma-color-bg-warning);
+  color: var(--figma-color-text-warning);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  font-size: var(--text-md);
+  margin-bottom: var(--space-2);
+}
+
+/* --------------------------------------------
+   STOP ROW (Enhanced)
+   -------------------------------------------- */
+.stop-row-wrapper {
+  margin-bottom: var(--space-1);
+}
+
+.stop-swatch-wrapper {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.stop-swatch-inner {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--figma-color-border);
+}
+
+.stop-swatch-inner.override {
+  border: 2px solid var(--figma-color-text-brand);
+}
+
+/* Custom mini checkbox */
+.mini-checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: var(--space-1);
+  cursor: pointer;
+}
+
+.mini-checkbox {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid var(--figma-color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mini-checkbox.checked {
+  background: var(--figma-color-text-brand);
+}
+
+.mini-checkbox-label {
+  font-size: var(--text-sm);
+  color: var(--figma-color-text-secondary);
+}
+
+/* Settings toggle button */
+.settings-toggle {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  border: 1px solid var(--figma-color-border);
+  background: transparent;
+  color: var(--figma-color-text-secondary);
+}
+
+.settings-toggle.active {
+  background: var(--figma-color-bg-brand-tertiary);
+  color: var(--figma-color-text-brand);
+}
