@@ -90,8 +90,10 @@ export type Color = {
   bbCorrectionOverride?: boolean
 
   // Artistic shifts (only at color level and stop level)
-  hueShift?: number         // 0-100
-  saturationShift?: number  // 0-100
+  hueShift?: number                                     // 0-100
+  hueShiftDirection?: "warm-cool" | "cool-warm"         // Default: warm-cool
+  saturationShift?: number                              // 0-100
+  saturationShiftDirection?: "vivid-muted" | "muted-vivid"  // Default: vivid-muted
 
   // Array of stops for this color
   stops: Stop[]

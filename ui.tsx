@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   Button,
@@ -28,6 +28,8 @@ import {
   hsbToRgb,
   generateColor,
   OKLCH,
+  HueShiftDirection,
+  ChromaShiftDirection,
 } from './lib/color-utils';
 
 // ============================================
@@ -893,6 +895,65 @@ function StopRow({ stop, generatedColor, correctionsEnabled, onOverride, onReset
 }
 
 // ============================================
+// REF-BASED NUMERIC INPUT
+// Uses refs instead of state to be immune to React re-renders while typing
+// ============================================
+interface RefBasedNumericInputProps {
+  value: number;
+  onChange: (value: number) => void;
+  min?: number;
+  max?: number;
+  decimals?: number;
+  style?: React.CSSProperties;
+}
+
+function RefBasedNumericInput({
+  value,
+  onChange,
+  min = -Infinity,
+  max = Infinity,
+  decimals = 1,
+  style
+}: RefBasedNumericInputProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const isFocusedRef = useRef(false);
+
+  // Only sync value from props when NOT focused
+  useEffect(() => {
+    if (inputRef.current && !isFocusedRef.current) {
+      inputRef.current.value = value.toFixed(decimals);
+    }
+  }, [value, decimals]);
+
+  const handleBlur = () => {
+    isFocusedRef.current = false;
+    if (inputRef.current) {
+      const parsed = parseFloat(inputRef.current.value);
+      if (!isNaN(parsed)) {
+        const clamped = Math.max(min, Math.min(max, parsed));
+        onChange(clamped);
+        inputRef.current.value = clamped.toFixed(decimals);
+      } else {
+        // Invalid input - reset to prop value
+        inputRef.current.value = value.toFixed(decimals);
+      }
+    }
+  };
+
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      defaultValue={value.toFixed(decimals)}
+      onFocus={() => { isFocusedRef.current = true; }}
+      onBlur={handleBlur}
+      onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+      style={style}
+    />
+  );
+}
+
+// ============================================
 // GLOBAL SETTINGS PANEL
 // ============================================
 interface GlobalSettingsProps {
@@ -904,10 +965,13 @@ function GlobalSettingsPanel({ settings, onUpdate }: GlobalSettingsProps) {
   const [showBgPicker, setShowBgPicker] = useState(false);
   const [showDefaults, setShowDefaults] = useState(false);
 
-  // Get all unique stop numbers from default lightness keys
-  const stopNumbers = Object.keys(settings.defaultLightness)
-    .map(Number)
-    .sort((a, b) => a - b);
+  // Get all unique stop numbers from default lightness keys (memoized to prevent re-creation)
+  const stopNumbers = useMemo(
+    () => Object.keys(settings.defaultLightness)
+      .map(Number)
+      .sort((a, b) => a - b),
+    [settings.defaultLightness]
+  );
 
   return (
     <div
@@ -1026,18 +1090,17 @@ function GlobalSettingsPanel({ settings, onUpdate }: GlobalSettingsProps) {
               <span style={{ fontSize: '11px', color: 'var(--figma-color-text-secondary)' }}>
                 {num}
               </span>
-              <input
-                type="text"
-                value={settings.defaultLightness[num]?.toFixed(2) ?? ''}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value);
-                  if (!isNaN(val)) {
-                    onUpdate({
-                      ...settings,
-                      defaultLightness: { ...settings.defaultLightness, [num]: Math.max(0, Math.min(1, val)) },
-                    });
-                  }
+              <RefBasedNumericInput
+                value={settings.defaultLightness[num] ?? 0.5}
+                onChange={(val) => {
+                  onUpdate({
+                    ...settings,
+                    defaultLightness: { ...settings.defaultLightness, [num]: val },
+                  });
                 }}
+                min={0}
+                max={1}
+                decimals={2}
                 style={{
                   width: '100%',
                   padding: '4px',
@@ -1048,18 +1111,17 @@ function GlobalSettingsPanel({ settings, onUpdate }: GlobalSettingsProps) {
                   color: 'var(--figma-color-text)',
                 }}
               />
-              <input
-                type="text"
-                value={settings.defaultContrast[num]?.toFixed(1) ?? ''}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value);
-                  if (!isNaN(val)) {
-                    onUpdate({
-                      ...settings,
-                      defaultContrast: { ...settings.defaultContrast, [num]: Math.max(1, val) },
-                    });
-                  }
+              <RefBasedNumericInput
+                value={settings.defaultContrast[num] ?? 1}
+                onChange={(val) => {
+                  onUpdate({
+                    ...settings,
+                    defaultContrast: { ...settings.defaultContrast, [num]: val },
+                  });
                 }}
+                min={1}
+                max={21}
+                decimals={2}
                 style={{
                   width: '100%',
                   padding: '4px',
@@ -1094,7 +1156,8 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
   const [settingsExpanded, setSettingsExpanded] = useState(false);  // Color-level settings
   const [newStopNumber, setNewStopNumber] = useState('');  // For "Add Stop" input
 
-  // Determine effective settings (color-level can override HK/BB only)
+  // Determine effective settings (color-level overrides global)
+  const effectiveMode = color.modeOverride ?? globalSettings.mode;
   const effectiveHK = color.hkCorrectionOverride !== undefined
     ? color.hkCorrectionOverride
     : globalSettings.hkCorrection;
@@ -1104,7 +1167,6 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
 
   // Generate colors for all stops
   const generatedColors = color.stops.map((stop) => {
-    const mode = globalSettings.mode;
     const lightness = globalSettings.defaultLightness;
     const contrast = globalSettings.defaultContrast;
 
@@ -1123,11 +1185,15 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
         manualOverride: stop.manualOverride,
         applyCorrectionsToManual: stop.applyCorrectionsToManual,
       },
-      mode,
+      effectiveMode,  // Use color-level mode if set, otherwise global
       lightness,
       contrast,
       globalSettings.backgroundColor,
-      perceptualCorrections  // Pass corrections so they can be applied
+      perceptualCorrections,
+      color.hueShift,  // Hue shift amount (0-100)
+      color.hueShiftDirection as HueShiftDirection,  // Hue shift direction
+      color.saturationShift,  // Saturation shift amount (0-100)
+      color.saturationShiftDirection as ChromaShiftDirection  // Saturation shift direction
     );
   });
 
@@ -1238,6 +1304,34 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
         onExpandedChange={setSettingsExpanded}
       >
         <div style={{ padding: '8px', background: 'var(--figma-color-bg-secondary)', borderRadius: '4px', marginTop: '4px' }}>
+          {/* Mode Override */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <span style={{ fontSize: '11px', minWidth: '60px' }}>Mode:</span>
+            <select
+              value={color.modeOverride ?? 'global'}
+              onChange={(e) => {
+                const val = e.target.value;
+                onUpdate({
+                  ...color,
+                  modeOverride: val === 'global' ? undefined : val as 'lightness' | 'contrast',
+                });
+              }}
+              style={{
+                padding: '4px 6px',
+                borderRadius: '3px',
+                border: '1px solid var(--figma-color-border)',
+                background: 'var(--figma-color-bg)',
+                color: 'var(--figma-color-text)',
+                fontSize: '11px',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="global">Use Global ({globalSettings.mode})</option>
+              <option value="lightness">Lightness</option>
+              <option value="contrast">Contrast</option>
+            </select>
+          </div>
+
           {/* HK Correction Override */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
             <span style={{ fontSize: '11px', minWidth: '60px' }}>HK:</span>
@@ -1267,7 +1361,7 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
           </div>
 
           {/* BB Correction Override */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
             <span style={{ fontSize: '11px', minWidth: '60px' }}>BB:</span>
             <select
               value={color.bbCorrectionOverride === undefined ? 'global' : color.bbCorrectionOverride ? 'on' : 'off'}
@@ -1292,6 +1386,93 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
               <option value="on">On</option>
               <option value="off">Off</option>
             </select>
+          </div>
+
+          {/* Divider */}
+          <div style={{
+            borderTop: '1px solid var(--figma-color-border)',
+            marginBottom: '12px',
+            paddingTop: '4px',
+          }}>
+            <span style={{ fontSize: '10px', color: 'var(--figma-color-text-tertiary)' }}>
+              Artistic Shifts
+            </span>
+          </div>
+
+          {/* Hue Shift Slider */}
+          <div style={{ marginBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+              <span style={{ fontSize: '11px' }}>Hue Shift</span>
+              <span style={{ fontSize: '10px', color: 'var(--figma-color-text-secondary)' }}>
+                {color.hueShift ?? 0}
+              </span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={color.hueShift ?? 0}
+              onChange={(e) => onUpdate({ ...color, hueShift: parseInt(e.target.value) })}
+              style={{ width: '100%', cursor: 'pointer' }}
+            />
+            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name={`hue-dir-${color.id}`}
+                  checked={(color.hueShiftDirection ?? 'warm-cool') === 'warm-cool'}
+                  onChange={() => onUpdate({ ...color, hueShiftDirection: 'warm-cool' })}
+                />
+                <span style={{ fontSize: '10px' }}>Warm→Cool</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name={`hue-dir-${color.id}`}
+                  checked={color.hueShiftDirection === 'cool-warm'}
+                  onChange={() => onUpdate({ ...color, hueShiftDirection: 'cool-warm' })}
+                />
+                <span style={{ fontSize: '10px' }}>Cool→Warm</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Saturation Shift Slider */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+              <span style={{ fontSize: '11px' }}>Saturation Shift</span>
+              <span style={{ fontSize: '10px', color: 'var(--figma-color-text-secondary)' }}>
+                {color.saturationShift ?? 0}
+              </span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={color.saturationShift ?? 0}
+              onChange={(e) => onUpdate({ ...color, saturationShift: parseInt(e.target.value) })}
+              style={{ width: '100%', cursor: 'pointer' }}
+            />
+            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name={`sat-dir-${color.id}`}
+                  checked={(color.saturationShiftDirection ?? 'vivid-muted') === 'vivid-muted'}
+                  onChange={() => onUpdate({ ...color, saturationShiftDirection: 'vivid-muted' })}
+                />
+                <span style={{ fontSize: '10px' }}>Vivid→Muted</span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name={`sat-dir-${color.id}`}
+                  checked={color.saturationShiftDirection === 'muted-vivid'}
+                  onChange={() => onUpdate({ ...color, saturationShiftDirection: 'muted-vivid' })}
+                />
+                <span style={{ fontSize: '10px' }}>Muted→Vivid</span>
+              </label>
+            </div>
           </div>
         </div>
       </Disclosure>
