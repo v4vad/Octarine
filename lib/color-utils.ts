@@ -1,4 +1,4 @@
-import type { ColorMode, ColorStop } from "./types"
+import type { ColorMode, ColorStop, GeneratedStop, PaletteResult, Stop, Color, GlobalSettings } from "./types"
 import { oklch, rgb, formatHex } from "culori"
 
 export interface OKLCH {
@@ -543,4 +543,324 @@ export function applyPerceptualCorrections(
   }
 
   return result
+}
+
+// ============================================
+// LIGHTNESS EXPANSION (Phase 8)
+// ============================================
+
+/**
+ * Apply Lightness Expansion
+ *
+ * Spreads colors away from mid-lightness (0.5):
+ * - factor = 1.0: No change
+ * - factor > 1.0: Lights become lighter, darks become darker
+ * - factor < 1.0: All colors compress toward middle gray
+ *
+ * Formula: expandedL = 0.5 + (originalL - 0.5) * factor
+ *
+ * @param lightness - Original lightness value (0-1)
+ * @param factor - Expansion factor (0.5 to 2.0 typical)
+ * @returns Expanded lightness, clamped to 0-1
+ */
+export function applyLightnessExpansion(lightness: number, factor: number): number {
+  if (factor === 1.0) return lightness
+
+  // Expand around the midpoint (0.5)
+  const expandedL = 0.5 + (lightness - 0.5) * factor
+
+  // Clamp to valid range
+  return Math.max(0, Math.min(1, expandedL))
+}
+
+// ============================================
+// DUPLICATE COLOR DETECTION & NUDGING (Phase 8)
+// ============================================
+
+/**
+ * Minimum lightness nudge step (approximately 1 hex level)
+ * In hex, each channel has 256 levels. In OKLCH, lightness range is 0-1,
+ * so 1/256 ≈ 0.004 is roughly one step.
+ */
+const MIN_LIGHTNESS_NUDGE = 0.004
+
+/**
+ * Minimum chroma nudge step
+ */
+const MIN_CHROMA_NUDGE = 0.002
+
+/**
+ * Ensure Unique Hex Colors
+ *
+ * Detects duplicate hex colors in a palette and nudges them apart using
+ * both lightness and chroma adjustments for minimal visible change.
+ *
+ * Strategy:
+ * 1. Identify which stops have the same hex color
+ * 2. For duplicates, nudge the one further from mid-lightness
+ * 3. Direction: lighter stops go lighter, darker stops go darker
+ * 4. If lightness alone doesn't work, also adjust chroma
+ *
+ * @param stops - Array of generated stops with OKLCH values
+ * @param baseChroma - The original chroma of the base color
+ * @returns Updated stops with wasNudged and nudgeAmount populated
+ */
+export function ensureUniqueHexColors(
+  stops: Array<{
+    stopNumber: number
+    hex: string
+    l: number
+    c: number
+    h: number
+    originalL: number
+    expandedL: number
+    isManualOverride: boolean
+  }>,
+  baseChroma: number
+): Array<{
+  stopNumber: number
+  hex: string
+  l: number
+  c: number
+  h: number
+  originalL: number
+  expandedL: number
+  wasNudged: boolean
+  nudgeAmount?: { lightness: number; chroma: number }
+}> {
+  // Create a map to track hex colors and their stop indices
+  const hexToIndices = new Map<string, number[]>()
+
+  // Build the map
+  stops.forEach((stop, index) => {
+    if (!stop.isManualOverride) {
+      const existing = hexToIndices.get(stop.hex) || []
+      existing.push(index)
+      hexToIndices.set(stop.hex, existing)
+    }
+  })
+
+  // Process duplicates
+  const result = stops.map(stop => ({
+    ...stop,
+    wasNudged: false,
+    nudgeAmount: undefined as { lightness: number; chroma: number } | undefined
+  }))
+
+  for (const [, indices] of hexToIndices) {
+    if (indices.length <= 1) continue // No duplicates
+
+    // Sort by stop number to maintain natural order
+    const sortedIndices = [...indices].sort(
+      (a, b) => stops[a].stopNumber - stops[b].stopNumber
+    )
+
+    // Keep the first one unchanged, nudge the rest
+    for (let i = 1; i < sortedIndices.length; i++) {
+      const idx = sortedIndices[i]
+      const stop = result[idx]
+
+      // Skip manual overrides
+      if (stops[idx].isManualOverride) continue
+
+      // Determine nudge direction based on lightness relative to 0.5
+      // Darker colors (L < 0.5) should get darker (negative nudge)
+      // Lighter colors (L > 0.5) should get lighter (positive nudge)
+      const lightnessDirection = stop.l >= 0.5 ? 1 : -1
+
+      let currentL = stop.l
+      let currentC = stop.c
+      let lightnessNudge = 0
+      let chromaNudge = 0
+      let newHex = stop.hex
+      let attempts = 0
+      const maxAttempts = 50
+
+      // Try to find a unique color
+      while (attempts < maxAttempts) {
+        // Check if this hex is unique among all result hexes
+        const isUnique = !result.some(
+          (s, sIdx) => sIdx !== idx && s.hex === newHex
+        )
+
+        if (isUnique) break
+
+        // First try lightness nudge
+        if (attempts < 25) {
+          lightnessNudge += lightnessDirection * MIN_LIGHTNESS_NUDGE
+          currentL = Math.max(0, Math.min(1, stop.l + lightnessNudge))
+        } else {
+          // If lightness alone isn't working, also adjust chroma
+          // Reduce chroma slightly (makes color less saturated, more distinguishable)
+          chromaNudge -= MIN_CHROMA_NUDGE
+          currentC = Math.max(0, stop.c + chromaNudge)
+        }
+
+        newHex = oklchToHex({ l: currentL, c: currentC, h: stop.h })
+        attempts++
+      }
+
+      if (lightnessNudge !== 0 || chromaNudge !== 0) {
+        result[idx] = {
+          ...result[idx],
+          hex: newHex,
+          l: currentL,
+          c: currentC,
+          wasNudged: true,
+          nudgeAmount: { lightness: lightnessNudge, chroma: chromaNudge }
+        }
+      }
+    }
+  }
+
+  return result
+}
+
+// ============================================
+// PALETTE GENERATION (Phase 8)
+// ============================================
+
+/**
+ * Generate Color Palette
+ *
+ * Generates all stops for a color at once, applying:
+ * 1. Lightness expansion
+ * 2. All existing transformations (hue shift, chroma shift, corrections)
+ * 3. Duplicate detection and nudging
+ *
+ * This replaces per-stop generation when uniqueness matters.
+ *
+ * @returns PaletteResult with all generated stops and metadata
+ */
+export function generateColorPalette(
+  color: Color,
+  globalSettings: GlobalSettings
+): PaletteResult {
+  const baseOklch = hexToOklch(color.baseColor)
+
+  // Determine effective settings (color-level overrides global)
+  const effectiveMode = color.modeOverride ?? globalSettings.mode
+  const effectiveHK = color.hkCorrectionOverride ?? globalSettings.hkCorrection
+  const effectiveBB = color.bbCorrectionOverride ?? globalSettings.bbCorrection
+  const effectiveExpansion = color.lightnessExpansionOverride ?? globalSettings.lightnessExpansion
+  const bgOklch = hexToOklch(globalSettings.backgroundColor)
+
+  // First pass: generate all colors with expansion
+  const intermediateStops = color.stops.map(stop => {
+    const stopNum = stop.number
+    const stopKey = String(stopNum)
+
+    // Check for manual override first
+    if (stop.manualOverride) {
+      let finalColor = stop.manualOverride
+      if (stop.applyCorrectionsToManual && (effectiveHK || effectiveBB)) {
+        finalColor = applyPerceptualCorrections(finalColor, bgOklch, {
+          hkCompensation: effectiveHK,
+          bbCorrection: effectiveBB
+        })
+      }
+      return {
+        stopNumber: stopNum,
+        hex: oklchToHex(finalColor),
+        l: finalColor.l,
+        c: finalColor.c,
+        h: finalColor.h,
+        originalL: finalColor.l,
+        expandedL: finalColor.l,
+        isManualOverride: true
+      }
+    }
+
+    // Calculate target lightness
+    let targetL: number
+    if (effectiveMode === "contrast") {
+      const targetContrast = stop.contrastOverride ??
+        globalSettings.defaultContrast[stopNum] ?? 4.5
+      targetL = findLightnessForContrast(baseOklch, globalSettings.backgroundColor, targetContrast)
+    } else {
+      targetL = stop.lightnessOverride ??
+        globalSettings.defaultLightness[stopNum] ?? 0.5
+    }
+
+    const originalL = targetL
+
+    // Apply lightness expansion
+    const expandedL = applyLightnessExpansion(targetL, effectiveExpansion)
+    targetL = expandedL
+
+    // Apply chroma reduction for very light/dark colors (gamut mapping)
+    let targetC = baseOklch.c
+    if (targetL > 0.9) {
+      targetC *= 0.3 + (0.7 * (1 - targetL) / 0.1)
+    } else if (targetL < 0.15) {
+      targetC *= 0.3 + (0.7 * targetL / 0.15)
+    }
+
+    let result: OKLCH = {
+      l: targetL,
+      c: targetC,
+      h: baseOklch.h
+    }
+
+    // Apply hue shift if specified
+    const hueShift = stop.hueShiftOverride ?? color.hueShift ?? 0
+    if (hueShift > 0) {
+      const effectiveShift = (color.hueShiftDirection ?? "warm-cool") === "cool-warm"
+        ? -hueShift
+        : hueShift
+      result = applyHueShift(result, targetL, effectiveShift)
+    }
+
+    // Apply chroma/saturation shift if specified
+    const chromaShift = stop.saturationShiftOverride ?? color.saturationShift ?? 0
+    if (chromaShift > 0) {
+      result = applyChromaShift(
+        result,
+        targetL,
+        chromaShift,
+        color.saturationShiftDirection ?? "vivid-muted"
+      )
+    }
+
+    // Apply perceptual corrections if enabled
+    if (effectiveHK || effectiveBB) {
+      result = applyPerceptualCorrections(result, bgOklch, {
+        hkCompensation: effectiveHK,
+        bbCorrection: effectiveBB
+      })
+    }
+
+    return {
+      stopNumber: stopNum,
+      hex: oklchToHex(result),
+      l: result.l,
+      c: result.c,
+      h: result.h,
+      originalL,
+      expandedL,
+      isManualOverride: false
+    }
+  })
+
+  // Second pass: ensure unique hex colors
+  const uniqueStops = ensureUniqueHexColors(intermediateStops, baseOklch.c)
+
+  // Check if any duplicates were found and fixed
+  const hadDuplicates = uniqueStops.some(s => s.wasNudged)
+
+  // Convert to final format
+  const generatedStops: GeneratedStop[] = uniqueStops.map(s => ({
+    stopNumber: s.stopNumber,
+    hex: s.hex,
+    originalL: s.originalL,
+    expandedL: s.expandedL,
+    wasNudged: s.wasNudged,
+    nudgeAmount: s.nudgeAmount
+  }))
+
+  return {
+    colorId: color.id,
+    stops: generatedStops,
+    hadDuplicates
+  }
 }

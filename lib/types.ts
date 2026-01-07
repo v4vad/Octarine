@@ -95,6 +95,9 @@ export type Color = {
   saturationShift?: number                              // 0-100
   saturationShiftDirection?: "vivid-muted" | "muted-vivid"  // Default: vivid-muted
 
+  // Override lightness expansion for this color
+  lightnessExpansionOverride?: number
+
   // Array of stops for this color
   stops: Stop[]
 }
@@ -111,6 +114,10 @@ export type GlobalSettings = {
   // Default lightness/contrast values per stop number
   defaultLightness: Record<number, number>
   defaultContrast: Record<number, number>
+
+  // Lightness expansion: spreads lights lighter, darks darker
+  // 1.0 = no change, >1.0 = expand, <1.0 = compress
+  lightnessExpansion: number
 }
 
 // ============================================
@@ -119,6 +126,30 @@ export type GlobalSettings = {
 export type AppState = {
   globalSettings: GlobalSettings
   colors: Color[]
+}
+
+// ============================================
+// PALETTE GENERATION RESULTS
+// ============================================
+
+// Result for a single generated stop (tracks what the algorithm did)
+export type GeneratedStop = {
+  stopNumber: number       // e.g., 50, 100, 200
+  hex: string              // Final hex color like "#E6F0FF"
+  originalL: number        // Lightness before expansion
+  expandedL: number        // Lightness after expansion
+  wasNudged: boolean       // Was this color adjusted to be unique?
+  nudgeAmount?: {          // How much was it nudged?
+    lightness: number      // Lightness adjustment (positive = lighter)
+    chroma: number         // Chroma adjustment (positive = more saturated)
+  }
+}
+
+// Result for an entire palette (all stops for one color)
+export type PaletteResult = {
+  colorId: string           // ID of the Color this belongs to
+  stops: GeneratedStop[]    // All generated stops
+  hadDuplicates: boolean    // Were any duplicates found and fixed?
 }
 
 // Helper to create a new color with default stops
@@ -139,6 +170,7 @@ export function createDefaultGlobalSettings(): GlobalSettings {
     hkCorrection: false,
     bbCorrection: false,
     defaultLightness: { ...DEFAULT_LIGHTNESS },
-    defaultContrast: { ...DEFAULT_CONTRAST }
+    defaultContrast: { ...DEFAULT_CONTRAST },
+    lightnessExpansion: 1.0  // No expansion by default
   }
 }

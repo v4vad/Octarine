@@ -14,6 +14,8 @@ import {
   Color,
   GlobalSettings,
   Stop,
+  GeneratedStop,
+  PaletteResult,
   createDefaultColor,
   createDefaultGlobalSettings,
   DEFAULT_STOPS,
@@ -27,6 +29,7 @@ import {
   rgbToHsb,
   hsbToRgb,
   generateColor,
+  generateColorPalette,
   OKLCH,
   HueShiftDirection,
   ChromaShiftDirection,
@@ -719,13 +722,14 @@ interface StopRowProps {
   stop: Stop;
   generatedColor: string;
   correctionsEnabled: boolean;             // Whether HK or BB corrections are on globally
+  wasNudged?: boolean;                     // Was this color auto-adjusted for uniqueness?
   onOverride: (oklch: OKLCH) => void;      // Called when user picks a new color
   onResetOverride: () => void;             // Called when user wants to reset to auto
   onRemove: () => void;                    // Called when user removes this stop
   onToggleApplyCorrections: () => void;    // Toggle applyCorrectionsToManual
 }
 
-function StopRow({ stop, generatedColor, correctionsEnabled, onOverride, onResetOverride, onRemove, onToggleApplyCorrections }: StopRowProps) {
+function StopRow({ stop, generatedColor, correctionsEnabled, wasNudged, onOverride, onResetOverride, onRemove, onToggleApplyCorrections }: StopRowProps) {
   const [showPicker, setShowPicker] = useState(false);
 
   const displayColor = stop.manualOverride
@@ -733,6 +737,7 @@ function StopRow({ stop, generatedColor, correctionsEnabled, onOverride, onReset
     : generatedColor;
 
   const isOverridden = !!stop.manualOverride;
+  const showNudgeIndicator = !isOverridden && wasNudged;
 
   // When user picks a color in the popup, convert hex to OKLCH and call onOverride
   const handleColorChange = (hex: string) => {
@@ -794,9 +799,17 @@ function StopRow({ stop, generatedColor, correctionsEnabled, onOverride, onReset
         )}
       </div>
 
-      {/* Hex color value */}
+      {/* Hex color value with nudge indicator */}
       <span style={{ fontSize: '11px', fontFamily: 'monospace' }}>
         {displayColor.toUpperCase()}
+        {showNudgeIndicator && (
+          <span
+            style={{ color: 'var(--figma-color-text-warning)', marginLeft: '2px' }}
+            title="Auto-adjusted for uniqueness"
+          >
+            ~
+          </span>
+        )}
       </span>
 
       {/* Reset icon - only shown when overridden */}
@@ -1057,6 +1070,39 @@ function GlobalSettingsPanel({ settings, onUpdate }: GlobalSettingsProps) {
         </span>
       </div>
 
+      {/* Lightness Expansion */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+        <Label style={{ minWidth: '80px' }}>L Expansion:</Label>
+        <input
+          type="range"
+          min="0.5"
+          max="2"
+          step="0.05"
+          value={settings.lightnessExpansion}
+          onChange={(e) => onUpdate({ ...settings, lightnessExpansion: parseFloat(e.target.value) })}
+          style={{ flex: 1, cursor: 'pointer' }}
+        />
+        <RefBasedNumericInput
+          value={settings.lightnessExpansion}
+          onChange={(val) => onUpdate({ ...settings, lightnessExpansion: val })}
+          min={0.5}
+          max={2}
+          decimals={2}
+          style={{
+            width: '50px',
+            padding: '4px',
+            border: '1px solid var(--figma-color-border)',
+            borderRadius: '3px',
+            fontSize: '10px',
+            background: 'var(--figma-color-bg)',
+            color: 'var(--figma-color-text)',
+          }}
+        />
+        <span style={{ fontSize: '9px', color: 'var(--figma-color-text-tertiary)', minWidth: '60px' }}>
+          {settings.lightnessExpansion < 0.95 ? 'Compress' : settings.lightnessExpansion > 1.05 ? 'Spread' : 'Normal'}
+        </span>
+      </div>
+
       {/* Default Values (expandable) */}
       <Disclosure
         label="Default Stop Values"
@@ -1165,37 +1211,13 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
     ? color.bbCorrectionOverride
     : globalSettings.bbCorrection;
 
-  // Generate colors for all stops
-  const generatedColors = color.stops.map((stop) => {
-    const lightness = globalSettings.defaultLightness;
-    const contrast = globalSettings.defaultContrast;
+  // Generate all colors using palette generation (handles expansion + uniqueness)
+  const paletteResult = useMemo(() => {
+    return generateColorPalette(color, globalSettings);
+  }, [color, globalSettings]);
 
-    // Build perceptual corrections object (using effective values)
-    const perceptualCorrections = {
-      hkCompensation: effectiveHK,
-      bbCorrection: effectiveBB,
-    };
-
-    return generateColor(
-      color.baseColor,
-      String(stop.number),
-      {
-        lightness: stop.lightnessOverride ?? lightness[stop.number],
-        contrast: stop.contrastOverride ?? contrast[stop.number],
-        manualOverride: stop.manualOverride,
-        applyCorrectionsToManual: stop.applyCorrectionsToManual,
-      },
-      effectiveMode,  // Use color-level mode if set, otherwise global
-      lightness,
-      contrast,
-      globalSettings.backgroundColor,
-      perceptualCorrections,
-      color.hueShift,  // Hue shift amount (0-100)
-      color.hueShiftDirection as HueShiftDirection,  // Hue shift direction
-      color.saturationShift,  // Saturation shift amount (0-100)
-      color.saturationShiftDirection as ChromaShiftDirection  // Saturation shift direction
-    );
-  });
+  // Map palette results to hex strings for backward compatibility
+  const generatedColors = paletteResult.stops.map(s => s.hex);
 
   // Handler: when user manually overrides a stop's color
   const handleStopOverride = (stopIndex: number, newOklch: OKLCH) => {
@@ -1388,6 +1410,51 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
             </select>
           </div>
 
+          {/* L Expansion Override */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <span style={{ fontSize: '11px', minWidth: '60px' }}>L Expand:</span>
+            <select
+              value={color.lightnessExpansionOverride === undefined ? 'global' : 'custom'}
+              onChange={(e) => {
+                if (e.target.value === 'global') {
+                  onUpdate({ ...color, lightnessExpansionOverride: undefined });
+                } else {
+                  onUpdate({ ...color, lightnessExpansionOverride: globalSettings.lightnessExpansion });
+                }
+              }}
+              style={{
+                padding: '4px 6px',
+                borderRadius: '3px',
+                border: '1px solid var(--figma-color-border)',
+                background: 'var(--figma-color-bg)',
+                color: 'var(--figma-color-text)',
+                fontSize: '11px',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="global">Use Global ({globalSettings.lightnessExpansion.toFixed(2)})</option>
+              <option value="custom">Custom</option>
+            </select>
+            {color.lightnessExpansionOverride !== undefined && (
+              <RefBasedNumericInput
+                value={color.lightnessExpansionOverride}
+                onChange={(val) => onUpdate({ ...color, lightnessExpansionOverride: val })}
+                min={0.5}
+                max={2}
+                decimals={2}
+                style={{
+                  width: '50px',
+                  padding: '4px',
+                  border: '1px solid var(--figma-color-border)',
+                  borderRadius: '3px',
+                  fontSize: '10px',
+                  background: 'var(--figma-color-bg)',
+                  color: 'var(--figma-color-text)',
+                }}
+              />
+            )}
+          </div>
+
           {/* Divider */}
           <div style={{
             borderTop: '1px solid var(--figma-color-border)',
@@ -1477,6 +1544,22 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
         </div>
       </Disclosure>
 
+      {/* Warning banner when duplicates were auto-fixed */}
+      {paletteResult.hadDuplicates && (
+        <div
+          style={{
+            backgroundColor: 'var(--figma-color-bg-warning)',
+            color: 'var(--figma-color-text-warning)',
+            padding: '8px 12px',
+            borderRadius: '4px',
+            fontSize: '10px',
+            marginBottom: '8px',
+          }}
+        >
+          Some colors were auto-adjusted for uniqueness. Look for ~ markers.
+        </div>
+      )}
+
       {/* Stops */}
       <Disclosure
         label={`Stops (${color.stops.length})`}
@@ -1490,6 +1573,7 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
               stop={stop}
               generatedColor={generatedColors[i]}
               correctionsEnabled={correctionsEnabled}
+              wasNudged={paletteResult.stops[i]?.wasNudged}
               onOverride={(oklch) => handleStopOverride(i, oklch)}
               onResetOverride={() => handleResetOverride(i)}
               onRemove={() => handleRemoveStop(i)}

@@ -4,7 +4,7 @@
 // ============================================
 
 import { Color, GlobalSettings } from './types';
-import { hexToRgb, generateColor } from './color-utils';
+import { hexToRgb, generateColorPalette } from './color-utils';
 
 // Convert hex color to Figma's RGBA format (values from 0-1)
 function hexToFigmaRgba(hex: string): RGBA {
@@ -62,28 +62,16 @@ export async function createFigmaVariables(
   let created = 0;
   let updated = 0;
 
-  // Process each color
+  // Process each color using palette generation (ensures expansion + uniqueness)
   for (const color of colors) {
-    // Process each stop in the color
-    for (const stop of color.stops) {
-      // Generate the actual color value for this stop
-      const mode = color.modeOverride || globalSettings.mode;
-      const lightness = globalSettings.defaultLightness;
-      const contrast = globalSettings.defaultContrast;
+    // Generate all stops at once with expansion and uniqueness
+    const paletteResult = generateColorPalette(color, globalSettings);
 
-      const hexColor = generateColor(
-        color.baseColor,
-        String(stop.number),
-        {
-          lightness: stop.lightnessOverride ?? lightness[stop.number],
-          contrast: stop.contrastOverride ?? contrast[stop.number],
-          manualOverride: stop.manualOverride,
-        },
-        mode,
-        lightness,
-        contrast,
-        globalSettings.backgroundColor
-      );
+    // Create variables for each generated stop
+    for (const generatedStop of paletteResult.stops) {
+      // Find the original stop to get the stop number
+      const stop = color.stops.find(s => s.number === generatedStop.stopNumber);
+      if (!stop) continue;
 
       // Variable name: "Primary/500" format
       const variableName = `${color.label}/${stop.number}`;
@@ -95,8 +83,8 @@ export async function createFigmaVariables(
       const isNew = variable.name === variableName &&
         Object.keys(variable.valuesByMode).length === 0;
 
-      // Set the color value
-      const figmaColor = hexToFigmaRgba(hexColor);
+      // Set the color value (using the hex from palette generation)
+      const figmaColor = hexToFigmaRgba(generatedStop.hex);
       variable.setValueForMode(modeId, figmaColor);
 
       if (isNew) {
