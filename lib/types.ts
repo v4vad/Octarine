@@ -2,8 +2,8 @@
 // DATA MODEL FOR OCTARINE
 // ============================================
 
-// Color mode determines how color stops are calculated
-export type ColorMode = "lightness" | "contrast"
+// Color method determines how color stops are calculated
+export type ColorMethod = "lightness" | "contrast"
 
 // Default stop numbers
 export const DEFAULT_STOPS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900]
@@ -47,7 +47,7 @@ export type ColorStop = {
     c: number
     h: number
   }
-  modeOverride?: ColorMode | "global"
+  methodOverride?: ColorMethod | "global"
   applyCorrectionsToManual?: boolean
 }
 
@@ -85,7 +85,7 @@ export type Color = {
   baseColor: string   // Hex color like "#0066CC"
 
   // Override global settings for this color
-  modeOverride?: ColorMode
+  methodOverride?: ColorMethod
   hkCorrectionOverride?: boolean
   bbCorrectionOverride?: boolean
 
@@ -107,7 +107,7 @@ export type Color = {
 // ============================================
 export type GlobalSettings = {
   backgroundColor: string  // For contrast calculations, default "#ffffff"
-  mode: ColorMode          // "lightness" or "contrast"
+  method: ColorMethod      // "lightness" or "contrast"
   hkCorrection: boolean    // Helmholtz-Kohlrausch compensation
   bbCorrection: boolean    // Bezold-Brücke correction
 
@@ -142,6 +142,7 @@ export type GeneratedStop = {
   nudgeAmount?: {          // How much was it nudged?
     lightness: number      // Lightness adjustment (positive = lighter)
     chroma: number         // Chroma adjustment (positive = more saturated)
+    hue: number            // Hue adjustment in degrees (positive = clockwise)
   }
 }
 
@@ -166,7 +167,7 @@ export function createDefaultColor(id: string, label: string, baseColor: string)
 export function createDefaultGlobalSettings(): GlobalSettings {
   return {
     backgroundColor: "#ffffff",
-    mode: "lightness",
+    method: "lightness",
     hkCorrection: false,
     bbCorrection: false,
     defaultLightness: { ...DEFAULT_LIGHTNESS },

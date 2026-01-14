@@ -709,6 +709,7 @@
   border-right: 1px solid var(--figma-color-border);
   background: var(--figma-color-bg-secondary);
   overflow-y: auto;
+  overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
 /* Right panel - colors */
@@ -717,31 +718,51 @@
   flex-direction: column;
   padding: var(--space-3);
   overflow-y: auto;
+  min-height: 0; /* Allow panel to shrink so scrolling works */
 }
 
-/* Header at top of app */
-.app-header {
+/* --------------------------------------------
+   TOGGLE SWITCH
+   -------------------------------------------- */
+.toggle-wrapper {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--figma-color-border);
-  background: var(--figma-color-bg);
+  gap: var(--space-2);
 }
 
-.app-header-title {
-  font-size: var(--text-xl);
-  font-weight: 600;
-}
-
-.app-header-close {
-  cursor: pointer;
+.toggle-label {
+  font-size: var(--text-sm);
   color: var(--figma-color-text-secondary);
-  font-size: var(--text-lg);
 }
 
-.app-header-close:hover {
-  color: var(--figma-color-text);
+.toggle-switch {
+  width: 28px;
+  height: 16px;
+  border-radius: 8px;
+  background: var(--figma-color-bg-disabled, #ccc);
+  cursor: pointer;
+  position: relative;
+  transition: background var(--transition-fast);
+}
+
+.toggle-switch.on {
+  background: var(--figma-color-bg-brand, #18a0fb);
+}
+
+.toggle-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: left var(--transition-fast);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch.on .toggle-thumb {
+  left: 14px;
 }
 
 /* --------------------------------------------
@@ -797,6 +818,34 @@
   outline: none;
   border-color: var(--figma-color-border-brand);
   background: var(--figma-color-bg);
+}
+
+/* Dual-column table (shows both L and C) */
+.defaults-table.dual-column th.clickable {
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.defaults-table.dual-column th.clickable:hover {
+  background: var(--figma-color-bg-hover);
+}
+
+.defaults-table.dual-column th.active {
+  background: var(--figma-color-bg-brand-tertiary);
+  color: var(--figma-color-text-brand);
+  font-weight: 600;
+}
+
+.defaults-table.dual-column th.inactive {
+  color: var(--figma-color-text-tertiary);
+}
+
+.defaults-table.dual-column td.inactive {
+  opacity: 0.4;
+}
+
+.defaults-table.dual-column td.inactive input {
+  pointer-events: none;
 }
 
 /* Tab bar for Lightness/Contrast switching */
@@ -872,6 +921,32 @@
   color: var(--figma-color-text-secondary);
 }
 
+.expansion-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 100%;
+}
+
+.expansion-slider {
+  flex: 1;
+  min-width: 0; /* Allow slider to shrink */
+}
+
+.expansion-input {
+  width: 40px;
+  min-width: 40px;
+  flex-shrink: 0;
+  padding: 2px 4px;
+  border: 1px solid var(--figma-color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  background: var(--figma-color-bg);
+  color: var(--figma-color-text);
+  text-align: center;
+  box-sizing: border-box;
+}
+
 /* --------------------------------------------
    COLOR ROW (Horizontal palette)
    -------------------------------------------- */
@@ -916,9 +991,34 @@
   background: var(--figma-color-bg-secondary);
 }
 
-.color-row-label .edit-icon {
-  color: var(--figma-color-text-tertiary);
+.base-color-swatch {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--figma-color-border);
+}
+
+.base-color-hex {
+  font-family: monospace;
   font-size: var(--text-sm);
+  padding: 2px 4px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--figma-color-text);
+  width: 65px;
+}
+
+.base-color-hex:hover {
+  background: var(--figma-color-bg-secondary);
+}
+
+.base-color-hex:focus {
+  outline: none;
+  border-color: var(--figma-color-border-brand);
+  background: var(--figma-color-bg);
 }
 
 .color-row-actions {
@@ -1191,16 +1291,22 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  flex-wrap: nowrap;
 }
 
 .bg-color-label {
   font-size: var(--text-sm);
   color: var(--figma-color-text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .bg-color-swatch {
   width: 24px;
   height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  flex-shrink: 0;
   border-radius: var(--radius-sm);
   border: 1px solid var(--figma-color-border);
   cursor: pointer;
@@ -1214,6 +1320,9 @@
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--figma-color-text);
+  width: 65px;
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .bg-color-hex:hover {
@@ -1224,6 +1333,24 @@
   outline: none;
   border-color: var(--figma-color-border-brand);
   background: var(--figma-color-bg);
+}
+
+/* BG color picker popup - floats above everything */
+.bg-color-picker-popup {
+  position: fixed;
+  left: 12px;
+  top: 60px;
+  z-index: 1000;
+}
+
+/* Base color swatch clickable */
+.base-color-swatch.clickable {
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.base-color-swatch.clickable:hover {
+  transform: scale(1.1);
 }
 
 /* --------------------------------------------

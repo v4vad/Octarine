@@ -1,4 +1,4 @@
-import type { ColorMode, ColorStop, GeneratedStop, PaletteResult, Stop, Color, GlobalSettings } from "./types"
+import type { ColorMethod, ColorStop, GeneratedStop, PaletteResult, Stop, Color, GlobalSettings } from "./types"
 import { oklch, rgb, formatHex } from "culori"
 
 export interface OKLCH {
@@ -131,6 +131,86 @@ export function findLightnessForContrast(
   return bestL
 }
 
+/**
+ * Refine Contrast to Target
+ *
+ * After color transformations (chroma reduction, hue shift, etc.), the actual
+ * contrast may differ from the target. This function iteratively adjusts
+ * lightness until the actual contrast matches the target.
+ *
+ * This fixes the issue where saturated colors (like orange) end up with wrong
+ * contrast because chroma reduction changes their luminance.
+ *
+ * @param color - The color after all transformations
+ * @param targetContrast - The desired contrast ratio
+ * @param backgroundColor - Background color for contrast calculation
+ * @param tolerance - How close to target is acceptable (default 0.02)
+ * @returns Color with adjusted lightness to achieve target contrast
+ */
+export function refineContrastToTarget(
+  color: OKLCH,
+  targetContrast: number,
+  backgroundColor: string,
+  tolerance: number = 0.02
+): OKLCH {
+  const bgL = hexToOklch(backgroundColor).l
+  const isLightBg = bgL > 0.5
+
+  // Store original chroma - we'll use this as the base for recalculating
+  // chroma at each new lightness level
+  const originalChroma = color.c
+
+  let currentColor = { ...color }
+
+  for (let i = 0; i < 20; i++) {
+    const currentHex = oklchToHex(currentColor)
+    const currentContrast = getContrastRatio(currentHex, backgroundColor)
+    const error = currentContrast - targetContrast
+
+    // Within tolerance? Done!
+    if (Math.abs(error) <= tolerance) break
+
+    // Adjust lightness based on error
+    // Light bg: decrease L = more contrast, increase L = less contrast
+    // Dark bg: increase L = more contrast, decrease L = less contrast
+    //
+    // If error > 0: contrast too high, need less contrast
+    // If error < 0: contrast too low, need more contrast
+    //
+    // Use proportional adjustment that decreases as we get closer
+    const adjustmentMagnitude = Math.min(Math.abs(error) * 0.15, 0.05)
+
+    let direction: number
+    if (error > 0) {
+      // Contrast too high - move TOWARD background
+      direction = isLightBg ? 1 : -1  // lighter on light bg, darker on dark bg
+    } else {
+      // Contrast too low - move AWAY from background
+      direction = isLightBg ? -1 : 1  // darker on light bg, lighter on dark bg
+    }
+
+    const newL = Math.max(0, Math.min(1, currentColor.l + direction * adjustmentMagnitude))
+
+    // KEY FIX: Also adjust chroma to stay in gamut
+    // Use the same formula as generateColorPalette for consistency
+    // Very light colors need reduced chroma, very dark colors too
+    let newC = originalChroma
+    if (newL > 0.9) {
+      newC *= 0.3 + (0.7 * (1 - newL) / 0.1)
+    } else if (newL < 0.15) {
+      newC *= 0.3 + (0.7 * newL / 0.15)
+    }
+
+    currentColor = {
+      l: newL,
+      c: newC,
+      h: currentColor.h
+    }
+  }
+
+  return currentColor
+}
+
 // Hue shift direction type
 export type HueShiftDirection = "warm-cool" | "cool-warm"
 
@@ -139,7 +219,7 @@ export function generateColor(
   baseColor: string,
   stop: string,
   stopData: ColorStop | undefined,
-  globalMode: ColorMode,
+  globalMode: ColorMethod,
   globalLightness?: Record<string, number>,
   globalContrast?: Record<string, number>,
   backgroundColor?: string,
@@ -165,19 +245,19 @@ export function generateColor(
 
   const baseOklch = hexToOklch(baseColor)
 
-  // Determine effective mode for this stop
-  const effectiveMode = stopData?.modeOverride === "global" || !stopData?.modeOverride
+  // Determine effective method for this stop
+  const effectiveMethod = stopData?.methodOverride === "global" || !stopData?.methodOverride
     ? globalMode
-    : stopData.modeOverride
+    : stopData.methodOverride
 
   let targetL: number
 
-  if (effectiveMode === "contrast" && backgroundColor) {
-    // Contrast mode: find lightness that achieves target contrast
+  if (effectiveMethod === "contrast" && backgroundColor) {
+    // Contrast method: find lightness that achieves target contrast
     const targetContrast = stopData?.contrast ?? globalContrast?.[stop] ?? 4.5
     targetL = findLightnessForContrast(baseOklch, backgroundColor, targetContrast)
   } else {
-    // Lightness mode: use target lightness directly
+    // Lightness method: use target lightness directly
     if (stopData?.lightness !== undefined) {
       targetL = stopData.lightness
     } else if (globalLightness && globalLightness[stop] !== undefined) {
@@ -590,19 +670,29 @@ const MIN_LIGHTNESS_NUDGE = 0.004
 const MIN_CHROMA_NUDGE = 0.002
 
 /**
- * Ensure Unique Hex Colors
+ * Minimum hue nudge step (in degrees)
+ * Small hue shifts create different hex values with minimal contrast impact
+ */
+const MIN_HUE_NUDGE = 1
+
+/**
+ * Ensure Unique Hex Colors (Multi-Dimensional, Contrast-Aware)
  *
  * Detects duplicate hex colors in a palette and nudges them apart using
- * both lightness and chroma adjustments for minimal visible change.
+ * hue, chroma, and lightness adjustments - in that priority order to
+ * minimize contrast deviation from targets.
  *
  * Strategy:
  * 1. Identify which stops have the same hex color
- * 2. For duplicates, nudge the one further from mid-lightness
- * 3. Direction: lighter stops go lighter, darker stops go darker
- * 4. If lightness alone doesn't work, also adjust chroma
+ * 2. For duplicates, try nudging in this order:
+ *    a. Hue (minimal contrast impact)
+ *    b. Chroma (small contrast impact)
+ *    c. Lightness (most contrast impact, but direction-aware)
+ * 3. When using lightness, nudge TOWARD target contrast, not away from it
  *
  * @param stops - Array of generated stops with OKLCH values
  * @param baseChroma - The original chroma of the base color
+ * @param backgroundColor - Background color for contrast calculations
  * @returns Updated stops with wasNudged and nudgeAmount populated
  */
 export function ensureUniqueHexColors(
@@ -615,8 +705,10 @@ export function ensureUniqueHexColors(
     originalL: number
     expandedL: number
     isManualOverride: boolean
+    targetContrast?: number  // Target contrast ratio (if using contrast mode)
   }>,
-  baseChroma: number
+  baseChroma: number,
+  backgroundColor: string
 ): Array<{
   stopNumber: number
   hex: string
@@ -626,8 +718,10 @@ export function ensureUniqueHexColors(
   originalL: number
   expandedL: number
   wasNudged: boolean
-  nudgeAmount?: { lightness: number; chroma: number }
+  nudgeAmount?: { lightness: number; chroma: number; hue: number }
 }> {
+  const bgOklch = hexToOklch(backgroundColor)
+
   // Create a map to track hex colors and their stop indices
   const hexToIndices = new Map<string, number[]>()
 
@@ -644,7 +738,7 @@ export function ensureUniqueHexColors(
   const result = stops.map(stop => ({
     ...stop,
     wasNudged: false,
-    nudgeAmount: undefined as { lightness: number; chroma: number } | undefined
+    nudgeAmount: undefined as { lightness: number; chroma: number; hue: number } | undefined
   }))
 
   for (const [, indices] of hexToIndices) {
@@ -663,51 +757,115 @@ export function ensureUniqueHexColors(
       // Skip manual overrides
       if (stops[idx].isManualOverride) continue
 
-      // Determine nudge direction based on lightness relative to 0.5
-      // Darker colors (L < 0.5) should get darker (negative nudge)
-      // Lighter colors (L > 0.5) should get lighter (positive nudge)
-      const lightnessDirection = stop.l >= 0.5 ? 1 : -1
-
       let currentL = stop.l
       let currentC = stop.c
+      let currentH = stop.h
       let lightnessNudge = 0
       let chromaNudge = 0
+      let hueNudge = 0
       let newHex = stop.hex
-      let attempts = 0
-      const maxAttempts = 50
+      let foundUnique = false
 
-      // Try to find a unique color
-      while (attempts < maxAttempts) {
-        // Check if this hex is unique among all result hexes
-        const isUnique = !result.some(
-          (s, sIdx) => sIdx !== idx && s.hex === newHex
-        )
+      // Helper to check if hex is unique
+      const isHexUnique = (hex: string) => !result.some(
+        (s, sIdx) => sIdx !== idx && s.hex === hex
+      )
 
-        if (isUnique) break
-
-        // First try lightness nudge
-        if (attempts < 25) {
-          lightnessNudge += lightnessDirection * MIN_LIGHTNESS_NUDGE
-          currentL = Math.max(0, Math.min(1, stop.l + lightnessNudge))
-        } else {
-          // If lightness alone isn't working, also adjust chroma
-          // Reduce chroma slightly (makes color less saturated, more distinguishable)
-          chromaNudge -= MIN_CHROMA_NUDGE
-          currentC = Math.max(0, stop.c + chromaNudge)
+      // PHASE 1: Try hue nudges first (minimal contrast impact)
+      const hueOffsets = [1, -1, 2, -2, 3, -3, 4, -4, 5, -5]
+      for (const offset of hueOffsets) {
+        const testH = (stop.h + offset + 360) % 360
+        const testHex = oklchToHex({ l: stop.l, c: stop.c, h: testH })
+        if (isHexUnique(testHex)) {
+          currentH = testH
+          hueNudge = offset
+          newHex = testHex
+          foundUnique = true
+          break
         }
-
-        newHex = oklchToHex({ l: currentL, c: currentC, h: stop.h })
-        attempts++
       }
 
-      if (lightnessNudge !== 0 || chromaNudge !== 0) {
+      // PHASE 2: Try chroma nudges (small contrast impact)
+      if (!foundUnique) {
+        const chromaOffsets = [-0.002, 0.002, -0.004, 0.004, -0.006, 0.006, -0.008, 0.008]
+        for (const offset of chromaOffsets) {
+          const testC = Math.max(0, stop.c + offset)
+          const testHex = oklchToHex({ l: stop.l, c: testC, h: stop.h })
+          if (isHexUnique(testHex)) {
+            currentC = testC
+            chromaNudge = offset
+            newHex = testHex
+            foundUnique = true
+            break
+          }
+        }
+      }
+
+      // PHASE 3: Lightness nudges (affects contrast most, but direction-aware)
+      if (!foundUnique) {
+        // Determine nudge direction based on target contrast (if available)
+        let lightnessDirection: number
+
+        if (stop.targetContrast !== undefined) {
+          // Smart direction: nudge toward target contrast
+          const currentContrast = getContrastRatio(stop.hex, backgroundColor)
+
+          if (currentContrast < stop.targetContrast) {
+            // Need MORE contrast → move AWAY from background lightness
+            // Light bg (bgL > 0.5): darker = more contrast → direction -1
+            // Dark bg (bgL < 0.5): lighter = more contrast → direction +1
+            lightnessDirection = bgOklch.l > 0.5 ? -1 : 1
+          } else {
+            // Need LESS contrast → move TOWARD background lightness
+            lightnessDirection = bgOklch.l > 0.5 ? 1 : -1
+          }
+        } else {
+          // No target contrast (lightness mode) - use legacy behavior
+          // Lighter colors go lighter, darker colors go darker
+          lightnessDirection = stop.l >= 0.5 ? 1 : -1
+        }
+
+        // Try lightness nudges in the calculated direction
+        for (let step = 1; step <= 25; step++) {
+          const nudgeAmount = lightnessDirection * MIN_LIGHTNESS_NUDGE * step
+          const testL = Math.max(0, Math.min(1, stop.l + nudgeAmount))
+          const testHex = oklchToHex({ l: testL, c: stop.c, h: stop.h })
+          if (isHexUnique(testHex)) {
+            currentL = testL
+            lightnessNudge = nudgeAmount
+            newHex = testHex
+            foundUnique = true
+            break
+          }
+        }
+
+        // If still not found, try the opposite direction as fallback
+        if (!foundUnique) {
+          const oppositeDirection = -lightnessDirection
+          for (let step = 1; step <= 25; step++) {
+            const nudgeAmount = oppositeDirection * MIN_LIGHTNESS_NUDGE * step
+            const testL = Math.max(0, Math.min(1, stop.l + nudgeAmount))
+            const testHex = oklchToHex({ l: testL, c: stop.c, h: stop.h })
+            if (isHexUnique(testHex)) {
+              currentL = testL
+              lightnessNudge = nudgeAmount
+              newHex = testHex
+              foundUnique = true
+              break
+            }
+          }
+        }
+      }
+
+      if (hueNudge !== 0 || chromaNudge !== 0 || lightnessNudge !== 0) {
         result[idx] = {
           ...result[idx],
           hex: newHex,
           l: currentL,
           c: currentC,
+          h: currentH,
           wasNudged: true,
-          nudgeAmount: { lightness: lightnessNudge, chroma: chromaNudge }
+          nudgeAmount: { lightness: lightnessNudge, chroma: chromaNudge, hue: hueNudge }
         }
       }
     }
@@ -739,7 +897,7 @@ export function generateColorPalette(
   const baseOklch = hexToOklch(color.baseColor)
 
   // Determine effective settings (color-level overrides global)
-  const effectiveMode = color.modeOverride ?? globalSettings.mode
+  const effectiveMethod = color.methodOverride ?? globalSettings.method
   const effectiveHK = color.hkCorrectionOverride ?? globalSettings.hkCorrection
   const effectiveBB = color.bbCorrectionOverride ?? globalSettings.bbCorrection
   const effectiveExpansion = color.lightnessExpansionOverride ?? globalSettings.lightnessExpansion
@@ -767,16 +925,19 @@ export function generateColorPalette(
         h: finalColor.h,
         originalL: finalColor.l,
         expandedL: finalColor.l,
-        isManualOverride: true
+        isManualOverride: true,
+        targetContrast: undefined  // Manual overrides don't have target contrast
       }
     }
 
-    // Calculate target lightness
+    // Calculate target lightness and track target contrast (if in contrast mode)
     let targetL: number
-    if (effectiveMode === "contrast") {
-      const targetContrast = stop.contrastOverride ??
+    let stopTargetContrast: number | undefined = undefined
+
+    if (effectiveMethod === "contrast") {
+      stopTargetContrast = stop.contrastOverride ??
         globalSettings.defaultContrast[stopNum] ?? 4.5
-      targetL = findLightnessForContrast(baseOklch, globalSettings.backgroundColor, targetContrast)
+      targetL = findLightnessForContrast(baseOklch, globalSettings.backgroundColor, stopTargetContrast)
     } else {
       targetL = stop.lightnessOverride ??
         globalSettings.defaultLightness[stopNum] ?? 0.5
@@ -830,6 +991,17 @@ export function generateColorPalette(
       })
     }
 
+    // Refine lightness to achieve target contrast (for contrast mode)
+    // This compensates for contrast changes caused by chroma reduction,
+    // hue/saturation shifts, and perceptual corrections
+    if (effectiveMethod === "contrast" && stopTargetContrast !== undefined) {
+      result = refineContrastToTarget(
+        result,
+        stopTargetContrast,
+        globalSettings.backgroundColor
+      )
+    }
+
     return {
       stopNumber: stopNum,
       hex: oklchToHex(result),
@@ -838,12 +1010,13 @@ export function generateColorPalette(
       h: result.h,
       originalL,
       expandedL,
-      isManualOverride: false
+      isManualOverride: false,
+      targetContrast: stopTargetContrast  // Pass target contrast for smart nudging
     }
   })
 
-  // Second pass: ensure unique hex colors
-  const uniqueStops = ensureUniqueHexColors(intermediateStops, baseOklch.c)
+  // Second pass: ensure unique hex colors (now with background for contrast-aware nudging)
+  const uniqueStops = ensureUniqueHexColors(intermediateStops, baseOklch.c, globalSettings.backgroundColor)
 
   // Check if any duplicates were found and fixed
   const hadDuplicates = uniqueStops.some(s => s.wasNudged)
