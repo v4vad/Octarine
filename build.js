@@ -32,7 +32,12 @@ async function build() {
   // Read the compiled JavaScript
   const uiJs = fs.readFileSync('ui.js.tmp', 'utf8');
 
-  // Create the HTML with inlined JavaScript
+  // Read CSS files
+  const figmaPluginCSS = fs.readFileSync('ui.css', 'utf8');
+  const customCSS = fs.readFileSync('styles.css', 'utf8');
+  console.log('Read CSS files');
+
+  // Create the HTML with inlined JavaScript and CSS
   const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -49,13 +54,12 @@ async function build() {
       color: var(--figma-color-text, #333);
       background: var(--figma-color-bg, #fff);
     }
-    #root {
-      padding: 16px;
-    }
   </style>
+  <style>${figmaPluginCSS}</style>
+  <style>${customCSS}</style>
 </head>
 <body>
-  <div id="root">Loading...</div>
+  <div id="root"></div>
   <script>${uiJs}</script>
 </body>
 </html>`;

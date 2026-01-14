@@ -3,9 +3,6 @@ import { createRoot } from 'react-dom/client';
 import {
   Button,
   Input,
-  Label,
-  Checkbox,
-  Disclosure,
   Icon,
 } from 'react-figma-plugin-ds';
 import 'react-figma-plugin-ds/figma-plugin-ds.css';
@@ -31,6 +28,7 @@ import {
   hsbToRgb,
   generateColor,
   generateColorPalette,
+  getContrastRatio,
   OKLCH,
   HueShiftDirection,
   ChromaShiftDirection,
@@ -62,31 +60,24 @@ function GradientPicker({ hue, saturation, brightness, mode, onChange }: Gradien
     const height = canvas.height;
 
     if (mode === 'hsb') {
-      // HSB gradient: X = saturation, Y = brightness (inverted)
-      // Create horizontal gradient (white to hue color)
       const hueColor = `hsl(${hue}, 100%, 50%)`;
-
-      // Draw saturation gradient (white to color)
       const satGradient = ctx.createLinearGradient(0, 0, width, 0);
       satGradient.addColorStop(0, 'white');
       satGradient.addColorStop(1, hueColor);
       ctx.fillStyle = satGradient;
       ctx.fillRect(0, 0, width, height);
 
-      // Overlay brightness gradient (transparent to black)
       const brightGradient = ctx.createLinearGradient(0, 0, 0, height);
       brightGradient.addColorStop(0, 'rgba(0,0,0,0)');
       brightGradient.addColorStop(1, 'rgba(0,0,0,1)');
       ctx.fillStyle = brightGradient;
       ctx.fillRect(0, 0, width, height);
     } else {
-      // OKLCH gradient: X = chroma, Y = lightness
-      // Draw pixel by pixel (slower but accurate for OKLCH)
       const imageData = ctx.createImageData(width, height);
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
-          const l = 1 - (y / height);  // Lightness: 1 at top, 0 at bottom
-          const c = (x / width) * 0.4;  // Chroma: 0 to 0.4
+          const l = 1 - (y / height);
+          const c = (x / width) * 0.4;
           const hex = oklchToHex({ l, c, h: hue });
           const rgb = hexToRgb(hex);
           const i = (y * width + x) * 4;
@@ -99,17 +90,15 @@ function GradientPicker({ hue, saturation, brightness, mode, onChange }: Gradien
       ctx.putImageData(imageData, 0, 0);
     }
 
-    // Draw position indicator circle
     let posX: number, posY: number;
     if (mode === 'hsb') {
       posX = (saturation / 100) * width;
       posY = (1 - brightness / 100) * height;
     } else {
-      posX = (saturation / 0.4) * width;  // saturation is actually chroma here
-      posY = (1 - brightness) * height;   // brightness is actually lightness here
+      posX = (saturation / 0.4) * width;
+      posY = (1 - brightness) * height;
     }
 
-    // Draw circle with border
     ctx.beginPath();
     ctx.arc(posX, posY, 6, 0, 2 * Math.PI);
     ctx.strokeStyle = 'white';
@@ -132,7 +121,7 @@ function GradientPicker({ hue, saturation, brightness, mode, onChange }: Gradien
     if (mode === 'hsb') {
       onChange(x * 100, (1 - y) * 100);
     } else {
-      onChange(x * 0.4, 1 - y);  // chroma 0-0.4, lightness 0-1
+      onChange(x * 0.4, 1 - y);
     }
   };
 
@@ -154,7 +143,7 @@ function GradientPicker({ hue, saturation, brightness, mode, onChange }: Gradien
 // HUE SLIDER
 // ============================================
 interface HueSliderProps {
-  hue: number;  // 0-360
+  hue: number;
   onChange: (hue: number) => void;
 }
 
@@ -191,7 +180,7 @@ interface ColorPickerPopupProps {
   color: string;
   onChange: (hex: string) => void;
   onClose: () => void;
-  onReset?: () => void;  // Optional: shows "Reset to Auto" button when provided
+  onReset?: () => void;
 }
 
 function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopupProps) {
@@ -202,11 +191,7 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
     return rgbToHsb(rgb.r, rgb.g, rgb.b);
   });
   const popupRef = useRef<HTMLDivElement>(null);
-
-  // Tab state
   const [activeTab, setActiveTab] = useState<'oklch' | 'hex' | 'hsb'>('hsb');
-
-  // Separate state for input fields to allow free typing
   const [hexInput, setHexInput] = useState(color);
   const [lInput, setLInput] = useState(oklch.l.toFixed(2));
   const [cInput, setCInput] = useState(oklch.c.toFixed(3));
@@ -215,7 +200,6 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
   const [hsbSInput, setHsbSInput] = useState(hsb.s.toFixed(0));
   const [hsbBInput, setHsbBInput] = useState(hsb.b.toFixed(0));
 
-  // Close on click outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
@@ -226,7 +210,6 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
 
-  // Listen for selection-color response from plugin
   useEffect(() => {
     const handleMessage = (e: MessageEvent) => {
       if (e.data.pluginMessage?.type === 'selection-color') {
@@ -251,7 +234,6 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
     return () => window.removeEventListener('message', handleMessage);
   }, [onChange]);
 
-  // Expand hex shorthand: #f45 → #ff4455, #3 → #333333
   const expandHexShorthand = (hex: string): string => {
     const h = hex.replace('#', '');
     if (h.length === 1) return '#' + h.repeat(6);
@@ -259,7 +241,6 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
     return hex;
   };
 
-  // Apply hex value - called on blur or Enter
   const applyHex = (newHex: string) => {
     const expanded = expandHexShorthand(newHex);
     if (/^#[0-9A-Fa-f]{6}$/.test(expanded)) {
@@ -280,7 +261,6 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
     }
   };
 
-  // Apply OKLCH value - called on blur or Enter or stepper
   const applyOklch = (newOklch: OKLCH) => {
     setOklch(newOklch);
     setLInput(newOklch.l.toFixed(2));
@@ -298,7 +278,6 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
     onChange(newHex);
   };
 
-  // Apply HSB value - called on blur or Enter or stepper
   const applyHsb = (newHsb: { h: number; s: number; b: number }) => {
     setHsb(newHsb);
     setHsbHInput(newHsb.h.toFixed(0));
@@ -316,17 +295,15 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
     onChange(newHex);
   };
 
-  // Handle blur for OKLCH L input
   const handleLBlur = () => {
     const val = parseFloat(lInput);
     if (!isNaN(val)) {
       applyOklch({ ...oklch, l: Math.max(0, Math.min(1, val)) });
     } else {
-      setLInput(oklch.l.toFixed(2)); // Reset to current value
+      setLInput(oklch.l.toFixed(2));
     }
   };
 
-  // Handle blur for OKLCH C input
   const handleCBlur = () => {
     const val = parseFloat(cInput);
     if (!isNaN(val)) {
@@ -336,7 +313,6 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
     }
   };
 
-  // Handle blur for OKLCH H input
   const handleHBlur = () => {
     const val = parseFloat(hInput);
     if (!isNaN(val)) {
@@ -346,7 +322,6 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
     }
   };
 
-  // Handle blur for HSB H input
   const handleHsbHBlur = () => {
     const val = parseFloat(hsbHInput);
     if (!isNaN(val)) {
@@ -356,7 +331,6 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
     }
   };
 
-  // Handle blur for HSB S input
   const handleHsbSBlur = () => {
     const val = parseFloat(hsbSInput);
     if (!isNaN(val)) {
@@ -366,7 +340,6 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
     }
   };
 
-  // Handle blur for HSB B input
   const handleHsbBBlur = () => {
     const val = parseFloat(hsbBInput);
     if (!isNaN(val)) {
@@ -378,7 +351,6 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
 
   return (
     <div ref={popupRef} className="popup">
-      {/* Tab bar */}
       <div className="tab-bar">
         {(['hsb', 'oklch', 'hex'] as const).map((tab) => (
           <div
@@ -391,7 +363,6 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
         ))}
       </div>
 
-      {/* Visual picker - HSB or OKLCH gradient */}
       {activeTab === 'oklch' ? (
         <>
           <GradientPicker
@@ -416,7 +387,6 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
         </>
       )}
 
-      {/* Pick color from selected shape */}
       <button
         onClick={() => parent.postMessage({ pluginMessage: { type: 'get-selection-color' } }, '*')}
         className="btn btn-full mt-2"
@@ -431,7 +401,6 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
         Pick from selection
       </button>
 
-      {/* Tab-specific inputs */}
       <div className="mt-3">
         {activeTab === 'hex' && (
           <div>
@@ -524,13 +493,11 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
         )}
       </div>
 
-      {/* Color preview with hex */}
       <div className="color-preview">
         <div className="color-preview-swatch" style={{ backgroundColor: hex }} />
         <span className="color-preview-hex">{hex}</span>
       </div>
 
-      {/* Reset button - only shown when onReset is provided */}
       {onReset && (
         <Button
           onClick={() => {
@@ -548,430 +515,7 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
 }
 
 // ============================================
-// COLOR SWATCH (clickable)
-// ============================================
-interface ColorSwatchProps {
-  color: string;
-  onClick: () => void;
-  size?: number;
-}
-
-function ColorSwatch({ color, onClick, size = 32 }: ColorSwatchProps) {
-  return (
-    <div
-      onClick={onClick}
-      style={{
-        width: size,
-        height: size,
-        backgroundColor: color,
-        borderRadius: '4px',
-        border: '1px solid var(--figma-color-border)',
-        cursor: 'pointer',
-      }}
-    />
-  );
-}
-
-// ============================================
-// STOP ROW
-// ============================================
-interface StopRowProps {
-  stop: Stop;
-  generatedColor: string;
-  correctionsEnabled: boolean;             // Whether HK or BB corrections are on globally
-  wasNudged?: boolean;                     // Was this color auto-adjusted for uniqueness?
-  effectiveMode: 'lightness' | 'contrast'; // Current mode (for showing correct override type)
-  defaultLightness: number;                // Default lightness for this stop number
-  defaultContrast: number;                 // Default contrast for this stop number
-  colorHueShift: number;                   // Color-level hue shift (for reference)
-  colorSaturationShift: number;            // Color-level saturation shift (for reference)
-  onOverride: (oklch: OKLCH) => void;      // Called when user picks a new color
-  onResetOverride: () => void;             // Called when user wants to reset to auto
-  onRemove: () => void;                    // Called when user removes this stop
-  onToggleApplyCorrections: () => void;    // Toggle applyCorrectionsToManual
-  onUpdateStop: (updates: Partial<Stop>) => void;  // Called when stop settings change
-}
-
-function StopRow({
-  stop,
-  generatedColor,
-  correctionsEnabled,
-  wasNudged,
-  effectiveMode,
-  defaultLightness,
-  defaultContrast,
-  colorHueShift,
-  colorSaturationShift,
-  onOverride,
-  onResetOverride,
-  onRemove,
-  onToggleApplyCorrections,
-  onUpdateStop
-}: StopRowProps) {
-  const [showPicker, setShowPicker] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-
-  const displayColor = stop.manualOverride
-    ? oklchToHex(stop.manualOverride)
-    : generatedColor;
-
-  const isOverridden = !!stop.manualOverride;
-  const showNudgeIndicator = !isOverridden && wasNudged;
-
-  // Check if this stop has any overrides set
-  const hasStopOverrides = stop.lightnessOverride !== undefined ||
-    stop.contrastOverride !== undefined ||
-    stop.hueShiftOverride !== undefined ||
-    stop.saturationShiftOverride !== undefined;
-
-  // When user picks a color in the popup, convert hex to OKLCH and call onOverride
-  const handleColorChange = (hex: string) => {
-    const oklch = hexToOklch(hex);
-    onOverride(oklch);
-  };
-
-  return (
-    <div className="stop-row-wrapper">
-      {/* Main row */}
-      <div className="stop-row">
-        {/* Stop number - shows asterisk if manually overridden */}
-        <span className={`stop-number ${hasStopOverrides ? 'stop-number-override' : ''}`}>
-          {stop.number}{isOverridden ? '*' : ''}
-        </span>
-
-        {/* Clickable color swatch with override indicator */}
-        <div
-          onClick={() => setShowPicker(!showPicker)}
-          className="stop-swatch-wrapper"
-        >
-          {/* The color swatch itself */}
-          <div
-            className={`stop-swatch-inner ${isOverridden ? 'override' : ''}`}
-            style={{ backgroundColor: displayColor }}
-          />
-          {/* Small dot indicator for overridden colors */}
-          {isOverridden && <div className="swatch-indicator" />}
-        </div>
-
-        {/* Hex color value with nudge indicator */}
-        <span className="stop-hex">
-          {displayColor.toUpperCase()}
-          {showNudgeIndicator && (
-            <span className="nudge-indicator" title="Auto-adjusted for uniqueness">~</span>
-          )}
-        </span>
-
-        {/* Reset icon - only shown when overridden */}
-        {isOverridden && (
-          <div
-            onClick={(e) => {
-              e.stopPropagation();
-              onResetOverride();
-            }}
-            className="btn-icon"
-            title="Reset to auto-generated color"
-          >
-            <Icon name="revert" />
-          </div>
-        )}
-
-        {/* Apply corrections toggle - only shown when overridden AND global corrections are on */}
-        {isOverridden && correctionsEnabled && (
-          <div
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleApplyCorrections();
-            }}
-            className="mini-checkbox-wrapper"
-            title="Apply HK/BB corrections to this override"
-          >
-            <div className={`mini-checkbox ${stop.applyCorrectionsToManual ? 'checked' : ''}`}>
-              {stop.applyCorrectionsToManual && (
-                <span style={{ color: 'white', fontSize: '9px', fontWeight: 'bold' }}>✓</span>
-              )}
-            </div>
-            <span className="mini-checkbox-label">Correct</span>
-          </div>
-        )}
-
-        {/* Spacer to push buttons to the right */}
-        <div className="flex-1" />
-
-        {/* Settings toggle button */}
-        <div
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowSettings(!showSettings);
-          }}
-          className={`settings-toggle ${showSettings || hasStopOverrides ? 'active' : ''}`}
-          title="Stop-level settings"
-        >
-          {showSettings ? '▼' : '▶'}
-        </div>
-
-        {/* Remove stop button */}
-        <div
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove();
-          }}
-          style={{
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            padding: '2px',
-            borderRadius: '2px',
-            opacity: 0.5,
-          }}
-          title="Remove this stop"
-        >
-          <Icon name="close" />
-        </div>
-
-        {/* Color picker popup */}
-        {showPicker && (
-          <ColorPickerPopup
-            color={displayColor}
-            onChange={handleColorChange}
-            onClose={() => setShowPicker(false)}
-            onReset={isOverridden ? onResetOverride : undefined}
-          />
-        )}
-      </div>
-
-      {/* Expandable Stop-Level Settings */}
-      {showSettings && (
-        <div
-          style={{
-            marginLeft: '40px',
-            padding: '8px',
-            background: 'var(--figma-color-bg-secondary)',
-            borderRadius: '4px',
-            marginTop: '4px',
-            marginBottom: '8px',
-          }}
-        >
-          {/* Lightness/Contrast Override */}
-          <div style={{ marginBottom: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '10px', minWidth: '70px', color: 'var(--figma-color-text-secondary)' }}>
-                {effectiveMode === 'lightness' ? 'Lightness:' : 'Contrast:'}
-              </span>
-              {effectiveMode === 'lightness' ? (
-                <>
-                  <select
-                    value={stop.lightnessOverride === undefined ? 'default' : 'custom'}
-                    onChange={(e) => {
-                      if (e.target.value === 'default') {
-                        onUpdateStop({ lightnessOverride: undefined });
-                      } else {
-                        onUpdateStop({ lightnessOverride: defaultLightness });
-                      }
-                    }}
-                    style={{
-                      padding: '3px 6px',
-                      borderRadius: '3px',
-                      border: '1px solid var(--figma-color-border)',
-                      background: 'var(--figma-color-bg)',
-                      color: 'var(--figma-color-text)',
-                      fontSize: '10px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <option value="default">Default ({defaultLightness.toFixed(2)})</option>
-                    <option value="custom">Custom</option>
-                  </select>
-                  {stop.lightnessOverride !== undefined && (
-                    <RefBasedNumericInput
-                      value={stop.lightnessOverride}
-                      onChange={(val) => onUpdateStop({ lightnessOverride: val })}
-                      min={0}
-                      max={1}
-                      decimals={2}
-                      style={{
-                        width: '50px',
-                        padding: '3px',
-                        border: '1px solid var(--figma-color-border)',
-                        borderRadius: '3px',
-                        fontSize: '10px',
-                        background: 'var(--figma-color-bg)',
-                        color: 'var(--figma-color-text)',
-                      }}
-                    />
-                  )}
-                </>
-              ) : (
-                <>
-                  <select
-                    value={stop.contrastOverride === undefined ? 'default' : 'custom'}
-                    onChange={(e) => {
-                      if (e.target.value === 'default') {
-                        onUpdateStop({ contrastOverride: undefined });
-                      } else {
-                        onUpdateStop({ contrastOverride: defaultContrast });
-                      }
-                    }}
-                    style={{
-                      padding: '3px 6px',
-                      borderRadius: '3px',
-                      border: '1px solid var(--figma-color-border)',
-                      background: 'var(--figma-color-bg)',
-                      color: 'var(--figma-color-text)',
-                      fontSize: '10px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <option value="default">Default ({defaultContrast.toFixed(1)})</option>
-                    <option value="custom">Custom</option>
-                  </select>
-                  {stop.contrastOverride !== undefined && (
-                    <RefBasedNumericInput
-                      value={stop.contrastOverride}
-                      onChange={(val) => onUpdateStop({ contrastOverride: val })}
-                      min={1}
-                      max={21}
-                      decimals={1}
-                      style={{
-                        width: '50px',
-                        padding: '3px',
-                        border: '1px solid var(--figma-color-border)',
-                        borderRadius: '3px',
-                        fontSize: '10px',
-                        background: 'var(--figma-color-bg)',
-                        color: 'var(--figma-color-text)',
-                      }}
-                    />
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Hue Shift Override */}
-          <div style={{ marginBottom: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '10px', minWidth: '70px', color: 'var(--figma-color-text-secondary)' }}>
-                Hue Shift:
-              </span>
-              <select
-                value={stop.hueShiftOverride === undefined ? 'default' : 'custom'}
-                onChange={(e) => {
-                  if (e.target.value === 'default') {
-                    onUpdateStop({ hueShiftOverride: undefined });
-                  } else {
-                    onUpdateStop({ hueShiftOverride: colorHueShift });
-                  }
-                }}
-                style={{
-                  padding: '3px 6px',
-                  borderRadius: '3px',
-                  border: '1px solid var(--figma-color-border)',
-                  background: 'var(--figma-color-bg)',
-                  color: 'var(--figma-color-text)',
-                  fontSize: '10px',
-                  cursor: 'pointer',
-                }}
-              >
-                <option value="default">Use Color ({colorHueShift})</option>
-                <option value="custom">Custom</option>
-              </select>
-              {stop.hueShiftOverride !== undefined && (
-                <>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={stop.hueShiftOverride}
-                    onChange={(e) => onUpdateStop({ hueShiftOverride: parseInt(e.target.value) })}
-                    style={{ flex: 1, cursor: 'pointer' }}
-                  />
-                  <span style={{ fontSize: '10px', minWidth: '24px', textAlign: 'right' }}>
-                    {stop.hueShiftOverride}
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Saturation Shift Override */}
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '10px', minWidth: '70px', color: 'var(--figma-color-text-secondary)' }}>
-                Sat Shift:
-              </span>
-              <select
-                value={stop.saturationShiftOverride === undefined ? 'default' : 'custom'}
-                onChange={(e) => {
-                  if (e.target.value === 'default') {
-                    onUpdateStop({ saturationShiftOverride: undefined });
-                  } else {
-                    onUpdateStop({ saturationShiftOverride: colorSaturationShift });
-                  }
-                }}
-                style={{
-                  padding: '3px 6px',
-                  borderRadius: '3px',
-                  border: '1px solid var(--figma-color-border)',
-                  background: 'var(--figma-color-bg)',
-                  color: 'var(--figma-color-text)',
-                  fontSize: '10px',
-                  cursor: 'pointer',
-                }}
-              >
-                <option value="default">Use Color ({colorSaturationShift})</option>
-                <option value="custom">Custom</option>
-              </select>
-              {stop.saturationShiftOverride !== undefined && (
-                <>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={stop.saturationShiftOverride}
-                    onChange={(e) => onUpdateStop({ saturationShiftOverride: parseInt(e.target.value) })}
-                    style={{ flex: 1, cursor: 'pointer' }}
-                  />
-                  <span style={{ fontSize: '10px', minWidth: '24px', textAlign: 'right' }}>
-                    {stop.saturationShiftOverride}
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Reset all stop overrides */}
-          {hasStopOverrides && (
-            <button
-              onClick={() => onUpdateStop({
-                lightnessOverride: undefined,
-                contrastOverride: undefined,
-                hueShiftOverride: undefined,
-                saturationShiftOverride: undefined,
-              })}
-              style={{
-                marginTop: '8px',
-                padding: '4px 8px',
-                border: '1px solid var(--figma-color-border)',
-                borderRadius: '3px',
-                background: 'var(--figma-color-bg)',
-                color: 'var(--figma-color-text-secondary)',
-                fontSize: '10px',
-                cursor: 'pointer',
-                width: '100%',
-              }}
-            >
-              Reset All Overrides
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ============================================
 // REF-BASED NUMERIC INPUT
-// Uses refs instead of state to be immune to React re-renders while typing
 // ============================================
 interface RefBasedNumericInputProps {
   value: number;
@@ -980,6 +524,7 @@ interface RefBasedNumericInputProps {
   max?: number;
   decimals?: number;
   style?: React.CSSProperties;
+  className?: string;
 }
 
 function RefBasedNumericInput({
@@ -988,12 +533,12 @@ function RefBasedNumericInput({
   min = -Infinity,
   max = Infinity,
   decimals = 1,
-  style
+  style,
+  className
 }: RefBasedNumericInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const isFocusedRef = useRef(false);
 
-  // Only sync value from props when NOT focused
   useEffect(() => {
     if (inputRef.current && !isFocusedRef.current) {
       inputRef.current.value = value.toFixed(decimals);
@@ -1009,7 +554,6 @@ function RefBasedNumericInput({
         onChange(clamped);
         inputRef.current.value = clamped.toFixed(decimals);
       } else {
-        // Invalid input - reset to prop value
         inputRef.current.value = value.toFixed(decimals);
       }
     }
@@ -1024,23 +568,23 @@ function RefBasedNumericInput({
       onBlur={handleBlur}
       onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
       style={style}
+      className={className}
     />
   );
 }
 
 // ============================================
-// GLOBAL SETTINGS PANEL
+// DEFAULTS TABLE (Left Panel)
 // ============================================
-interface GlobalSettingsProps {
+interface DefaultsTableProps {
   settings: GlobalSettings;
   onUpdate: (settings: GlobalSettings) => void;
 }
 
-function GlobalSettingsPanel({ settings, onUpdate }: GlobalSettingsProps) {
-  const [showBgPicker, setShowBgPicker] = useState(false);
-  const [showDefaults, setShowDefaults] = useState(false);
+function DefaultsTable({ settings, onUpdate }: DefaultsTableProps) {
+  const [activeTab, setActiveTab] = useState<'lightness' | 'contrast'>('lightness');
+  const [newStopNumber, setNewStopNumber] = useState('');
 
-  // Get all unique stop numbers from default lightness keys (memoized to prevent re-creation)
   const stopNumbers = useMemo(
     () => Object.keys(settings.defaultLightness)
       .map(Number)
@@ -1048,353 +592,510 @@ function GlobalSettingsPanel({ settings, onUpdate }: GlobalSettingsProps) {
     [settings.defaultLightness]
   );
 
+  const handleAddStop = () => {
+    const num = parseInt(newStopNumber, 10);
+    if (isNaN(num) || num <= 0) return;
+    if (settings.defaultLightness[num] !== undefined) return;
+
+    // Calculate interpolated values based on neighbors
+    const sorted = [...stopNumbers, num].sort((a, b) => a - b);
+    const idx = sorted.indexOf(num);
+
+    let newL = 0.5;
+    let newC = 4.5;
+
+    if (idx > 0 && idx < sorted.length - 1) {
+      // Interpolate between neighbors
+      const prevStop = sorted[idx - 1];
+      const nextStop = sorted[idx + 1];
+      const ratio = (num - prevStop) / (nextStop - prevStop);
+      newL = settings.defaultLightness[prevStop] + ratio * (settings.defaultLightness[nextStop] - settings.defaultLightness[prevStop]);
+      newC = settings.defaultContrast[prevStop] + ratio * (settings.defaultContrast[nextStop] - settings.defaultContrast[prevStop]);
+    } else if (idx === 0 && sorted.length > 1) {
+      newL = settings.defaultLightness[sorted[1]] + 0.05;
+      newC = settings.defaultContrast[sorted[1]] - 0.5;
+    } else if (idx === sorted.length - 1 && sorted.length > 1) {
+      newL = settings.defaultLightness[sorted[sorted.length - 2]] - 0.05;
+      newC = settings.defaultContrast[sorted[sorted.length - 2]] + 1;
+    }
+
+    onUpdate({
+      ...settings,
+      defaultLightness: { ...settings.defaultLightness, [num]: Math.max(0, Math.min(1, newL)) },
+      defaultContrast: { ...settings.defaultContrast, [num]: Math.max(1, Math.min(21, newC)) },
+    });
+    setNewStopNumber('');
+  };
+
   return (
-    <div className="section-card">
-      <div className="section-header">Global Settings</div>
-
-      {/* Background Color */}
-      <div className="form-row">
-        <Label className="form-label">Background:</Label>
-        <ColorSwatch
-          color={settings.backgroundColor}
-          onClick={() => setShowBgPicker(!showBgPicker)}
-          size={24}
-        />
-        <span className="font-mono text-md">{settings.backgroundColor.toUpperCase()}</span>
-        {showBgPicker && (
-          <ColorPickerPopup
-            color={settings.backgroundColor}
-            onChange={(hex) => onUpdate({ ...settings, backgroundColor: hex })}
-            onClose={() => setShowBgPicker(false)}
-          />
-        )}
-      </div>
-
-      {/* Target Toggle */}
-      <div className="form-row">
-        <Label className="form-label">Target:</Label>
-        <select
-          value={settings.mode}
-          onChange={(e) => onUpdate({ ...settings, mode: e.target.value as 'lightness' | 'contrast' })}
-          className="select"
+    <div className="defaults-section">
+      {/* Tab switcher */}
+      <div className="defaults-tabs">
+        <button
+          className={`defaults-tab ${activeTab === 'lightness' ? 'active' : ''}`}
+          onClick={() => setActiveTab('lightness')}
         >
-          <option value="lightness">Lightness</option>
-          <option value="contrast">Contrast</option>
-        </select>
-        <span className="hint-sm">
-          {settings.mode === 'lightness' ? '(OKLCH L value)' : '(WCAG ratio)'}
-        </span>
+          Lightness
+        </button>
+        <button
+          className={`defaults-tab ${activeTab === 'contrast' ? 'active' : ''}`}
+          onClick={() => setActiveTab('contrast')}
+        >
+          Contrast
+        </button>
       </div>
 
-      {/* HK/BB Corrections */}
-      <div className="form-row" style={{ gap: '16px' }}>
-        <Label className="form-label">Corrections:</Label>
-        <label className="checkbox-label">
-          <input
-            type="checkbox"
-            checked={settings.hkCorrection}
-            onChange={(e) => onUpdate({ ...settings, hkCorrection: e.target.checked })}
-          />
-          <span>HK</span>
-        </label>
-        <label className="checkbox-label">
-          <input
-            type="checkbox"
-            checked={settings.bbCorrection}
-            onChange={(e) => onUpdate({ ...settings, bbCorrection: e.target.checked })}
-          />
-          <span>BB</span>
-        </label>
-        <span className="hint-sm">(perceptual adjustments)</span>
-      </div>
-
-      {/* Lightness Expansion */}
-      <div className="form-row">
-        <Label className="form-label">L Expansion:</Label>
-        <input
-          type="range"
-          min="0.5"
-          max="2"
-          step="0.05"
-          value={settings.lightnessExpansion}
-          onChange={(e) => onUpdate({ ...settings, lightnessExpansion: parseFloat(e.target.value) })}
-          className="slider"
-        />
-        <RefBasedNumericInput
-          value={settings.lightnessExpansion}
-          onChange={(val) => onUpdate({ ...settings, lightnessExpansion: val })}
-          min={0.5}
-          max={2}
-          decimals={2}
-          className="input-sm"
-        />
-        <span className="hint" style={{ minWidth: '60px' }}>
-          {settings.lightnessExpansion < 0.95 ? 'Compress' : settings.lightnessExpansion > 1.05 ? 'Spread' : 'Normal'}
-        </span>
-      </div>
-
-      {/* Default Values (expandable) */}
-      <Disclosure
-        label="Default Stop Values"
-        isExpanded={showDefaults}
-        onExpandedChange={setShowDefaults}
-      >
-        <div className="mt-2">
-          <div className="grid-stops grid-stops-header">
-            <span>Stop</span>
-            <span>Lightness</span>
-            <span>Contrast</span>
-          </div>
+      {/* Table */}
+      <table className="defaults-table">
+        <thead>
+          <tr>
+            <th className="stop-col">stop</th>
+            <th className="value-col">{activeTab === 'lightness' ? 'L' : 'C'}</th>
+          </tr>
+        </thead>
+        <tbody>
           {stopNumbers.map((num) => (
-            <div key={num} className="grid-stops mb-1">
-              <span className="text-md text-secondary">{num}</span>
-              <RefBasedNumericInput
-                value={settings.defaultLightness[num] ?? 0.5}
-                onChange={(val) => {
-                  onUpdate({
-                    ...settings,
-                    defaultLightness: { ...settings.defaultLightness, [num]: val },
-                  });
-                }}
-                min={0}
-                max={1}
-                decimals={2}
-                className="input-sm w-full"
-              />
-              <RefBasedNumericInput
-                value={settings.defaultContrast[num] ?? 1}
-                onChange={(val) => {
-                  onUpdate({
-                    ...settings,
-                    defaultContrast: { ...settings.defaultContrast, [num]: val },
-                  });
-                }}
-                min={1}
-                max={21}
-                decimals={2}
-                className="input-sm w-full"
-              />
-            </div>
+            <tr key={num}>
+              <td className="stop-col">{num}</td>
+              <td className="value-col">
+                {activeTab === 'lightness' ? (
+                  <RefBasedNumericInput
+                    value={settings.defaultLightness[num] ?? 0.5}
+                    onChange={(val) => {
+                      onUpdate({
+                        ...settings,
+                        defaultLightness: { ...settings.defaultLightness, [num]: val },
+                      });
+                    }}
+                    min={0}
+                    max={1}
+                    decimals={2}
+                  />
+                ) : (
+                  <RefBasedNumericInput
+                    value={settings.defaultContrast[num] ?? 1}
+                    onChange={(val) => {
+                      onUpdate({
+                        ...settings,
+                        defaultContrast: { ...settings.defaultContrast, [num]: val },
+                      });
+                    }}
+                    min={1}
+                    max={21}
+                    decimals={2}
+                  />
+                )}
+              </td>
+            </tr>
           ))}
-        </div>
-      </Disclosure>
+        </tbody>
+      </table>
+
+      {/* Add Stop */}
+      <div className="flex gap-1 mt-2">
+        <input
+          type="text"
+          value={newStopNumber}
+          onChange={(e) => setNewStopNumber(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleAddStop(); }}
+          placeholder="e.g. 150"
+          className="input-sm"
+          style={{ width: '60px' }}
+        />
+        <button onClick={handleAddStop} className="btn" style={{ padding: '4px 8px', fontSize: '10px' }}>
+          + Add Stop
+        </button>
+      </div>
     </div>
   );
 }
 
 // ============================================
-// COLOR CARD
+// STOP POPUP (Click swatch to edit)
 // ============================================
-interface ColorCardProps {
-  color: Color;
-  globalSettings: GlobalSettings;
-  onUpdate: (color: Color) => void;
-  onRemove: () => void;
+interface StopPopupProps {
+  stop: Stop;
+  stopNumber: number;
+  generatedColor: string;
+  wasNudged: boolean;
+  effectiveMode: 'lightness' | 'contrast';
+  defaultLightness: number;
+  defaultContrast: number;
+  colorHueShift: number;
+  colorSaturationShift: number;
+  backgroundColor: string;
+  position: { x: number; y: number };
+  onUpdate: (updates: Partial<Stop>) => void;
+  onClose: () => void;
 }
 
-function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps) {
-  const [showPicker, setShowPicker] = useState(false);
-  const [stopsExpanded, setStopsExpanded] = useState(true);
-  const [settingsExpanded, setSettingsExpanded] = useState(false);  // Color-level settings
-  const [newStopNumber, setNewStopNumber] = useState('');  // For "Add Stop" input
+function StopPopup({
+  stop,
+  stopNumber,
+  generatedColor,
+  wasNudged,
+  effectiveMode,
+  defaultLightness,
+  defaultContrast,
+  colorHueShift,
+  colorSaturationShift,
+  backgroundColor,
+  position,
+  onUpdate,
+  onClose
+}: StopPopupProps) {
+  const popupRef = useRef<HTMLDivElement>(null);
+  const [showColorPicker, setShowColorPicker] = useState(false);
 
-  // Determine effective settings (color-level overrides global)
-  const effectiveMode = color.modeOverride ?? globalSettings.mode;
-  const effectiveHK = color.hkCorrectionOverride !== undefined
-    ? color.hkCorrectionOverride
-    : globalSettings.hkCorrection;
-  const effectiveBB = color.bbCorrectionOverride !== undefined
-    ? color.bbCorrectionOverride
-    : globalSettings.bbCorrection;
+  const displayColor = stop.manualOverride ? oklchToHex(stop.manualOverride) : generatedColor;
+  const isOverridden = !!stop.manualOverride;
 
-  // Generate all colors using palette generation (handles expansion + uniqueness)
-  const paletteResult = useMemo(() => {
-    return generateColorPalette(color, globalSettings);
-  }, [color, globalSettings]);
+  // Calculate contrast ratio
+  const contrastRatio = getContrastRatio(displayColor, backgroundColor);
 
-  // Map palette results to hex strings for backward compatibility
-  const generatedColors = paletteResult.stops.map(s => s.hex);
-
-  // Handler: when user manually overrides a stop's color
-  const handleStopOverride = (stopIndex: number, newOklch: OKLCH) => {
-    const newStops = [...color.stops];
-    newStops[stopIndex] = {
-      ...newStops[stopIndex],
-      manualOverride: newOklch,
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
+        onClose();
+      }
     };
-    onUpdate({ ...color, stops: newStops });
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose]);
+
+  const handleManualOverride = (hex: string) => {
+    const oklch = hexToOklch(hex);
+    onUpdate({ manualOverride: oklch });
   };
 
-  // Handler: when user resets a stop back to auto-generated
-  const handleResetOverride = (stopIndex: number) => {
-    const newStops = [...color.stops];
-    newStops[stopIndex] = {
-      ...newStops[stopIndex],
+  const handleResetToAuto = () => {
+    onUpdate({
       manualOverride: undefined,
-    };
-    onUpdate({ ...color, stops: newStops });
+      lightnessOverride: undefined,
+      contrastOverride: undefined,
+      hueShiftOverride: undefined,
+      saturationShiftOverride: undefined,
+    });
   };
-
-  // Handler: add a new stop with the given number
-  const handleAddStop = () => {
-    const num = parseInt(newStopNumber, 10);
-
-    // Validate: must be a positive number
-    if (isNaN(num) || num <= 0) {
-      return;
-    }
-
-    // Check if stop already exists
-    if (color.stops.some(s => s.number === num)) {
-      return;  // Stop already exists, don't add duplicate
-    }
-
-    // Create new stop with just the number (no overrides)
-    const newStop: Stop = { number: num };
-
-    // Add to stops array and sort by number (auto-sort)
-    const newStops = [...color.stops, newStop].sort((a, b) => a.number - b.number);
-
-    onUpdate({ ...color, stops: newStops });
-    setNewStopNumber('');  // Clear input
-  };
-
-  // Handler: remove a stop by its index
-  const handleRemoveStop = (stopIndex: number) => {
-    const newStops = color.stops.filter((_, i) => i !== stopIndex);
-    onUpdate({ ...color, stops: newStops });
-  };
-
-  // Handler: toggle applyCorrectionsToManual for a stop
-  const handleToggleApplyCorrections = (stopIndex: number) => {
-    const newStops = [...color.stops];
-    newStops[stopIndex] = {
-      ...newStops[stopIndex],
-      applyCorrectionsToManual: !newStops[stopIndex].applyCorrectionsToManual,
-    };
-    onUpdate({ ...color, stops: newStops });
-  };
-
-  // Handler: update a stop's settings (for Phase 7 stop-level overrides)
-  const handleUpdateStop = (stopIndex: number, updates: Partial<Stop>) => {
-    const newStops = [...color.stops];
-    newStops[stopIndex] = {
-      ...newStops[stopIndex],
-      ...updates,
-    };
-    onUpdate({ ...color, stops: newStops });
-  };
-
-  // Are corrections enabled (using effective values for this color)?
-  const correctionsEnabled = effectiveHK || effectiveBB;
 
   return (
-    <div
-      style={{
-        border: '1px solid var(--figma-color-border)',
-        borderRadius: '6px',
-        padding: '12px',
-        marginBottom: '8px',
-      }}
-    >
-      {/* Header: Label + Remove */}
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-        <Input
-          value={color.label}
-          onChange={(val) => onUpdate({ ...color, label: val })}
-          style={{ flex: 1 }}
-        />
-        <Button onClick={onRemove} isDestructive>
-          Remove
-        </Button>
-      </div>
-
-      {/* Base color */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', position: 'relative' }}>
-        <Label>Base:</Label>
-        <ColorSwatch color={color.baseColor} onClick={() => setShowPicker(!showPicker)} />
-        <span style={{ fontFamily: 'monospace', fontSize: '11px' }}>
-          {color.baseColor.toUpperCase()}
-        </span>
-        {showPicker && (
-          <ColorPickerPopup
-            color={color.baseColor}
-            onChange={(hex) => onUpdate({ ...color, baseColor: hex })}
-            onClose={() => setShowPicker(false)}
-          />
-        )}
-      </div>
-
-      {/* Color-level Settings */}
-      <Disclosure
-        label="Settings"
-        isExpanded={settingsExpanded}
-        onExpandedChange={setSettingsExpanded}
+    <>
+      <div className="popup-backdrop" onClick={onClose} />
+      <div
+        ref={popupRef}
+        className="stop-popup"
+        style={{
+          left: Math.min(position.x, window.innerWidth - 280),
+          top: Math.min(position.y, window.innerHeight - 400),
+        }}
       >
-        <div className="settings-panel">
-          {/* Mode Override */}
-          <div className="settings-row">
-            <span className="settings-label">Mode:</span>
-            <select
-              value={color.modeOverride ?? 'global'}
-              onChange={(e) => {
-                const val = e.target.value;
-                onUpdate({
-                  ...color,
-                  modeOverride: val === 'global' ? undefined : val as 'lightness' | 'contrast',
-                });
-              }}
-              className="select-sm"
-            >
-              <option value="global">Use Global ({globalSettings.mode})</option>
-              <option value="lightness">Lightness</option>
-              <option value="contrast">Contrast</option>
-            </select>
-          </div>
+        {/* Header */}
+        <div className="stop-popup-header">
+          <span className="stop-popup-title">Stop {stopNumber}</span>
+          <span className="stop-popup-close" onClick={onClose}>×</span>
+        </div>
 
-          {/* HK Correction Override */}
-          <div className="settings-row">
-            <span className="settings-label">HK:</span>
-            <select
-              value={color.hkCorrectionOverride === undefined ? 'global' : color.hkCorrectionOverride ? 'on' : 'off'}
-              onChange={(e) => {
-                const val = e.target.value;
-                onUpdate({
-                  ...color,
-                  hkCorrectionOverride: val === 'global' ? undefined : val === 'on',
-                });
-              }}
-              className="select-sm"
-            >
-              <option value="global">Use Global ({globalSettings.hkCorrection ? 'On' : 'Off'})</option>
-              <option value="on">On</option>
-              <option value="off">Off</option>
-            </select>
+        {/* Color Preview */}
+        <div className="stop-popup-preview">
+          <div
+            className="stop-popup-swatch"
+            style={{ backgroundColor: displayColor }}
+            onClick={() => setShowColorPicker(!showColorPicker)}
+          />
+          <div className="stop-popup-info">
+            <div className="stop-popup-hex">
+              {displayColor.toUpperCase()}
+              {wasNudged && !isOverridden && <span className="nudge-indicator">~</span>}
+            </div>
+            <div className="stop-popup-contrast">
+              {contrastRatio.toFixed(2)}:1 contrast
+            </div>
           </div>
+        </div>
 
-          {/* BB Correction Override */}
-          <div className="settings-row mb-3">
-            <span className="settings-label">BB:</span>
-            <select
-              value={color.bbCorrectionOverride === undefined ? 'global' : color.bbCorrectionOverride ? 'on' : 'off'}
-              onChange={(e) => {
-                const val = e.target.value;
-                onUpdate({
-                  ...color,
-                  bbCorrectionOverride: val === 'global' ? undefined : val === 'on',
-                });
-              }}
-              className="select-sm"
-            >
-              <option value="global">Use Global ({globalSettings.bbCorrection ? 'On' : 'Off'})</option>
-              <option value="on">On</option>
-              <option value="off">Off</option>
-            </select>
+        {/* Manual Color Picker */}
+        {showColorPicker && (
+          <div className="mb-3">
+            <ColorPickerPopup
+              color={displayColor}
+              onChange={handleManualOverride}
+              onClose={() => setShowColorPicker(false)}
+              onReset={isOverridden ? () => onUpdate({ manualOverride: undefined }) : undefined}
+            />
           </div>
+        )}
 
-          {/* L Expansion Override */}
-          <div className="settings-row mb-3">
-            <span className="settings-label">L Expand:</span>
+        {/* Lightness/Contrast Override */}
+        <div className="stop-popup-section">
+          <div className="stop-popup-label">
+            {effectiveMode === 'lightness' ? 'Lightness Override' : 'Contrast Override'}
+          </div>
+          <div className="stop-popup-input-row">
+            <select
+              value={
+                (effectiveMode === 'lightness' ? stop.lightnessOverride : stop.contrastOverride) === undefined
+                  ? 'default'
+                  : 'custom'
+              }
+              onChange={(e) => {
+                if (e.target.value === 'default') {
+                  onUpdate(effectiveMode === 'lightness'
+                    ? { lightnessOverride: undefined }
+                    : { contrastOverride: undefined }
+                  );
+                } else {
+                  onUpdate(effectiveMode === 'lightness'
+                    ? { lightnessOverride: defaultLightness }
+                    : { contrastOverride: defaultContrast }
+                  );
+                }
+              }}
+              className="stop-popup-input"
+              style={{ flex: 'none', width: '90px' }}
+            >
+              <option value="default">Default</option>
+              <option value="custom">Custom</option>
+            </select>
+            {effectiveMode === 'lightness' && stop.lightnessOverride !== undefined && (
+              <RefBasedNumericInput
+                value={stop.lightnessOverride}
+                onChange={(val) => onUpdate({ lightnessOverride: val })}
+                min={0}
+                max={1}
+                decimals={2}
+                className="stop-popup-input"
+                style={{ width: '60px' }}
+              />
+            )}
+            {effectiveMode === 'contrast' && stop.contrastOverride !== undefined && (
+              <RefBasedNumericInput
+                value={stop.contrastOverride}
+                onChange={(val) => onUpdate({ contrastOverride: val })}
+                min={1}
+                max={21}
+                decimals={1}
+                className="stop-popup-input"
+                style={{ width: '60px' }}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Hue Shift Override */}
+        <div className="stop-popup-section">
+          <div className="stop-popup-label">Hue Shift Override</div>
+          <div className="stop-popup-input-row">
+            <select
+              value={stop.hueShiftOverride === undefined ? 'default' : 'custom'}
+              onChange={(e) => {
+                if (e.target.value === 'default') {
+                  onUpdate({ hueShiftOverride: undefined });
+                } else {
+                  onUpdate({ hueShiftOverride: colorHueShift });
+                }
+              }}
+              className="stop-popup-input"
+              style={{ flex: 'none', width: '90px' }}
+            >
+              <option value="default">Default ({colorHueShift})</option>
+              <option value="custom">Custom</option>
+            </select>
+            {stop.hueShiftOverride !== undefined && (
+              <>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={stop.hueShiftOverride}
+                  onChange={(e) => onUpdate({ hueShiftOverride: parseInt(e.target.value) })}
+                  style={{ flex: 1 }}
+                />
+                <span style={{ fontSize: '10px', minWidth: '24px' }}>{stop.hueShiftOverride}</span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Saturation Shift Override */}
+        <div className="stop-popup-section">
+          <div className="stop-popup-label">Saturation Shift Override</div>
+          <div className="stop-popup-input-row">
+            <select
+              value={stop.saturationShiftOverride === undefined ? 'default' : 'custom'}
+              onChange={(e) => {
+                if (e.target.value === 'default') {
+                  onUpdate({ saturationShiftOverride: undefined });
+                } else {
+                  onUpdate({ saturationShiftOverride: colorSaturationShift });
+                }
+              }}
+              className="stop-popup-input"
+              style={{ flex: 'none', width: '90px' }}
+            >
+              <option value="default">Default ({colorSaturationShift})</option>
+              <option value="custom">Custom</option>
+            </select>
+            {stop.saturationShiftOverride !== undefined && (
+              <>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={stop.saturationShiftOverride}
+                  onChange={(e) => onUpdate({ saturationShiftOverride: parseInt(e.target.value) })}
+                  style={{ flex: 1 }}
+                />
+                <span style={{ fontSize: '10px', minWidth: '24px' }}>{stop.saturationShiftOverride}</span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Reset Button */}
+        <button onClick={handleResetToAuto} className="stop-popup-reset w-full mt-2">
+          Reset to Auto
+        </button>
+      </div>
+    </>
+  );
+}
+
+// ============================================
+// COLOR SETTINGS POPUP
+// ============================================
+interface ColorSettingsPopupProps {
+  color: Color;
+  globalSettings: GlobalSettings;
+  position: { x: number; y: number };
+  onUpdate: (color: Color) => void;
+  onClose: () => void;
+}
+
+function ColorSettingsPopup({ color, globalSettings, position, onUpdate, onClose }: ColorSettingsPopupProps) {
+  const popupRef = useRef<HTMLDivElement>(null);
+  const [showBasePicker, setShowBasePicker] = useState(false);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose]);
+
+  return (
+    <>
+      <div className="popup-backdrop" onClick={onClose} />
+      <div
+        ref={popupRef}
+        className="color-settings-popup"
+        style={{
+          left: Math.min(position.x, window.innerWidth - 300),
+          top: Math.min(position.y, window.innerHeight - 500),
+        }}
+      >
+        <div className="stop-popup-header">
+          <span className="stop-popup-title">{color.label} Settings</span>
+          <span className="stop-popup-close" onClick={onClose}>×</span>
+        </div>
+
+        {/* Base Color */}
+        <div className="stop-popup-section">
+          <div className="stop-popup-label">Base Color</div>
+          <div className="flex items-center gap-2">
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                backgroundColor: color.baseColor,
+                borderRadius: 4,
+                border: '1px solid var(--figma-color-border)',
+                cursor: 'pointer',
+              }}
+              onClick={() => setShowBasePicker(!showBasePicker)}
+            />
+            <span className="font-mono text-sm">{color.baseColor.toUpperCase()}</span>
+          </div>
+          {showBasePicker && (
+            <div className="mt-2">
+              <ColorPickerPopup
+                color={color.baseColor}
+                onChange={(hex) => onUpdate({ ...color, baseColor: hex })}
+                onClose={() => setShowBasePicker(false)}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Mode Override */}
+        <div className="stop-popup-section">
+          <div className="stop-popup-label">Mode</div>
+          <select
+            value={color.modeOverride ?? 'global'}
+            onChange={(e) => {
+              const val = e.target.value;
+              onUpdate({
+                ...color,
+                modeOverride: val === 'global' ? undefined : val as 'lightness' | 'contrast',
+              });
+            }}
+            className="stop-popup-input w-full"
+          >
+            <option value="global">Use Global ({globalSettings.mode})</option>
+            <option value="lightness">Lightness</option>
+            <option value="contrast">Contrast</option>
+          </select>
+        </div>
+
+        {/* Corrections */}
+        <div className="stop-popup-section">
+          <div className="stop-popup-label">Corrections</div>
+          <div className="flex gap-3">
+            <label className="checkbox-label">
+              <select
+                value={color.hkCorrectionOverride === undefined ? 'global' : color.hkCorrectionOverride ? 'on' : 'off'}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  onUpdate({
+                    ...color,
+                    hkCorrectionOverride: val === 'global' ? undefined : val === 'on',
+                  });
+                }}
+                className="stop-popup-input"
+                style={{ width: '80px' }}
+              >
+                <option value="global">HK: Global</option>
+                <option value="on">HK: On</option>
+                <option value="off">HK: Off</option>
+              </select>
+            </label>
+            <label className="checkbox-label">
+              <select
+                value={color.bbCorrectionOverride === undefined ? 'global' : color.bbCorrectionOverride ? 'on' : 'off'}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  onUpdate({
+                    ...color,
+                    bbCorrectionOverride: val === 'global' ? undefined : val === 'on',
+                  });
+                }}
+                className="stop-popup-input"
+                style={{ width: '80px' }}
+              >
+                <option value="global">BB: Global</option>
+                <option value="on">BB: On</option>
+                <option value="off">BB: Off</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        {/* L Expansion Override */}
+        <div className="stop-popup-section">
+          <div className="stop-popup-label">L Expansion Override</div>
+          <div className="flex items-center gap-2">
             <select
               value={color.lightnessExpansionOverride === undefined ? 'global' : 'custom'}
               onChange={(e) => {
@@ -1404,9 +1105,10 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
                   onUpdate({ ...color, lightnessExpansionOverride: globalSettings.lightnessExpansion });
                 }
               }}
-              className="select-sm"
+              className="stop-popup-input"
+              style={{ width: '90px' }}
             >
-              <option value="global">Use Global ({globalSettings.lightnessExpansion.toFixed(2)})</option>
+              <option value="global">Global</option>
               <option value="custom">Custom</option>
             </select>
             {color.lightnessExpansionOverride !== undefined && (
@@ -1416,142 +1118,355 @@ function ColorCard({ color, globalSettings, onUpdate, onRemove }: ColorCardProps
                 min={0.5}
                 max={2}
                 decimals={2}
-                className="input-sm"
+                className="stop-popup-input"
+                style={{ width: '60px' }}
               />
             )}
           </div>
+        </div>
 
-          {/* Divider */}
-          <div className="divider">
-            <span className="hint-sm">Artistic Shifts</span>
-          </div>
-
-          {/* Hue Shift Slider */}
-          <div className="slider-row">
-            <div className="slider-header">
-              <span className="slider-label">Hue Shift</span>
-              <span className="slider-value">{color.hueShift ?? 0}</span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={color.hueShift ?? 0}
-              onChange={(e) => onUpdate({ ...color, hueShift: parseInt(e.target.value) })}
-              className="slider w-full"
-            />
-            <div className="radio-group">
-              <label className="radio-label">
-                <input
-                  type="radio"
-                  name={`hue-dir-${color.id}`}
-                  checked={(color.hueShiftDirection ?? 'warm-cool') === 'warm-cool'}
-                  onChange={() => onUpdate({ ...color, hueShiftDirection: 'warm-cool' })}
-                />
-                <span>Warm→Cool</span>
-              </label>
-              <label className="radio-label">
-                <input
-                  type="radio"
-                  name={`hue-dir-${color.id}`}
-                  checked={color.hueShiftDirection === 'cool-warm'}
-                  onChange={() => onUpdate({ ...color, hueShiftDirection: 'cool-warm' })}
-                />
-                <span>Cool→Warm</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Saturation Shift Slider */}
-          <div>
-            <div className="slider-header">
-              <span className="slider-label">Saturation Shift</span>
-              <span className="slider-value">{color.saturationShift ?? 0}</span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={color.saturationShift ?? 0}
-              onChange={(e) => onUpdate({ ...color, saturationShift: parseInt(e.target.value) })}
-              className="slider w-full"
-            />
-            <div className="radio-group">
-              <label className="radio-label">
-                <input
-                  type="radio"
-                  name={`sat-dir-${color.id}`}
-                  checked={(color.saturationShiftDirection ?? 'vivid-muted') === 'vivid-muted'}
-                  onChange={() => onUpdate({ ...color, saturationShiftDirection: 'vivid-muted' })}
-                />
-                <span>Vivid→Muted</span>
-              </label>
-              <label className="radio-label">
-                <input
-                  type="radio"
-                  name={`sat-dir-${color.id}`}
-                  checked={color.saturationShiftDirection === 'muted-vivid'}
-                  onChange={() => onUpdate({ ...color, saturationShiftDirection: 'muted-vivid' })}
-                />
-                <span>Muted→Vivid</span>
-              </label>
-            </div>
+        {/* Hue Shift */}
+        <div className="stop-popup-section">
+          <div className="stop-popup-label">Hue Shift: {color.hueShift ?? 0}</div>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={color.hueShift ?? 0}
+            onChange={(e) => onUpdate({ ...color, hueShift: parseInt(e.target.value) })}
+            className="w-full"
+          />
+          <div className="flex gap-2 mt-1">
+            <label className="radio-label text-xs">
+              <input
+                type="radio"
+                checked={(color.hueShiftDirection ?? 'warm-cool') === 'warm-cool'}
+                onChange={() => onUpdate({ ...color, hueShiftDirection: 'warm-cool' })}
+              />
+              Warm→Cool
+            </label>
+            <label className="radio-label text-xs">
+              <input
+                type="radio"
+                checked={color.hueShiftDirection === 'cool-warm'}
+                onChange={() => onUpdate({ ...color, hueShiftDirection: 'cool-warm' })}
+              />
+              Cool→Warm
+            </label>
           </div>
         </div>
-      </Disclosure>
 
-      {/* Warning banner when duplicates were auto-fixed */}
+        {/* Saturation Shift */}
+        <div className="stop-popup-section">
+          <div className="stop-popup-label">Saturation Shift: {color.saturationShift ?? 0}</div>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={color.saturationShift ?? 0}
+            onChange={(e) => onUpdate({ ...color, saturationShift: parseInt(e.target.value) })}
+            className="w-full"
+          />
+          <div className="flex gap-2 mt-1">
+            <label className="radio-label text-xs">
+              <input
+                type="radio"
+                checked={(color.saturationShiftDirection ?? 'vivid-muted') === 'vivid-muted'}
+                onChange={() => onUpdate({ ...color, saturationShiftDirection: 'vivid-muted' })}
+              />
+              Vivid→Muted
+            </label>
+            <label className="radio-label text-xs">
+              <input
+                type="radio"
+                checked={color.saturationShiftDirection === 'muted-vivid'}
+                onChange={() => onUpdate({ ...color, saturationShiftDirection: 'muted-vivid' })}
+              />
+              Muted→Vivid
+            </label>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ============================================
+// COLOR ROW (Horizontal palette row)
+// ============================================
+interface ColorRowProps {
+  color: Color;
+  globalSettings: GlobalSettings;
+  onUpdate: (color: Color) => void;
+  onRemove: () => void;
+}
+
+function ColorRow({ color, globalSettings, onUpdate, onRemove }: ColorRowProps) {
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingsPosition, setSettingsPosition] = useState({ x: 0, y: 0 });
+  const [selectedStop, setSelectedStop] = useState<{ index: number; position: { x: number; y: number } } | null>(null);
+
+  // Generate palette
+  const paletteResult = useMemo(() => {
+    return generateColorPalette(color, globalSettings);
+  }, [color, globalSettings]);
+
+  const effectiveMode = color.modeOverride ?? globalSettings.mode;
+
+  const handleStopClick = (index: number, e: React.MouseEvent) => {
+    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    setSelectedStop({
+      index,
+      position: { x: rect.left, y: rect.bottom + 8 },
+    });
+  };
+
+  const handleSettingsClick = (e: React.MouseEvent) => {
+    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    setSettingsPosition({ x: rect.left - 200, y: rect.bottom + 8 });
+    setShowSettings(true);
+  };
+
+  const handleUpdateStop = (stopIndex: number, updates: Partial<Stop>) => {
+    const newStops = [...color.stops];
+    newStops[stopIndex] = { ...newStops[stopIndex], ...updates };
+    onUpdate({ ...color, stops: newStops });
+  };
+
+  return (
+    <div className="color-row">
+      {/* Header */}
+      <div className="color-row-header">
+        <div className="color-row-label">
+          <input
+            type="text"
+            value={color.label}
+            onChange={(e) => onUpdate({ ...color, label: e.target.value })}
+          />
+          <span className="edit-icon">✏️</span>
+        </div>
+        <div className="color-row-actions">
+          <button onClick={handleSettingsClick}>settings</button>
+          <button className="delete" onClick={onRemove}>delete</button>
+        </div>
+      </div>
+
+      {/* Duplicate warning */}
       {paletteResult.hadDuplicates && (
-        <div className="warning-banner">
-          Some colors were auto-adjusted for uniqueness. Look for ~ markers.
+        <div className="warning-banner mb-2">
+          Some colors were auto-adjusted (~) for uniqueness.
         </div>
       )}
 
-      {/* Stops */}
-      <Disclosure
-        label={`Stops (${color.stops.length})`}
-        isExpanded={stopsExpanded}
-        onExpandedChange={setStopsExpanded}
-      >
-        <div style={{ paddingLeft: '8px' }}>
-          {color.stops.map((stop, i) => (
-            <StopRow
-              key={stop.number}
-              stop={stop}
-              generatedColor={generatedColors[i]}
-              correctionsEnabled={correctionsEnabled}
-              wasNudged={paletteResult.stops[i]?.wasNudged}
-              effectiveMode={effectiveMode}
-              defaultLightness={globalSettings.defaultLightness[stop.number] ?? 0.5}
-              defaultContrast={globalSettings.defaultContrast[stop.number] ?? 4.5}
-              colorHueShift={color.hueShift ?? 0}
-              colorSaturationShift={color.saturationShift ?? 0}
-              onOverride={(oklch) => handleStopOverride(i, oklch)}
-              onResetOverride={() => handleResetOverride(i)}
-              onRemove={() => handleRemoveStop(i)}
-              onToggleApplyCorrections={() => handleToggleApplyCorrections(i)}
-              onUpdateStop={(updates) => handleUpdateStop(i, updates)}
-            />
-          ))}
+      {/* Stop Strip */}
+      <div className="stop-strip">
+        {color.stops.map((stop, i) => {
+          const generatedStop = paletteResult.stops[i];
+          const displayColor = stop.manualOverride
+            ? oklchToHex(stop.manualOverride)
+            : generatedStop?.hex ?? '#808080';
+          const contrastRatio = getContrastRatio(displayColor, globalSettings.backgroundColor);
+          const hasOverride = !!stop.manualOverride ||
+            stop.lightnessOverride !== undefined ||
+            stop.contrastOverride !== undefined ||
+            stop.hueShiftOverride !== undefined ||
+            stop.saturationShiftOverride !== undefined;
 
-          {/* Add Stop: input + button */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
-            <Input
-              value={newStopNumber}
-              onChange={setNewStopNumber}
-              placeholder="e.g. 150"
-              style={{ width: '80px' }}
-              onKeyDown={(e: React.KeyboardEvent) => {
-                if (e.key === 'Enter') handleAddStop();
-              }}
-            />
-            <Button onClick={handleAddStop} isSecondary>
-              + Add Stop
-            </Button>
-          </div>
-        </div>
-      </Disclosure>
+          return (
+            <div
+              key={stop.number}
+              className="stop-strip-item"
+              onClick={(e) => handleStopClick(i, e)}
+            >
+              <span className="stop-strip-number">{stop.number}</span>
+              <div
+                className={`stop-strip-swatch ${hasOverride ? 'has-override' : ''}`}
+                style={{ backgroundColor: displayColor }}
+              />
+              <span className="stop-strip-hex">
+                {displayColor.slice(1, 5).toUpperCase()}
+                {generatedStop?.wasNudged && !stop.manualOverride && '~'}
+              </span>
+              <span className="stop-strip-contrast">{contrastRatio.toFixed(2)}:1</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Stop Popup */}
+      {selectedStop && (
+        <StopPopup
+          stop={color.stops[selectedStop.index]}
+          stopNumber={color.stops[selectedStop.index].number}
+          generatedColor={paletteResult.stops[selectedStop.index]?.hex ?? '#808080'}
+          wasNudged={paletteResult.stops[selectedStop.index]?.wasNudged ?? false}
+          effectiveMode={effectiveMode}
+          defaultLightness={globalSettings.defaultLightness[color.stops[selectedStop.index].number] ?? 0.5}
+          defaultContrast={globalSettings.defaultContrast[color.stops[selectedStop.index].number] ?? 4.5}
+          colorHueShift={color.hueShift ?? 0}
+          colorSaturationShift={color.saturationShift ?? 0}
+          backgroundColor={globalSettings.backgroundColor}
+          position={selectedStop.position}
+          onUpdate={(updates) => handleUpdateStop(selectedStop.index, updates)}
+          onClose={() => setSelectedStop(null)}
+        />
+      )}
+
+      {/* Color Settings Popup */}
+      {showSettings && (
+        <ColorSettingsPopup
+          color={color}
+          globalSettings={globalSettings}
+          position={settingsPosition}
+          onUpdate={onUpdate}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
     </div>
+  );
+}
+
+// ============================================
+// LEFT PANEL
+// ============================================
+interface LeftPanelProps {
+  settings: GlobalSettings;
+  onUpdate: (settings: GlobalSettings) => void;
+  onExport: () => void;
+}
+
+function LeftPanel({ settings, onUpdate, onExport }: LeftPanelProps) {
+  const [showBgPicker, setShowBgPicker] = useState(false);
+
+  return (
+    <div className="left-panel">
+      {/* Background Color */}
+      <div className="bg-color-section">
+        <div className="bg-color-row">
+          <span className="bg-color-label">Bg color</span>
+          <div
+            className="bg-color-swatch"
+            style={{ backgroundColor: settings.backgroundColor }}
+            onClick={() => setShowBgPicker(!showBgPicker)}
+          />
+          <input
+            type="text"
+            value={settings.backgroundColor}
+            onChange={(e) => {
+              if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+                onUpdate({ ...settings, backgroundColor: e.target.value });
+              }
+            }}
+            className="bg-color-hex"
+          />
+        </div>
+        {showBgPicker && (
+          <div className="relative">
+            <ColorPickerPopup
+              color={settings.backgroundColor}
+              onChange={(hex) => onUpdate({ ...settings, backgroundColor: hex })}
+              onClose={() => setShowBgPicker(false)}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Defaults Table */}
+      <DefaultsTable settings={settings} onUpdate={onUpdate} />
+
+      {/* Global Settings */}
+      <div className="global-settings-section">
+        <div className="section-title">Global settings</div>
+        <div className="toggle-row">
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={settings.hkCorrection}
+              onChange={(e) => onUpdate({ ...settings, hkCorrection: e.target.checked })}
+            />
+            <span className="text-sm">HK</span>
+          </label>
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={settings.bbCorrection}
+              onChange={(e) => onUpdate({ ...settings, bbCorrection: e.target.checked })}
+            />
+            <span className="text-sm">BB</span>
+          </label>
+        </div>
+      </div>
+
+      {/* L Expansion */}
+      <div className="expansion-slider-row">
+        <div className="expansion-label">
+          <span>L expansion</span>
+          <span className="expansion-value">
+            {settings.lightnessExpansion < 0.95 ? 'Compress' : settings.lightnessExpansion > 1.05 ? 'Spread' : 'Normal'}
+          </span>
+        </div>
+        <input
+          type="range"
+          min="0.5"
+          max="2"
+          step="0.05"
+          value={settings.lightnessExpansion}
+          onChange={(e) => onUpdate({ ...settings, lightnessExpansion: parseFloat(e.target.value) })}
+          className="w-full"
+        />
+      </div>
+
+      {/* Export Button */}
+      <button onClick={onExport} className="export-btn">
+        export
+      </button>
+    </div>
+  );
+}
+
+// ============================================
+// RESIZE HANDLE (for resizable plugin window)
+// ============================================
+function ResizeHandle() {
+  const handleRef = useRef<SVGSVGElement>(null);
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    const handle = handleRef.current;
+    if (!handle) return;
+
+    handle.setPointerCapture(e.pointerId);
+
+    const onPointerMove = (moveEvent: PointerEvent) => {
+      const width = Math.max(300, Math.floor(moveEvent.clientX + 5));
+      const height = Math.max(200, Math.floor(moveEvent.clientY + 5));
+      parent.postMessage(
+        { pluginMessage: { type: 'resize', width, height } },
+        '*'
+      );
+    };
+
+    const onPointerUp = () => {
+      handle.removeEventListener('pointermove', onPointerMove);
+      handle.removeEventListener('pointerup', onPointerUp);
+    };
+
+    handle.addEventListener('pointermove', onPointerMove);
+    handle.addEventListener('pointerup', onPointerUp);
+  };
+
+  return (
+    <svg
+      ref={handleRef}
+      className="resize-handle"
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      onPointerDown={handlePointerDown}
+    >
+      <path d="M16 0V16H0L16 0Z" fill="var(--figma-color-bg, white)" />
+      <path d="M6.22577 16H3L16 3V6.22576L6.22577 16Z" fill="var(--figma-color-border, #8C8C8C)" />
+      <path d="M11.8602 16H8.63441L16 8.63441V11.8602L11.8602 16Z" fill="var(--figma-color-border, #8C8C8C)" />
+    </svg>
   );
 }
 
@@ -1608,42 +1523,52 @@ function App() {
     );
   };
 
+  const handleClose = () => {
+    parent.postMessage({ pluginMessage: { type: 'close' } }, '*');
+  };
+
   return (
-    <div className="app-container">
-      <h2 className="app-title">Octarine</h2>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      {/* Header */}
+      <div className="app-header">
+        <span className="app-header-title">Octarine</span>
+        <span className="app-header-close" onClick={handleClose}>×</span>
+      </div>
 
-      {/* Global Settings */}
-      <GlobalSettingsPanel
-        settings={globalSettings}
-        onUpdate={setGlobalSettings}
-      />
+      {/* Main Layout */}
+      <div className="app-layout">
+        {/* Left Panel */}
+        <LeftPanel
+          settings={globalSettings}
+          onUpdate={setGlobalSettings}
+          onExport={createVariables}
+        />
 
-      {/* Colors list */}
-      {colors.length === 0 ? (
-        <p className="empty-state">No colors yet. Add one to get started.</p>
-      ) : (
-        colors.map((color, i) => (
-          <ColorCard
-            key={color.id}
-            color={color}
-            globalSettings={globalSettings}
-            onUpdate={(c) => updateColor(i, c)}
-            onRemove={() => removeColor(i)}
-          />
-        ))
-      )}
+        {/* Right Panel */}
+        <div className="right-panel">
+          {colors.length === 0 ? (
+            <p className="empty-state p-4">No colors yet. Add one to get started.</p>
+          ) : (
+            colors.map((color, i) => (
+              <ColorRow
+                key={color.id}
+                color={color}
+                globalSettings={globalSettings}
+                onUpdate={(c) => updateColor(i, c)}
+                onRemove={() => removeColor(i)}
+              />
+            ))
+          )}
 
-      {/* Add color button */}
-      <Button onClick={addColor} className="mb-4">
-        + Add Color
-      </Button>
+          {/* Add Color Button */}
+          <button onClick={addColor} className="add-color-btn">
+            + Add Color
+          </button>
+        </div>
+      </div>
 
-      {/* Create variables button */}
-      {colors.length > 0 && (
-        <Button onClick={createVariables} isSecondary>
-          Create Figma Variables
-        </Button>
-      )}
+      {/* Resize handle for plugin window */}
+      <ResizeHandle />
     </div>
   );
 }

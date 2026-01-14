@@ -1,12 +1,19 @@
-figma-plugin-plan.md
-CLAUDE.md
+# Dependencies
 node_modules/
-tranquil-hopping-starfish.md
-INPUT_BUG_DEBUG.md
 
 # Build outputs
 code.js
+ui.html
 ui.js
 ui.js.css
-ui.css
-ui.html
+
+# Claude Code internal files
+.claude/
+
+# macOS
+.DS_Store
+
+# Project notes (not needed in repo)
+figma-plugin-plan.md
+CLAUDE.md
+INPUT_BUG_DEBUG.md

@@ -7,7 +7,7 @@ import { Color, GlobalSettings } from './lib/types';
 // Show the plugin UI
 // The size can be adjusted later based on UI needs
 figma.showUI(__html__, {
-  width: 400,
+  width: 700,
   height: 500,
   themeColors: true  // Use Figma's theme colors
 });
@@ -18,6 +18,11 @@ figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
   switch (msg.type) {
     case 'close':
       figma.closePlugin();
+      break;
+
+    case 'resize':
+      // Resize the plugin window (UI can request this)
+      figma.ui.resize(msg.width as number, msg.height as number);
       break;
 
     case 'notify':
