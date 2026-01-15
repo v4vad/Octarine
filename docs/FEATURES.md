@@ -225,10 +225,6 @@ When BB Correction is enabled:
 
 *Tip: Double-click a toggle to reset it to the global setting.*
 
-### Lightness Expansion Override
-
-Override the global expansion setting for just this color. See [Global Settings](#global-settings) for more about expansion.
-
 ---
 
 ## Global Settings
@@ -262,20 +258,6 @@ Turn on Bezold-Brücke correction for all colors. This adjusts for the fact that
 **What the correction does:** Shifts the hue at each lightness level to counteract our eye's natural shift, keeping the color looking consistent from light to dark.
 
 Individual colors can override this setting if needed.
-
-### Lightness Expansion
-
-A slider from 0.5 to 2.0 that controls how "spread out" your colors are:
-
-| Value | Effect |
-|-------|--------|
-| 0.5   | Colors compress toward middle gray |
-| 1.0   | No change (default) |
-| 1.5   | Light colors get lighter, dark colors get darker |
-| 2.0   | Maximum spread |
-
-**Why use expansion?**
-When generating subtle color variations, the mathematical differences can be so small that multiple stops end up with identical hex codes. Expansion spreads them apart to create distinct colors.
 
 ---
 
@@ -403,8 +385,8 @@ Once exported, your colors appear in Figma's Variables panel. You can:
 ## Troubleshooting
 
 ### Colors look identical
-- Try increasing the Lightness Expansion slider
-- The plugin will automatically adjust duplicates (marked with ~)
+- The plugin automatically adjusts duplicates to make them unique (marked with ~)
+- This uses smart nudging: first tries hue shifts, then chroma, then lightness
 
 ### Colors look too bright/dim
 - Enable HK Correction in Global Settings

@@ -626,34 +626,6 @@ export function applyPerceptualCorrections(
 }
 
 // ============================================
-// LIGHTNESS EXPANSION (Phase 8)
-// ============================================
-
-/**
- * Apply Lightness Expansion
- *
- * Spreads colors away from mid-lightness (0.5):
- * - factor = 1.0: No change
- * - factor > 1.0: Lights become lighter, darks become darker
- * - factor < 1.0: All colors compress toward middle gray
- *
- * Formula: expandedL = 0.5 + (originalL - 0.5) * factor
- *
- * @param lightness - Original lightness value (0-1)
- * @param factor - Expansion factor (0.5 to 2.0 typical)
- * @returns Expanded lightness, clamped to 0-1
- */
-export function applyLightnessExpansion(lightness: number, factor: number): number {
-  if (factor === 1.0) return lightness
-
-  // Expand around the midpoint (0.5)
-  const expandedL = 0.5 + (lightness - 0.5) * factor
-
-  // Clamp to valid range
-  return Math.max(0, Math.min(1, expandedL))
-}
-
-// ============================================
 // DUPLICATE COLOR DETECTION & NUDGING (Phase 8)
 // ============================================
 
@@ -882,11 +854,8 @@ export function ensureUniqueHexColors(
  * Generate Color Palette
  *
  * Generates all stops for a color at once, applying:
- * 1. Lightness expansion
- * 2. All existing transformations (hue shift, chroma shift, corrections)
- * 3. Duplicate detection and nudging
- *
- * This replaces per-stop generation when uniqueness matters.
+ * 1. All transformations (hue shift, chroma shift, corrections)
+ * 2. Duplicate detection and smart nudging (hue → chroma → lightness)
  *
  * @returns PaletteResult with all generated stops and metadata
  */
@@ -900,7 +869,6 @@ export function generateColorPalette(
   const effectiveMethod = color.methodOverride ?? globalSettings.method
   const effectiveHK = color.hkCorrectionOverride ?? globalSettings.hkCorrection
   const effectiveBB = color.bbCorrectionOverride ?? globalSettings.bbCorrection
-  const effectiveExpansion = color.lightnessExpansionOverride ?? globalSettings.lightnessExpansion
   const bgOklch = hexToOklch(globalSettings.backgroundColor)
 
   // First pass: generate all colors with expansion
@@ -944,10 +912,6 @@ export function generateColorPalette(
     }
 
     const originalL = targetL
-
-    // Apply lightness expansion
-    const expandedL = applyLightnessExpansion(targetL, effectiveExpansion)
-    targetL = expandedL
 
     // Apply chroma reduction for very light/dark colors (gamut mapping)
     let targetC = baseOklch.c
@@ -1009,7 +973,7 @@ export function generateColorPalette(
       c: result.c,
       h: result.h,
       originalL,
-      expandedL,
+      expandedL: originalL,  // No expansion - same as original
       isManualOverride: false,
       targetContrast: stopTargetContrast  // Pass target contrast for smart nudging
     }

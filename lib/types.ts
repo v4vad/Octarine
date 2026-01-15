@@ -95,9 +95,6 @@ export type Color = {
   saturationShift?: number                              // 0-100
   saturationShiftDirection?: "vivid-muted" | "muted-vivid"  // Default: vivid-muted
 
-  // Override lightness expansion for this color
-  lightnessExpansionOverride?: number
-
   // Array of stops for this color
   stops: Stop[]
 }
@@ -114,10 +111,6 @@ export type GlobalSettings = {
   // Default lightness/contrast values per stop number
   defaultLightness: Record<number, number>
   defaultContrast: Record<number, number>
-
-  // Lightness expansion: spreads lights lighter, darks darker
-  // 1.0 = no change, >1.0 = expand, <1.0 = compress
-  lightnessExpansion: number
 }
 
 // ============================================
@@ -172,6 +165,5 @@ export function createDefaultGlobalSettings(): GlobalSettings {
     bbCorrection: false,
     defaultLightness: { ...DEFAULT_LIGHTNESS },
     defaultContrast: { ...DEFAULT_CONTRAST },
-    lightnessExpansion: 1.0  // No expansion by default
   }
 }

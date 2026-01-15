@@ -489,12 +489,6 @@
   margin-bottom: var(--space-3);
 }
 
-/* Nudge indicator */
-.nudge-indicator {
-  color: var(--figma-color-text-warning);
-  margin-left: 2px;
-}
-
 /* --------------------------------------------
    COLOR PREVIEW
    -------------------------------------------- */
@@ -608,8 +602,8 @@
    WARNING BANNER
    -------------------------------------------- */
 .warning-banner {
-  background-color: var(--figma-color-bg-warning);
-  color: var(--figma-color-text-warning);
+  background-color: #2d2d2d;
+  color: #fbbf24;
   padding: var(--space-2);
   border-radius: var(--radius-md);
   font-size: var(--text-md);
@@ -763,6 +757,43 @@
 
 .toggle-switch.on .toggle-thumb {
   left: 14px;
+}
+
+/* --------------------------------------------
+   METHOD TOGGLE (Lightness / Contrast)
+   -------------------------------------------- */
+.method-toggle {
+  display: flex;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--figma-color-border);
+}
+
+.method-toggle-btn {
+  flex: 1;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  border: none;
+  background: var(--figma-color-bg);
+  color: var(--figma-color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.method-toggle-btn:first-child {
+  border-right: 1px solid var(--figma-color-border);
+}
+
+.method-toggle-btn:hover:not(.active) {
+  background: var(--figma-color-bg-hover);
+}
+
+.method-toggle-btn.active {
+  background: var(--figma-color-bg-tertiary, #e5e5e5);
+  color: var(--figma-color-text);
+  font-weight: 600;
 }
 
 /* --------------------------------------------
@@ -1082,7 +1113,7 @@
 /* Stop strip - horizontal row of swatches */
 .stop-strip {
   display: flex;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
 .stop-strip-item {
@@ -1091,6 +1122,9 @@
   align-items: center;
   cursor: pointer;
   transition: transform var(--transition-fast);
+  flex: 1;
+  min-width: 36px;
+  max-width: 56px;
 }
 
 .stop-strip-item:hover {
@@ -1104,15 +1138,24 @@
 }
 
 .stop-strip-swatch {
-  width: 32px;
-  height: 32px;
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 48px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--figma-color-border);
   margin-bottom: 2px;
 }
 
 .stop-strip-swatch.has-override {
-  border: 2px solid var(--figma-color-text-brand);
+  border: 3px solid #000;
+  outline: 2px solid #fff;
+  outline-offset: -5px;
+}
+
+.stop-strip-swatch.was-nudged {
+  border: 3px dashed #000;
+  outline: 2px solid #fff;
+  outline-offset: -5px;
 }
 
 .stop-strip-hex {

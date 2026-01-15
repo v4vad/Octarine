@@ -574,6 +574,33 @@ function Toggle({ label, checked, onChange, onReset }: ToggleProps) {
 }
 
 // ============================================
+// METHOD TOGGLE (Lightness / Contrast)
+// ============================================
+interface MethodToggleProps {
+  method: 'lightness' | 'contrast';
+  onChange: (method: 'lightness' | 'contrast') => void;
+}
+
+function MethodToggle({ method, onChange }: MethodToggleProps) {
+  return (
+    <div className="method-toggle">
+      <button
+        className={`method-toggle-btn ${method === 'lightness' ? 'active' : ''}`}
+        onClick={() => onChange('lightness')}
+      >
+        Lightness
+      </button>
+      <button
+        className={`method-toggle-btn ${method === 'contrast' ? 'active' : ''}`}
+        onClick={() => onChange('contrast')}
+      >
+        Contrast
+      </button>
+    </div>
+  );
+}
+
+// ============================================
 // REF-BASED NUMERIC INPUT
 // ============================================
 interface RefBasedNumericInputProps {
@@ -689,24 +716,22 @@ function DefaultsTable({ settings, onUpdate }: DefaultsTableProps) {
 
   return (
     <div className="defaults-section">
+      {/* Method toggle above table */}
+      <MethodToggle
+        method={settings.method}
+        onChange={(method) => onUpdate({ ...settings, method })}
+      />
+
       {/* Table with both columns */}
       <table className="defaults-table dual-column">
         <thead>
           <tr>
             <th className="stop-col">stop</th>
-            <th
-              className={`value-col clickable ${isLightnessActive ? 'active' : 'inactive'}`}
-              onClick={() => onUpdate({ ...settings, method: 'lightness' })}
-              title="Click to use Lightness method"
-            >
-              L
+            <th className={`value-col ${isLightnessActive ? '' : 'inactive'}`}>
+              Lightness
             </th>
-            <th
-              className={`value-col clickable ${!isLightnessActive ? 'active' : 'inactive'}`}
-              onClick={() => onUpdate({ ...settings, method: 'contrast' })}
-              title="Click to use Contrast method"
-            >
-              C
+            <th className={`value-col ${!isLightnessActive ? '' : 'inactive'}`}>
+              Contrast
             </th>
           </tr>
         </thead>
@@ -861,7 +886,6 @@ function StopPopup({
           <div className="stop-popup-info">
             <div className="stop-popup-hex">
               {displayColor.toUpperCase()}
-              {wasNudged && !isOverridden && <span className="nudge-indicator">~</span>}
               {isOverridden && <span className="override-indicator"> (Override)</span>}
             </div>
             <div className="stop-popup-contrast">
@@ -1079,36 +1103,6 @@ function ColorSettingsPopup({ color, globalSettings, position, onUpdate, onClose
           </div>
         </div>
 
-        {/* L Expansion Override */}
-        <div className="stop-popup-section">
-          <div className="stop-popup-label">
-            L Expansion {color.lightnessExpansionOverride === undefined ? '(Global)' : '(Override)'}
-          </div>
-          <div className="l-expansion-controls">
-            <RefBasedNumericInput
-              value={color.lightnessExpansionOverride ?? globalSettings.lightnessExpansion}
-              onChange={(val) => onUpdate({ ...color, lightnessExpansionOverride: val })}
-              min={0.5}
-              max={2}
-              decimals={2}
-              className="stop-popup-input"
-              style={{ width: '60px' }}
-            />
-            {color.lightnessExpansionOverride !== undefined && (
-              <button
-                className="reset-icon-btn"
-                onClick={() => onUpdate({ ...color, lightnessExpansionOverride: undefined })}
-                title="Reset to global"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                  <path d="M3 3v5h5"/>
-                </svg>
-              </button>
-            )}
-          </div>
-        </div>
-
         {/* Hue Shift */}
         <div className="stop-popup-section">
           <div className="stop-popup-label">Hue Shift: {color.hueShift ?? 0}</div>
@@ -1263,7 +1257,7 @@ function ColorRow({ color, globalSettings, onUpdate, onRemove }: ColorRowProps) 
       {/* Duplicate warning */}
       {paletteResult.hadDuplicates && (
         <div className="warning-banner mb-2">
-          Some colors were auto-adjusted (~) for uniqueness.
+          Some colors were auto-adjusted for uniqueness.
         </div>
       )}
 
@@ -1281,6 +1275,8 @@ function ColorRow({ color, globalSettings, onUpdate, onRemove }: ColorRowProps) 
             stop.hueShiftOverride !== undefined ||
             stop.saturationShiftOverride !== undefined;
 
+          const isNudged = generatedStop?.wasNudged && !stop.manualOverride;
+
           return (
             <div
               key={stop.number}
@@ -1289,12 +1285,11 @@ function ColorRow({ color, globalSettings, onUpdate, onRemove }: ColorRowProps) 
             >
               <span className="stop-strip-number">{stop.number}</span>
               <div
-                className={`stop-strip-swatch ${hasOverride ? 'has-override' : ''}`}
+                className={`stop-strip-swatch ${hasOverride ? 'has-override' : ''} ${isNudged ? 'was-nudged' : ''}`}
                 style={{ backgroundColor: displayColor }}
               />
               <span className="stop-strip-hex">
                 {displayColor.slice(1, 7).toUpperCase()}
-                {generatedStop?.wasNudged && !stop.manualOverride && '~'}
               </span>
               <span className="stop-strip-contrast">{contrastRatio.toFixed(2)}:1</span>
             </div>
@@ -1469,32 +1464,6 @@ function LeftPanel({ settings, onUpdate, onExport }: LeftPanelProps) {
             label="BB"
             checked={settings.bbCorrection}
             onChange={(val) => onUpdate({ ...settings, bbCorrection: val })}
-          />
-        </div>
-      </div>
-
-      {/* L Expansion */}
-      <div className="expansion-slider-row">
-        <div className="expansion-label">
-          <span>L expansion</span>
-        </div>
-        <div className="expansion-controls">
-          <input
-            type="range"
-            min="0.5"
-            max="2"
-            step="0.05"
-            value={settings.lightnessExpansion}
-            onChange={(e) => onUpdate({ ...settings, lightnessExpansion: parseFloat(e.target.value) })}
-            className="expansion-slider"
-          />
-          <RefBasedNumericInput
-            value={settings.lightnessExpansion}
-            onChange={(val) => onUpdate({ ...settings, lightnessExpansion: val })}
-            min={0.5}
-            max={2}
-            decimals={2}
-            className="expansion-input"
           />
         </div>
       </div>

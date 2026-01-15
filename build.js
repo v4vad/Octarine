@@ -32,8 +32,11 @@ async function build() {
   // Read the compiled JavaScript
   const uiJs = fs.readFileSync('ui.js.tmp', 'utf8');
 
-  // Read CSS files
-  const figmaPluginCSS = fs.readFileSync('ui.css', 'utf8');
+  // Read CSS files - always use fresh copy from node_modules
+  const figmaPluginCSS = fs.readFileSync(
+    path.join(__dirname, 'node_modules/react-figma-plugin-ds/figma-plugin-ds.css'),
+    'utf8'
+  );
   const customCSS = fs.readFileSync('styles.css', 'utf8');
   console.log('Read CSS files');
 

@@ -4,7 +4,7 @@
   "description": "Figma plugin for generating color systems with OKLCH support",
   "scripts": {
     "build": "node build.js",
-    "watch": "nodemon --watch code.ts --watch ui.tsx --watch 'lib/**/*' --exec 'npm run build'",
+    "watch": "nodemon --watch code.ts --watch ui.tsx --watch styles.css --watch 'lib/**/*' --exec 'npm run build'",
     "typecheck": "tsc --noEmit",
     "validate": "npm run typecheck && npm run build && node -e \"const fs=require('fs'); if(!fs.existsSync('code.js')||!fs.existsSync('ui.html')){console.error('Build outputs missing!');process.exit(1);} console.log('✓ Validation passed: All checks successful');\"",
     "prepare": "husky"
