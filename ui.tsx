@@ -387,19 +387,36 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
         </>
       )}
 
-      <button
-        onClick={() => parent.postMessage({ pluginMessage: { type: 'get-selection-color' } }, '*')}
-        className="btn btn-full mt-2"
-      >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="12" cy="12" r="4"/>
-          <line x1="12" y1="2" x2="12" y2="6"/>
-          <line x1="12" y1="18" x2="12" y2="22"/>
-          <line x1="2" y1="12" x2="6" y2="12"/>
-          <line x1="18" y1="12" x2="22" y2="12"/>
-        </svg>
-        Pick from selection
-      </button>
+      <div className="picker-action-row">
+        <button
+          onClick={() => parent.postMessage({ pluginMessage: { type: 'get-selection-color' } }, '*')}
+          className="btn btn-full"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="4"/>
+            <line x1="12" y1="2" x2="12" y2="6"/>
+            <line x1="12" y1="18" x2="12" y2="22"/>
+            <line x1="2" y1="12" x2="6" y2="12"/>
+            <line x1="18" y1="12" x2="22" y2="12"/>
+          </svg>
+          Pick from selection
+        </button>
+        {onReset && (
+          <button
+            onClick={() => {
+              onReset();
+              onClose();
+            }}
+            className="reset-icon-btn"
+            title="Reset to auto"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+            </svg>
+          </button>
+        )}
+      </div>
 
       <div className="mt-3">
         {activeTab === 'hex' && (
@@ -497,20 +514,34 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
         <div className="color-preview-swatch" style={{ backgroundColor: hex }} />
         <span className="color-preview-hex">{hex}</span>
       </div>
-
-      {onReset && (
-        <Button
-          onClick={() => {
-            onReset();
-            onClose();
-          }}
-          isSecondary
-          className="mt-3 w-full"
-        >
-          Reset to Auto
-        </Button>
-      )}
     </div>
+  );
+}
+
+// ============================================
+// CONFIRM MODAL
+// ============================================
+interface ConfirmModalProps {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function ConfirmModal({ title, message, confirmLabel = 'Delete', onConfirm, onCancel }: ConfirmModalProps) {
+  return (
+    <>
+      <div className="modal-backdrop" onClick={onCancel} />
+      <div className="confirm-modal">
+        <div className="confirm-modal-title">{title}</div>
+        <div className="confirm-modal-message">{message}</div>
+        <div className="confirm-modal-actions">
+          <button className="btn-secondary" onClick={onCancel}>Cancel</button>
+          <button className="btn-danger" onClick={onConfirm}>{confirmLabel}</button>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -831,6 +862,7 @@ function StopPopup({
             <div className="stop-popup-hex">
               {displayColor.toUpperCase()}
               {wasNudged && !isOverridden && <span className="nudge-indicator">~</span>}
+              {isOverridden && <span className="override-indicator"> (Override)</span>}
             </div>
             <div className="stop-popup-contrast">
               {contrastRatio.toFixed(2)}:1 contrast
@@ -853,125 +885,99 @@ function StopPopup({
         {/* Lightness/Contrast Override */}
         <div className="stop-popup-section">
           <div className="stop-popup-label">
-            {effectiveMethod === 'lightness' ? 'Lightness Override' : 'Contrast Override'}
+            {effectiveMethod === 'lightness' ? 'Lightness' : 'Contrast'}
+            {(effectiveMethod === 'lightness' ? stop.lightnessOverride : stop.contrastOverride) === undefined
+              ? ' (Default)' : ' (Override)'}
           </div>
-          <div className="stop-popup-input-row">
-            <select
-              value={
-                (effectiveMethod === 'lightness' ? stop.lightnessOverride : stop.contrastOverride) === undefined
-                  ? 'default'
-                  : 'custom'
-              }
-              onChange={(e) => {
-                if (e.target.value === 'default') {
-                  onUpdate(effectiveMethod === 'lightness'
-                    ? { lightnessOverride: undefined }
-                    : { contrastOverride: undefined }
-                  );
-                } else {
-                  onUpdate(effectiveMethod === 'lightness'
-                    ? { lightnessOverride: defaultLightness }
-                    : { contrastOverride: defaultContrast }
-                  );
-                }
-              }}
+          <div className="stop-override-controls">
+            <RefBasedNumericInput
+              value={effectiveMethod === 'lightness'
+                ? (stop.lightnessOverride ?? defaultLightness)
+                : (stop.contrastOverride ?? defaultContrast)}
+              onChange={(val) => onUpdate(effectiveMethod === 'lightness'
+                ? { lightnessOverride: val }
+                : { contrastOverride: val }
+              )}
+              min={effectiveMethod === 'lightness' ? 0 : 1}
+              max={effectiveMethod === 'lightness' ? 1 : 21}
+              decimals={effectiveMethod === 'lightness' ? 2 : 1}
               className="stop-popup-input"
-              style={{ flex: 'none', width: '90px' }}
-            >
-              <option value="default">Default</option>
-              <option value="custom">Custom</option>
-            </select>
-            {effectiveMethod === 'lightness' && stop.lightnessOverride !== undefined && (
-              <RefBasedNumericInput
-                value={stop.lightnessOverride}
-                onChange={(val) => onUpdate({ lightnessOverride: val })}
-                min={0}
-                max={1}
-                decimals={2}
-                className="stop-popup-input"
-                style={{ width: '60px' }}
-              />
-            )}
-            {effectiveMethod === 'contrast' && stop.contrastOverride !== undefined && (
-              <RefBasedNumericInput
-                value={stop.contrastOverride}
-                onChange={(val) => onUpdate({ contrastOverride: val })}
-                min={1}
-                max={21}
-                decimals={1}
-                className="stop-popup-input"
-                style={{ width: '60px' }}
-              />
+              style={{ width: '60px' }}
+            />
+            {(effectiveMethod === 'lightness' ? stop.lightnessOverride : stop.contrastOverride) !== undefined && (
+              <button
+                className="reset-icon-btn"
+                onClick={() => onUpdate(effectiveMethod === 'lightness'
+                  ? { lightnessOverride: undefined }
+                  : { contrastOverride: undefined }
+                )}
+                title="Reset to default"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                  <path d="M3 3v5h5"/>
+                </svg>
+              </button>
             )}
           </div>
         </div>
 
         {/* Hue Shift Override */}
         <div className="stop-popup-section">
-          <div className="stop-popup-label">Hue Shift Override</div>
-          <div className="stop-popup-input-row">
-            <select
-              value={stop.hueShiftOverride === undefined ? 'default' : 'custom'}
-              onChange={(e) => {
-                if (e.target.value === 'default') {
-                  onUpdate({ hueShiftOverride: undefined });
-                } else {
-                  onUpdate({ hueShiftOverride: colorHueShift });
-                }
-              }}
-              className="stop-popup-input"
-              style={{ flex: 'none', width: '90px' }}
-            >
-              <option value="default">Default ({colorHueShift})</option>
-              <option value="custom">Custom</option>
-            </select>
+          <div className="stop-popup-label">
+            Hue Shift {stop.hueShiftOverride === undefined ? '(Default)' : '(Override)'}
+          </div>
+          <div className="stop-override-controls">
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={stop.hueShiftOverride ?? colorHueShift}
+              onChange={(e) => onUpdate({ hueShiftOverride: parseInt(e.target.value) })}
+              style={{ flex: 1 }}
+            />
+            <span style={{ fontSize: '10px', minWidth: '24px' }}>{stop.hueShiftOverride ?? colorHueShift}</span>
             {stop.hueShiftOverride !== undefined && (
-              <>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={stop.hueShiftOverride}
-                  onChange={(e) => onUpdate({ hueShiftOverride: parseInt(e.target.value) })}
-                  style={{ flex: 1 }}
-                />
-                <span style={{ fontSize: '10px', minWidth: '24px' }}>{stop.hueShiftOverride}</span>
-              </>
+              <button
+                className="reset-icon-btn"
+                onClick={() => onUpdate({ hueShiftOverride: undefined })}
+                title="Reset to default"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                  <path d="M3 3v5h5"/>
+                </svg>
+              </button>
             )}
           </div>
         </div>
 
         {/* Saturation Shift Override */}
         <div className="stop-popup-section">
-          <div className="stop-popup-label">Saturation Shift Override</div>
-          <div className="stop-popup-input-row">
-            <select
-              value={stop.saturationShiftOverride === undefined ? 'default' : 'custom'}
-              onChange={(e) => {
-                if (e.target.value === 'default') {
-                  onUpdate({ saturationShiftOverride: undefined });
-                } else {
-                  onUpdate({ saturationShiftOverride: colorSaturationShift });
-                }
-              }}
-              className="stop-popup-input"
-              style={{ flex: 'none', width: '90px' }}
-            >
-              <option value="default">Default ({colorSaturationShift})</option>
-              <option value="custom">Custom</option>
-            </select>
+          <div className="stop-popup-label">
+            Saturation Shift {stop.saturationShiftOverride === undefined ? '(Default)' : '(Override)'}
+          </div>
+          <div className="stop-override-controls">
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={stop.saturationShiftOverride ?? colorSaturationShift}
+              onChange={(e) => onUpdate({ saturationShiftOverride: parseInt(e.target.value) })}
+              style={{ flex: 1 }}
+            />
+            <span style={{ fontSize: '10px', minWidth: '24px' }}>{stop.saturationShiftOverride ?? colorSaturationShift}</span>
             {stop.saturationShiftOverride !== undefined && (
-              <>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={stop.saturationShiftOverride}
-                  onChange={(e) => onUpdate({ saturationShiftOverride: parseInt(e.target.value) })}
-                  style={{ flex: 1 }}
-                />
-                <span style={{ fontSize: '10px', minWidth: '24px' }}>{stop.saturationShiftOverride}</span>
-              </>
+              <button
+                className="reset-icon-btn"
+                onClick={() => onUpdate({ saturationShiftOverride: undefined })}
+                title="Reset to default"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                  <path d="M3 3v5h5"/>
+                </svg>
+              </button>
             )}
           </div>
         </div>
@@ -1075,33 +1081,30 @@ function ColorSettingsPopup({ color, globalSettings, position, onUpdate, onClose
 
         {/* L Expansion Override */}
         <div className="stop-popup-section">
-          <div className="stop-popup-label">L Expansion Override</div>
-          <div className="flex items-center gap-2">
-            <select
-              value={color.lightnessExpansionOverride === undefined ? 'global' : 'custom'}
-              onChange={(e) => {
-                if (e.target.value === 'global') {
-                  onUpdate({ ...color, lightnessExpansionOverride: undefined });
-                } else {
-                  onUpdate({ ...color, lightnessExpansionOverride: globalSettings.lightnessExpansion });
-                }
-              }}
+          <div className="stop-popup-label">
+            L Expansion {color.lightnessExpansionOverride === undefined ? '(Global)' : '(Override)'}
+          </div>
+          <div className="l-expansion-controls">
+            <RefBasedNumericInput
+              value={color.lightnessExpansionOverride ?? globalSettings.lightnessExpansion}
+              onChange={(val) => onUpdate({ ...color, lightnessExpansionOverride: val })}
+              min={0.5}
+              max={2}
+              decimals={2}
               className="stop-popup-input"
-              style={{ width: '90px' }}
-            >
-              <option value="global">Global</option>
-              <option value="custom">Custom</option>
-            </select>
+              style={{ width: '60px' }}
+            />
             {color.lightnessExpansionOverride !== undefined && (
-              <RefBasedNumericInput
-                value={color.lightnessExpansionOverride}
-                onChange={(val) => onUpdate({ ...color, lightnessExpansionOverride: val })}
-                min={0.5}
-                max={2}
-                decimals={2}
-                className="stop-popup-input"
-                style={{ width: '60px' }}
-              />
+              <button
+                className="reset-icon-btn"
+                onClick={() => onUpdate({ ...color, lightnessExpansionOverride: undefined })}
+                title="Reset to global"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                  <path d="M3 3v5h5"/>
+                </svg>
+              </button>
             )}
           </div>
         </div>
@@ -1187,6 +1190,7 @@ function ColorRow({ color, globalSettings, onUpdate, onRemove }: ColorRowProps) 
   const [settingsPosition, setSettingsPosition] = useState({ x: 0, y: 0 });
   const [selectedStop, setSelectedStop] = useState<{ index: number; position: { x: number; y: number } } | null>(null);
   const [showBaseColorPicker, setShowBaseColorPicker] = useState<{ x: number; y: number } | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Generate palette
   const paletteResult = useMemo(() => {
@@ -1198,6 +1202,7 @@ function ColorRow({ color, globalSettings, onUpdate, onRemove }: ColorRowProps) 
 
   const handleStopClick = (index: number, e: React.MouseEvent) => {
     const rect = (e.target as HTMLElement).getBoundingClientRect();
+    setShowSettings(false); // Close settings if open
     setSelectedStop({
       index,
       position: { x: rect.left, y: rect.bottom + 8 },
@@ -1206,6 +1211,7 @@ function ColorRow({ color, globalSettings, onUpdate, onRemove }: ColorRowProps) 
 
   const handleSettingsClick = (e: React.MouseEvent) => {
     const rect = (e.target as HTMLElement).getBoundingClientRect();
+    setSelectedStop(null); // Close color picker if open
     setSettingsPosition({ x: rect.left - 200, y: rect.bottom + 8 });
     setShowSettings(true);
   };
@@ -1250,7 +1256,7 @@ function ColorRow({ color, globalSettings, onUpdate, onRemove }: ColorRowProps) 
         </div>
         <div className="color-row-actions">
           <button onClick={handleSettingsClick}>settings</button>
-          <button className="delete" onClick={onRemove}>delete</button>
+          <button className="delete" onClick={() => setShowDeleteConfirm(true)}>delete</button>
         </div>
       </div>
 
@@ -1382,6 +1388,19 @@ function ColorRow({ color, globalSettings, onUpdate, onRemove }: ColorRowProps) 
           </>
         );
       })()}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <ConfirmModal
+          title="Delete Color"
+          message={`Are you sure you want to delete "${color.label}"?`}
+          onConfirm={() => {
+            onRemove();
+            setShowDeleteConfirm(false);
+          }}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
     </div>
   );
 }

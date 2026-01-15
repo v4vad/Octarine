@@ -947,6 +947,39 @@
   box-sizing: border-box;
 }
 
+/* L Expansion controls with reset button (in color popup) */
+.l-expansion-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.reset-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--figma-color-text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.reset-icon-btn:hover {
+  background: var(--figma-color-bg-hover);
+  color: var(--figma-color-text);
+}
+
+/* Stop override controls (in stop settings popup) */
+.stop-override-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 /* --------------------------------------------
    COLOR ROW (Horizontal palette)
    -------------------------------------------- */
@@ -1363,4 +1396,81 @@
   cursor: nwse-resize;
   z-index: 9999;
   touch-action: none;
+}
+
+/* --------------------------------------------
+   CONFIRM MODAL
+   -------------------------------------------- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+}
+
+.confirm-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--figma-color-bg);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  min-width: 280px;
+  z-index: 2001;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.confirm-modal-title {
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+}
+
+.confirm-modal-message {
+  color: var(--figma-color-text-secondary);
+  margin-bottom: var(--space-4);
+}
+
+.confirm-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.btn-secondary {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--figma-color-border);
+  background: transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--figma-color-text);
+}
+
+.btn-secondary:hover {
+  background: var(--figma-color-bg-hover);
+}
+
+.btn-danger {
+  padding: var(--space-2) var(--space-3);
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.btn-danger:hover {
+  background: #c82333;
+}
+
+/* Picker action row (pick from selection + reset) */
+.picker-action-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.picker-action-row .btn-full {
+  flex: 1;
 }
