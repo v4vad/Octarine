@@ -73,3 +73,65 @@ lightnessExpansionOverride?: number
 If you need similar functionality in the future:
 - Consider if auto-nudging already handles your use case
 - If you want **artistic spread** (not duplicate prevention), that's a different feature - perhaps "Palette Spread" or "Contrast Emphasis" that explicitly doesn't claim to fix duplicates
+
+---
+
+## Global HK/BB Corrections
+
+**Removed:** January 2026
+
+### What It Did
+
+Global toggles for Helmholtz-Kohlrausch (HK) and Bezold-Brücke (BB) corrections that applied to all colors by default. Individual colors could override these global settings.
+
+**UI location:** Left panel under "Global settings"
+
+**Behavior:**
+- When global HK was enabled, all colors would receive HK compensation unless they had an explicit override
+- When global BB was enabled, all colors would receive BB correction unless they had an explicit override
+- Per-color settings showed "(Global)" or "(Override)" to indicate the source
+
+### Why It Was Removed
+
+HK and BB corrections are fundamentally **per-color effects** that depend on each color's specific properties:
+
+**HK Correction (Helmholtz-Kohlrausch):**
+- Compensates for saturated colors appearing brighter
+- Effect varies dramatically by hue: blues need ~5x more correction than yellows
+- Effect scales with saturation: neutral grays need zero correction
+
+**BB Correction (Bezold-Brücke):**
+- Compensates for hue shifts at different lightness levels
+- Different hues shift toward different attractors (yellow/blue at high lightness, red/green at low lightness)
+- Effect depends on both hue and lightness
+
+**The problem with global toggles:**
+- Implied uniform behavior when the actual effect varies per color
+- A "global on" setting for HK made little sense: a neutral gray doesn't need it, while a saturated blue does
+- Added UI complexity without meaningful benefit
+- Per-color control is more intuitive and accurate
+
+### Current Behavior
+
+HK and BB corrections are now per-color settings only:
+- Found in each color's settings popup (click the "settings" button on a color row)
+- Default is OFF for new colors
+- No global setting to inherit from
+
+### Related Types (Removed)
+
+```typescript
+// Removed from GlobalSettings
+hkCorrection: boolean
+bbCorrection: boolean
+
+// Renamed in Color type
+hkCorrectionOverride?: boolean  // Now: hkCorrection?: boolean
+bbCorrectionOverride?: boolean  // Now: bbCorrection?: boolean
+```
+
+### If Revisiting
+
+If you want to apply corrections to multiple colors at once:
+- Consider a "batch edit" feature that lets you select multiple colors and toggle settings
+- Or a "preset" system that applies a bundle of settings to new colors

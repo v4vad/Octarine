@@ -867,8 +867,9 @@ export function generateColorPalette(
 
   // Determine effective settings (color-level overrides global)
   const effectiveMethod = color.methodOverride ?? globalSettings.method
-  const effectiveHK = color.hkCorrectionOverride ?? globalSettings.hkCorrection
-  const effectiveBB = color.bbCorrectionOverride ?? globalSettings.bbCorrection
+  // HK/BB corrections are per-color settings (default: off)
+  const effectiveHK = color.hkCorrection ?? false
+  const effectiveBB = color.bbCorrection ?? false
   const bgOklch = hexToOklch(globalSettings.backgroundColor)
 
   // First pass: generate all colors with expansion

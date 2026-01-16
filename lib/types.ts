@@ -86,8 +86,10 @@ export type Color = {
 
   // Override global settings for this color
   methodOverride?: ColorMethod
-  hkCorrectionOverride?: boolean
-  bbCorrectionOverride?: boolean
+
+  // Perceptual corrections (per-color settings)
+  hkCorrection?: boolean   // Helmholtz-Kohlrausch: compensates for saturated colors appearing brighter
+  bbCorrection?: boolean   // Bezold-Brücke: corrects for hue shifts at different lightness levels
 
   // Artistic shifts (only at color level and stop level)
   hueShift?: number                                     // 0-100
@@ -105,8 +107,6 @@ export type Color = {
 export type GlobalSettings = {
   backgroundColor: string  // For contrast calculations, default "#ffffff"
   method: ColorMethod      // "lightness" or "contrast"
-  hkCorrection: boolean    // Helmholtz-Kohlrausch compensation
-  bbCorrection: boolean    // Bezold-Brücke correction
 
   // Default lightness/contrast values per stop number
   defaultLightness: Record<number, number>
@@ -161,8 +161,6 @@ export function createDefaultGlobalSettings(): GlobalSettings {
   return {
     backgroundColor: "#ffffff",
     method: "lightness",
-    hkCorrection: false,
-    bbCorrection: false,
     defaultLightness: { ...DEFAULT_LIGHTNESS },
     defaultContrast: { ...DEFAULT_CONTRAST },
   }

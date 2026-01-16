@@ -223,8 +223,6 @@ When BB Correction is enabled:
 
 **When to use it:** Enable BB correction when you want your dark blue to still look like "blue" (not purple) and your light yellow to still look like "yellow" (not green).
 
-*Tip: Double-click a toggle to reset it to the global setting.*
-
 ---
 
 ## Global Settings
@@ -238,26 +236,6 @@ The color used for contrast calculations. By default, this is white (#FFFFFF).
 - Click the swatch to change it
 - All contrast ratios will be recalculated
 - Important for the Contrast Method
-
-### HK Correction (Global)
-
-Turn on Helmholtz-Kohlrausch compensation for all colors. This adjusts for the fact that our eyes see saturated colors as brighter than they actually are.
-
-**The problem it solves:** Without correction, a row of color swatches might look uneven—the saturated middle stops appear to "pop" more than the lighter or darker stops, even though their lightness values are mathematically even.
-
-**What the correction does:** Slightly darkens saturated colors so they *appear* to have the same brightness as less saturated colors at the same lightness level.
-
-Individual colors can override this setting if needed.
-
-### BB Correction (Global)
-
-Turn on Bezold-Brücke correction for all colors. This adjusts for the fact that our perception of hue shifts as colors get lighter or darker.
-
-**The problem it solves:** Without correction, your dark stops might look like a different hue than your light stops. A "blue" palette might have light stops that look slightly purple and dark stops that look slightly green.
-
-**What the correction does:** Shifts the hue at each lightness level to counteract our eye's natural shift, keeping the color looking consistent from light to dark.
-
-Individual colors can override this setting if needed.
 
 ---
 
@@ -389,7 +367,7 @@ Once exported, your colors appear in Figma's Variables panel. You can:
 - This uses smart nudging: first tries hue shifts, then chroma, then lightness
 
 ### Colors look too bright/dim
-- Enable HK Correction in Global Settings
+- Enable HK Correction in the color's settings (click the settings button on the color row)
 - Adjust the base color's lightness
 
 ### Contrast ratios are wrong

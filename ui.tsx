@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   Button,
@@ -14,10 +14,13 @@ import {
   Stop,
   GeneratedStop,
   PaletteResult,
+  AppState,
   createDefaultColor,
   createDefaultGlobalSettings,
   DEFAULT_STOPS,
 } from './lib/types';
+
+import { useHistory } from './lib/useHistory';
 
 import {
   hexToOklch,
@@ -352,7 +355,7 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
   return (
     <div ref={popupRef} className="popup">
       <div className="tab-bar">
-        {(['hsb', 'oklch', 'hex'] as const).map((tab) => (
+        {(['hex', 'hsb', 'oklch'] as const).map((tab) => (
           <div
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -553,14 +556,15 @@ interface ToggleProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
   onReset?: () => void;
+  tooltip?: string;
 }
 
-function Toggle({ label, checked, onChange, onReset }: ToggleProps) {
+function Toggle({ label, checked, onChange, onReset, tooltip }: ToggleProps) {
   return (
     <div
       className="toggle-wrapper"
       onDoubleClick={onReset ? () => onReset() : undefined}
-      title={onReset ? 'Double-click to reset to global' : undefined}
+      title={tooltip || (onReset ? 'Double-click to reset to global' : undefined)}
     >
       <span className="toggle-label">{label}</span>
       <div
@@ -1058,20 +1062,16 @@ function ColorSettingsPopup({ color, globalSettings, position, onUpdate, onClose
 
         {/* Base Color */}
         <div className="stop-popup-section">
-          <div className="stop-popup-label">Base Color</div>
-          <div className="flex items-center gap-2">
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                backgroundColor: color.baseColor,
-                borderRadius: 4,
-                border: '1px solid var(--figma-color-border)',
-                cursor: 'pointer',
-              }}
-              onClick={() => setShowBasePicker(!showBasePicker)}
-            />
-            <span className="font-mono text-sm">{color.baseColor.toUpperCase()}</span>
+          <div className="color-field-row">
+            <span className="color-field-label">Base Color</span>
+            <div className="color-field-controls">
+              <div
+                className="color-field-swatch"
+                style={{ backgroundColor: color.baseColor }}
+                onClick={() => setShowBasePicker(!showBasePicker)}
+              />
+              <span className="color-field-hex">{color.baseColor.toUpperCase()}</span>
+            </div>
           </div>
           {showBasePicker && (
             <div className="mt-2">
@@ -1087,18 +1087,18 @@ function ColorSettingsPopup({ color, globalSettings, position, onUpdate, onClose
         {/* Corrections */}
         <div className="stop-popup-section">
           <div className="stop-popup-label">Corrections</div>
-          <div className="toggle-row">
+          <div className="toggle-stack">
             <Toggle
-              label={`HK ${color.hkCorrectionOverride === undefined ? '(Global)' : '(Override)'}`}
-              checked={color.hkCorrectionOverride ?? globalSettings.hkCorrection}
-              onChange={(val) => onUpdate({ ...color, hkCorrectionOverride: val })}
-              onReset={() => onUpdate({ ...color, hkCorrectionOverride: undefined })}
+              label="Helmholtz-Kohlrausch"
+              checked={color.hkCorrection ?? false}
+              onChange={(val) => onUpdate({ ...color, hkCorrection: val })}
+              tooltip="Compensates for saturated colors appearing brighter to the eye"
             />
             <Toggle
-              label={`BB ${color.bbCorrectionOverride === undefined ? '(Global)' : '(Override)'}`}
-              checked={color.bbCorrectionOverride ?? globalSettings.bbCorrection}
-              onChange={(val) => onUpdate({ ...color, bbCorrectionOverride: val })}
-              onReset={() => onUpdate({ ...color, bbCorrectionOverride: undefined })}
+              label="Bezold-Brücke"
+              checked={color.bbCorrection ?? false}
+              onChange={(val) => onUpdate({ ...color, bbCorrection: val })}
+              tooltip="Corrects for hue shifts that occur at different lightness levels"
             />
           </div>
         </div>
@@ -1114,7 +1114,7 @@ function ColorSettingsPopup({ color, globalSettings, position, onUpdate, onClose
             onChange={(e) => onUpdate({ ...color, hueShift: parseInt(e.target.value) })}
             className="w-full"
           />
-          <div className="flex gap-2 mt-1">
+          <div className="flex gap-2 mt-2">
             <label className="radio-label text-xs">
               <input
                 type="radio"
@@ -1145,7 +1145,7 @@ function ColorSettingsPopup({ color, globalSettings, position, onUpdate, onClose
             onChange={(e) => onUpdate({ ...color, saturationShift: parseInt(e.target.value) })}
             className="w-full"
           />
-          <div className="flex gap-2 mt-1">
+          <div className="flex gap-2 mt-2">
             <label className="radio-label text-xs">
               <input
                 type="radio"
@@ -1218,14 +1218,16 @@ function ColorRow({ color, globalSettings, onUpdate, onRemove }: ColorRowProps) 
 
   return (
     <div className="color-row">
-      {/* Header */}
+      {/* Header: Name + Base Color + Actions */}
       <div className="color-row-header">
-        <div className="color-row-label">
-          <input
-            type="text"
-            value={color.label}
-            onChange={(e) => onUpdate({ ...color, label: e.target.value })}
-          />
+        <input
+          type="text"
+          value={color.label}
+          onChange={(e) => onUpdate({ ...color, label: e.target.value })}
+          className="color-row-name"
+        />
+        <div className="color-row-right">
+          <span className="base-color-label">Base color:</span>
           <div
             className="base-color-swatch clickable"
             style={{ backgroundColor: color.baseColor }}
@@ -1247,10 +1249,10 @@ function ColorRow({ color, globalSettings, onUpdate, onRemove }: ColorRowProps) 
             }}
             className="base-color-hex"
           />
-        </div>
-        <div className="color-row-actions">
-          <button onClick={handleSettingsClick}>settings</button>
-          <button className="delete" onClick={() => setShowDeleteConfirm(true)}>delete</button>
+          <div className="color-row-actions">
+            <button onClick={handleSettingsClick}>settings</button>
+            <button className="delete" onClick={() => setShowDeleteConfirm(true)}>delete</button>
+          </div>
         </div>
       </div>
 
@@ -1407,32 +1409,67 @@ interface LeftPanelProps {
   settings: GlobalSettings;
   onUpdate: (settings: GlobalSettings) => void;
   onExport: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
-function LeftPanel({ settings, onUpdate, onExport }: LeftPanelProps) {
+function LeftPanel({ settings, onUpdate, onExport, onUndo, onRedo, canUndo, canRedo }: LeftPanelProps) {
   const [showBgPicker, setShowBgPicker] = useState(false);
 
   return (
     <div className="left-panel">
+      {/* Undo/Redo Buttons */}
+      <div className="undo-redo-row">
+        <button
+          onClick={onUndo}
+          disabled={!canUndo}
+          className="undo-redo-btn"
+          title="Undo (Cmd+Z)"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M3 10h10a5 5 0 0 1 0 10H9" />
+            <path d="M3 10l4-4" />
+            <path d="M3 10l4 4" />
+          </svg>
+          Undo
+        </button>
+        <button
+          onClick={onRedo}
+          disabled={!canRedo}
+          className="undo-redo-btn"
+          title="Redo (Cmd+Shift+Z)"
+        >
+          Redo
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 10H11a5 5 0 0 0 0 10h4" />
+            <path d="M21 10l-4-4" />
+            <path d="M21 10l-4 4" />
+          </svg>
+        </button>
+      </div>
       {/* Background Color */}
       <div className="bg-color-section">
-        <div className="bg-color-row">
-          <span className="bg-color-label">Bg color</span>
-          <div
-            className="bg-color-swatch"
-            style={{ backgroundColor: settings.backgroundColor }}
-            onClick={() => setShowBgPicker(!showBgPicker)}
-          />
-          <input
-            type="text"
-            value={settings.backgroundColor}
-            onChange={(e) => {
-              if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
-                onUpdate({ ...settings, backgroundColor: e.target.value });
-              }
-            }}
-            className="bg-color-hex"
-          />
+        <div className="color-field-row">
+          <span className="color-field-label">Bg color</span>
+          <div className="color-field-controls">
+            <div
+              className="color-field-swatch"
+              style={{ backgroundColor: settings.backgroundColor }}
+              onClick={() => setShowBgPicker(!showBgPicker)}
+            />
+            <input
+              type="text"
+              value={settings.backgroundColor}
+              onChange={(e) => {
+                if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+                  onUpdate({ ...settings, backgroundColor: e.target.value });
+                }
+              }}
+              className="color-field-hex"
+            />
+          </div>
         </div>
         {showBgPicker && (
           <>
@@ -1450,23 +1487,6 @@ function LeftPanel({ settings, onUpdate, onExport }: LeftPanelProps) {
 
       {/* Defaults Table */}
       <DefaultsTable settings={settings} onUpdate={onUpdate} />
-
-      {/* Global Settings */}
-      <div className="global-settings-section">
-        <div className="section-title">Global settings</div>
-        <div className="toggle-row">
-          <Toggle
-            label="HK"
-            checked={settings.hkCorrection}
-            onChange={(val) => onUpdate({ ...settings, hkCorrection: val })}
-          />
-          <Toggle
-            label="BB"
-            checked={settings.bbCorrection}
-            onChange={(val) => onUpdate({ ...settings, bbCorrection: val })}
-          />
-        </div>
-      </div>
 
       {/* Export Button */}
       <button onClick={onExport} className="export-btn">
@@ -1526,10 +1546,13 @@ function ResizeHandle() {
 // MAIN APP
 // ============================================
 function App() {
-  const [globalSettings, setGlobalSettings] = useState<GlobalSettings>(
-    createDefaultGlobalSettings()
-  );
-  const [colors, setColors] = useState<Color[]>([]);
+  // Use history hook for undo/redo support
+  const initialState: AppState = {
+    globalSettings: createDefaultGlobalSettings(),
+    colors: [],
+  };
+  const { state, setState, undo, redo, canUndo, canRedo } = useHistory(initialState);
+  const { globalSettings, colors } = state;
 
   // Listen for messages from plugin
   useEffect(() => {
@@ -1545,21 +1568,41 @@ function App() {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo]);
+
+  const setGlobalSettings = useCallback((newSettings: GlobalSettings) => {
+    setState({ globalSettings: newSettings, colors });
+  }, [setState, colors]);
+
   const addColor = () => {
     const id = `color-${Date.now()}`;
     const label = `Color ${colors.length + 1}`;
     const baseColor = '#0066CC';
-    setColors([...colors, createDefaultColor(id, label, baseColor)]);
+    setState({ globalSettings, colors: [...colors, createDefaultColor(id, label, baseColor)] });
   };
 
   const updateColor = (index: number, updatedColor: Color) => {
     const newColors = [...colors];
     newColors[index] = updatedColor;
-    setColors(newColors);
+    setState({ globalSettings, colors: newColors });
   };
 
   const removeColor = (index: number) => {
-    setColors(colors.filter((_, i) => i !== index));
+    setState({ globalSettings, colors: colors.filter((_, i) => i !== index) });
   };
 
   const createVariables = () => {
@@ -1584,6 +1627,10 @@ function App() {
           settings={globalSettings}
           onUpdate={setGlobalSettings}
           onExport={createVariables}
+          onUndo={undo}
+          onRedo={redo}
+          canUndo={canUndo}
+          canRedo={canRedo}
         />
 
         {/* Right Panel */}
