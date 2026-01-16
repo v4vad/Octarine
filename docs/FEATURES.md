@@ -174,10 +174,6 @@ Each stop can have its own custom settings:
    - The color won't change when you modify the base color
    - Check "Apply perceptual corrections" to use the plugin's color adjustments
 
-### The Tilde (~) Indicator
-
-When you see a **~** symbol on a stop, it means the plugin automatically adjusted that color to ensure it's unique (not identical to another stop).
-
 ### Reset to Auto
 
 Click **"Reset to Auto"** to clear all overrides and let the plugin generate the color automatically.
@@ -320,6 +316,8 @@ Once exported, your colors appear in Figma's Variables panel. You can:
 
 ### Keyboard Shortcuts
 
+- **Cmd+Z** (Mac) / **Ctrl+Z** (Windows) - Undo
+- **Cmd+Shift+Z** (Mac) / **Ctrl+Shift+Z** (Windows) - Redo
 - **Enter** - Confirm text input changes
 - **Click outside** - Close popups
 
@@ -327,7 +325,6 @@ Once exported, your colors appear in Figma's Variables panel. You can:
 
 | Symbol | Meaning |
 |--------|---------|
-| ~ | Color was auto-adjusted for uniqueness |
 | Grayed column | Inactive generation method |
 | Reset icon | Click to remove an override |
 
@@ -363,7 +360,7 @@ Once exported, your colors appear in Figma's Variables panel. You can:
 ## Troubleshooting
 
 ### Colors look identical
-- The plugin automatically adjusts duplicates to make them unique (marked with ~)
+- The plugin automatically adjusts duplicates to make them unique
 - This uses smart nudging: first tries hue shifts, then chroma, then lightness
 
 ### Colors look too bright/dim
