@@ -4,6 +4,122 @@ This document archives features that have been removed from Octarine, explaining
 
 ---
 
+## Smart Auto Hue Shift (Saturation Recovery)
+
+**Removed:** January 2026
+
+### What It Did
+
+Smart Auto Hue Shift was a per-color toggle that automatically shifted the hue slightly at extreme lightness levels to preserve more saturation (chroma) when colors would otherwise be clipped by the sRGB gamut.
+
+**UI location:** Color settings popup under "Saturation Recovery"
+
+**Behavior:**
+- When enabled, the algorithm searched nearby hues (up to ±30°) for one with more gamut room
+- Only triggered when saturation loss exceeded 25%
+- Required at least 10% improvement to actually apply the shift
+- Prioritized smaller hue shifts over larger ones
+
+**Example:** Orange (#F32C01) at lightness 0.85 would lose ~65% of its saturation due to sRGB gamut limits. Shifting the hue ~25° toward yellow could theoretically recover some of that saturation.
+
+### Why It Was Removed
+
+The feature didn't solve the problem well due to fundamental physics of the sRGB color space:
+
+1. **At mild lightness (L=0.85, stop 200):** The saturation loss was often below the 25% threshold, so the feature didn't trigger even though colors looked slightly washed out
+
+2. **At moderate lightness (L=0.75, stop 300):** When it did trigger, the required hue shift was so large (20-30°) that the resulting color looked noticeably different from the base color—an orange looked yellow-ish
+
+3. **The underlying problem is unsolvable with hue rotation alone:** The sRGB gamut is simply smaller at high and low lightness levels. There's no "trick" that can make a fully saturated orange exist at L=0.85 in sRGB—it's physically impossible in that color space.
+
+**The core insight:** This was attempting to work around a hardware limitation (sRGB monitors) with a software hack. The solution created a new problem (color identity loss) while only partially addressing the original (saturation loss).
+
+### The sRGB Gamut Limitation (Important Context)
+
+This feature was built on the gamut lookup table (`lib/gamut-table.ts`) which maps the maximum chroma achievable at each lightness/hue combination in sRGB. Key observations:
+
+**Gamut shape varies by hue:**
+- Yellow (~90°) has excellent gamut at high lightness—you CAN have bright, saturated yellows
+- Blue (~270°) has excellent gamut at low lightness—you CAN have dark, saturated blues
+- Orange (~45°) and other intermediate hues have more limited gamut at extremes
+
+**What this means for palette design:**
+- Some colors will inevitably lose saturation at light/dark stops
+- This is physics, not a bug—sRGB simply can't represent those colors
+- Wider gamut displays (P3, Rec.2020) can show more saturated colors, but most design targets sRGB for compatibility
+
+**Practical guidance:**
+- Accept that light stops (50-200) will be less saturated for most hues
+- Accept that dark stops (800-900) will be less saturated for most hues
+- If saturation preservation is critical, choose base colors that have favorable gamut at your target lightness levels (e.g., yellow for light palettes, blue for dark palettes)
+
+### Original Code
+
+The main function lived in `lib/color-utils.ts`:
+
+```typescript
+export function findBetterHueForGamut(
+  baseChroma: number,
+  baseHue: number,
+  lightness: number,
+  maxShift: number = 30,
+  lossThreshold: number = 0.25
+): { hue: number; shifted: boolean; originalLoss: number; newLoss: number } {
+  const maxChromaAtCurrentHue = getMaxChroma(lightness, baseHue)
+
+  const currentLoss = baseChroma > 0
+    ? Math.max(0, (baseChroma - maxChromaAtCurrentHue) / baseChroma)
+    : 0
+
+  if (currentLoss < lossThreshold) {
+    return { hue: baseHue, shifted: false, originalLoss: currentLoss, newLoss: currentLoss }
+  }
+
+  let bestHue = baseHue
+  let bestLoss = currentLoss
+
+  for (let offset = 1; offset <= maxShift; offset++) {
+    const huePos = (baseHue + offset) % 360
+    const maxChromaPos = getMaxChroma(lightness, huePos)
+    const lossPos = baseChroma > 0
+      ? Math.max(0, (baseChroma - maxChromaPos) / baseChroma)
+      : 0
+    if (lossPos < bestLoss) {
+      bestLoss = lossPos
+      bestHue = huePos
+    }
+    // ... also tries negative direction
+  }
+
+  const improvement = currentLoss - bestLoss
+  if (improvement >= 0.1) {
+    return { hue: bestHue, shifted: true, originalLoss: currentLoss, newLoss: bestLoss }
+  }
+  return { hue: baseHue, shifted: false, originalLoss: currentLoss, newLoss: currentLoss }
+}
+```
+
+### Related Types (Removed)
+
+```typescript
+// In Color type
+smartAutoHueShift?: boolean
+```
+
+### If Revisiting
+
+If you want to address saturation loss in the future, consider:
+
+1. **Display P3 / wide gamut support** - Export colors in a wider gamut color space for devices that support it (would require Figma API changes)
+
+2. **Visual indicator only** - Show users which stops are losing saturation (a warning icon or percentage) without trying to "fix" it automatically
+
+3. **Guided base color selection** - Help users pick base colors that work well across their target lightness range, rather than trying to rescue bad combinations after the fact
+
+4. **Per-stop hue adjustment (manual)** - Let users intentionally shift hue at specific stops if they want warmer lights / cooler darks as an artistic choice (this already exists via the Hue Shift feature, which is different from automatic gamut recovery)
+
+---
+
 ## Lightness Expansion
 
 **Removed:** January 2026

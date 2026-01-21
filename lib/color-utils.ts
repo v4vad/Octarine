@@ -1,5 +1,6 @@
 import type { ColorMethod, ColorStop, GeneratedStop, PaletteResult, Stop, Color, GlobalSettings } from "./types"
 import { oklch, rgb, formatHex } from "culori"
+import { clampChromaToGamut } from "./gamut-table"
 
 export interface OKLCH {
   l: number
@@ -192,14 +193,8 @@ export function refineContrastToTarget(
     const newL = Math.max(0, Math.min(1, currentColor.l + direction * adjustmentMagnitude))
 
     // KEY FIX: Also adjust chroma to stay in gamut
-    // Use the same formula as generateColorPalette for consistency
-    // Very light colors need reduced chroma, very dark colors too
-    let newC = originalChroma
-    if (newL > 0.9) {
-      newC *= 0.3 + (0.7 * (1 - newL) / 0.1)
-    } else if (newL < 0.15) {
-      newC *= 0.3 + (0.7 * newL / 0.15)
-    }
+    // Use the gamut lookup table to find actual max chroma for this hue/lightness
+    const newC = clampChromaToGamut(originalChroma, newL, currentColor.h)
 
     currentColor = {
       l: newL,
@@ -269,13 +264,8 @@ export function generateColor(
     }
   }
 
-  // Apply chroma reduction for very light/dark colors to stay in gamut
-  let targetC = baseOklch.c
-  if (targetL > 0.9) {
-    targetC *= 0.3 + (0.7 * (1 - targetL) / 0.1)
-  } else if (targetL < 0.15) {
-    targetC *= 0.3 + (0.7 * targetL / 0.15)
-  }
+  // Apply chroma reduction to stay in gamut using lookup table
+  const targetC = clampChromaToGamut(baseOklch.c, targetL, baseOklch.h)
 
   let result: OKLCH = {
     l: targetL,
@@ -914,13 +904,8 @@ export function generateColorPalette(
 
     const originalL = targetL
 
-    // Apply chroma reduction for very light/dark colors (gamut mapping)
-    let targetC = baseOklch.c
-    if (targetL > 0.9) {
-      targetC *= 0.3 + (0.7 * (1 - targetL) / 0.1)
-    } else if (targetL < 0.15) {
-      targetC *= 0.3 + (0.7 * targetL / 0.15)
-    }
+    // Apply chroma reduction to stay in gamut using lookup table
+    const targetC = clampChromaToGamut(baseOklch.c, targetL, baseOklch.h)
 
     let result: OKLCH = {
       l: targetL,

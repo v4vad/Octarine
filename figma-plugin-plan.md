@@ -1,6 +1,71 @@
 # Octarine - Figma Color System Plugin
 
-**Last Updated:** 2026-01-16
+**Last Updated:** 2026-01-21
+
+---
+
+## Current Work: Smart Gamut Handling (Lookup Table)
+
+**Branch:** `feature/gamut-lookup-table`
+
+### Problem
+The current chroma reduction uses fixed thresholds (90% and 15% lightness) that treat all hues the same. But different hues have different gamut limits:
+- **Blues** can stay saturated when dark, but desaturate quickly when light
+- **Yellows** desaturate quickly when dark, but can stay vivid when light
+- **Reds/Oranges** have medium range in both directions
+
+The current approach is too conservative for some colors and wastes their vibrancy potential.
+
+### Solution
+Replace threshold-based formulas with a **lookup table** containing actual maximum chroma values for every hue/lightness combination.
+
+### Implementation Steps
+
+1. **Create feature branch** (safety net to return to main)
+   ```bash
+   git checkout -b feature/gamut-lookup-table
+   ```
+
+2. **Generate lookup table data**
+   - New file: `lib/gamut-table.ts`
+   - 2D array: `maxChroma[lightness][hue]` (101 × 360 values)
+   - Pre-calculated using binary search to find actual gamut boundaries
+
+3. **Create lookup function**
+   - Add `getMaxChroma(lightness: number, hue: number): number` to `lib/color-utils.ts`
+   - Uses interpolation between grid points for smooth results
+
+4. **Replace threshold logic** in `lib/color-utils.ts`:
+   - `generateColor()` (lines 272-278)
+   - `generateColorPalette()` (lines 917-923)
+   - `refineContrastToTarget()` (lines 194-202)
+
+   **Before:**
+   ```typescript
+   if (targetL > 0.9) {
+     targetC *= 0.3 + (0.7 * (1 - targetL) / 0.1)
+   } else if (targetL < 0.15) {
+     targetC *= 0.3 + (0.7 * targetL / 0.15)
+   }
+   ```
+
+   **After:**
+   ```typescript
+   const maxC = getMaxChroma(targetL, baseOklch.h)
+   targetC = Math.min(targetC, maxC)
+   ```
+
+5. **Build & test** in Figma with various colors
+
+### Expected Results
+- Blue palettes: Darker stops retain more saturation
+- Yellow palettes: Lighter stops retain more saturation
+- All colors: More accurate to actual display capabilities
+
+### Rollback
+```bash
+git checkout main
+```
 
 ---
 
