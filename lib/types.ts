@@ -165,3 +165,14 @@ export function createDefaultGlobalSettings(): GlobalSettings {
     defaultContrast: { ...DEFAULT_CONTRAST },
   }
 }
+
+// ============================================
+// STATE PERSISTENCE
+// ============================================
+export const STORAGE_KEY = 'octarine-state'
+export const STORAGE_VERSION = 1
+
+export type PersistedState = {
+  version: number
+  state: AppState
+}

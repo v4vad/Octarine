@@ -8,6 +8,7 @@ export interface UseHistoryReturn {
   state: AppState
   // Actions
   setState: (newState: AppState) => void
+  replaceState: (newState: AppState) => void  // Set state without creating undo history
   undo: () => void
   redo: () => void
   // Status
@@ -32,6 +33,13 @@ export function useHistory(initialState: AppState): UseHistoryReturn {
     setPresent(newState)
     setFuture([]) // Clear redo stack on new action
   }, [present])
+
+  // Set state without creating undo history (for loading saved data)
+  const replaceState = useCallback((newState: AppState) => {
+    setPresent(newState)
+    setPast([])
+    setFuture([])
+  }, [])
 
   const undo = useCallback(() => {
     if (past.length === 0) return
@@ -58,6 +66,7 @@ export function useHistory(initialState: AppState): UseHistoryReturn {
   return {
     state: present,
     setState,
+    replaceState,
     undo,
     redo,
     canUndo: past.length > 0,

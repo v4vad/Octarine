@@ -2,7 +2,7 @@
 // This file runs in Figma's sandbox and can access the Figma API
 
 import { createFigmaVariables } from './lib/figma-utils';
-import { Color, GlobalSettings } from './lib/types';
+import { Color, GlobalSettings, STORAGE_KEY, STORAGE_VERSION } from './lib/types';
 
 // Show the plugin UI
 // The size can be adjusted later based on UI needs
@@ -11,6 +11,10 @@ figma.showUI(__html__, {
   height: 500,
   themeColors: true  // Use Figma's theme colors
 });
+
+// Note: We no longer load state immediately on startup.
+// Instead, we use a request/response pattern - the UI requests state
+// when it's ready (after React mounts), avoiding race conditions.
 
 // Listen for messages from the UI
 figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
@@ -77,6 +81,30 @@ figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
         }
       } else {
         figma.notify('Selected shape has no fill');
+      }
+      break;
+
+    case 'save-state':
+      // Save state to document storage
+      const toSave = { version: STORAGE_VERSION, state: msg.state };
+      figma.root.setPluginData(STORAGE_KEY, JSON.stringify(toSave));
+      break;
+
+    case 'request-state':
+      // UI is ready and requesting saved state - this avoids race conditions
+      // where the old push-based approach sent data before React mounted
+      const savedData = figma.root.getPluginData(STORAGE_KEY);
+      if (savedData) {
+        try {
+          const parsed = JSON.parse(savedData);
+          figma.ui.postMessage({ type: 'load-state', state: parsed.state });
+        } catch (e) {
+          // Invalid data, tell UI there's nothing to load
+          figma.ui.postMessage({ type: 'load-state', state: null });
+        }
+      } else {
+        // No saved data exists
+        figma.ui.postMessage({ type: 'load-state', state: null });
       }
       break;
 

@@ -1551,8 +1551,18 @@ function App() {
     globalSettings: createDefaultGlobalSettings(),
     colors: [],
   };
-  const { state, setState, undo, redo, canUndo, canRedo } = useHistory(initialState);
+  const { state, setState, replaceState, undo, redo, canUndo, canRedo } = useHistory(initialState);
   const { globalSettings, colors } = state;
+
+  // Track whether we've received the initial load response
+  // This prevents auto-save from overwriting saved data before it's loaded
+  const hasLoadedRef = useRef(false);
+
+  // Request saved state when component mounts (request/response pattern)
+  // This avoids the race condition where the plugin sends data before React mounts
+  useEffect(() => {
+    parent.postMessage({ pluginMessage: { type: 'request-state' } }, '*');
+  }, []);
 
   // Listen for messages from plugin
   useEffect(() => {
@@ -1563,10 +1573,18 @@ function App() {
       if (msg.type === 'plugin-ready') {
         console.log('Plugin ready');
       }
+
+      // Handle load-state response - mark as loaded whether data exists or not
+      if (msg.type === 'load-state') {
+        hasLoadedRef.current = true;
+        if (msg.state) {
+          replaceState(msg.state);
+        }
+      }
     };
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, []);
+  }, [replaceState]);
 
   // Keyboard shortcuts for undo/redo
   useEffect(() => {
@@ -1583,6 +1601,17 @@ function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undo, redo]);
+
+  // Auto-save state to document storage (debounced)
+  // Only save after initial load completes to prevent overwriting saved data
+  useEffect(() => {
+    if (!hasLoadedRef.current) return;  // Don't save until we've received load response
+
+    const timer = setTimeout(() => {
+      parent.postMessage({ pluginMessage: { type: 'save-state', state } }, '*');
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [state]);
 
   const setGlobalSettings = useCallback((newSettings: GlobalSettings) => {
     setState({ globalSettings: newSettings, colors });
