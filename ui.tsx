@@ -32,6 +32,7 @@ import {
   generateColor,
   generateColorPalette,
   getContrastRatio,
+  DELTA_E_THRESHOLD,
   OKLCH,
   HueShiftDirection,
   ChromaShiftDirection,
@@ -1278,6 +1279,7 @@ function ColorRow({ color, globalSettings, onUpdate, onRemove }: ColorRowProps) 
             stop.saturationShiftOverride !== undefined;
 
           const isNudged = generatedStop?.wasNudged && !stop.manualOverride;
+          const isTooSimilar = generatedStop?.tooSimilar && !stop.manualOverride;
 
           return (
             <div
@@ -1287,9 +1289,16 @@ function ColorRow({ color, globalSettings, onUpdate, onRemove }: ColorRowProps) 
             >
               <span className="stop-strip-number">{stop.number}</span>
               <div
-                className={`stop-strip-swatch ${hasOverride ? 'has-override' : ''} ${isNudged ? 'was-nudged' : ''}`}
+                className={`stop-strip-swatch ${hasOverride ? 'has-override' : ''} ${isNudged ? 'was-nudged' : ''} ${isTooSimilar ? 'too-similar' : ''}`}
                 style={{ backgroundColor: displayColor }}
-              />
+                title={isTooSimilar ? `Very similar to previous stop (ΔE=${generatedStop?.deltaE?.toFixed(1)})` : undefined}
+              >
+                {isTooSimilar && (
+                  <span className="similarity-warning" title={`ΔE=${generatedStop?.deltaE?.toFixed(1)} - may look identical`}>
+                    ⚠
+                  </span>
+                )}
+              </div>
               <span className="stop-strip-hex">
                 {displayColor.slice(1, 7).toUpperCase()}
               </span>

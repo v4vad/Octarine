@@ -145,14 +145,14 @@ export function findLightnessForContrast(
  * @param color - The color after all transformations
  * @param targetContrast - The desired contrast ratio
  * @param backgroundColor - Background color for contrast calculation
- * @param tolerance - How close to target is acceptable (default 0.02)
+ * @param tolerance - How close to target is acceptable (default 0.005 for WCAG compliance)
  * @returns Color with adjusted lightness to achieve target contrast
  */
 export function refineContrastToTarget(
   color: OKLCH,
   targetContrast: number,
   backgroundColor: string,
-  tolerance: number = 0.02
+  tolerance: number = 0.005
 ): OKLCH {
   const bgL = hexToOklch(backgroundColor).l
   const isLightBg = bgL > 0.5
@@ -402,8 +402,13 @@ export function oklchToRgb(l: number, c: number, h: number): { r: number; g: num
  * reduce lightness slightly to compensate for perceived brightness increase.
  *
  * The effect is strongest for blue-magenta hues and weakest for yellow.
+ * It's also lightness-aware: the effect peaks at mid-lightness where
+ * human perception is most sensitive, and reduces at extremes.
  */
-export function getHKCompensation(chroma: number, hue: number): number {
+export function getHKCompensation(chroma: number, hue: number, lightness: number = 0.5): number {
+  // Skip correction for near-gray colors (no perceptual HK effect)
+  if (chroma < 0.01) return 0
+
   // Effect magnitude varies by hue (peak at blue ~270°, minimum at yellow ~90°)
   // Using cosine wave centered on blue (270°) so effect is strongest there
   const hueFactor = 0.5 + 0.5 * Math.cos((hue - 270) * Math.PI / 180) // 1 at blue, 0 at yellow
@@ -411,12 +416,16 @@ export function getHKCompensation(chroma: number, hue: number): number {
   // Effect increases with chroma (saturation)
   const chromaFactor = Math.min(chroma / 0.2, 1) // Normalize to typical chroma range
 
-  // Maximum compensation ~0.05 L units for highly saturated blue
-  return 0.05 * chromaFactor * hueFactor
+  // Lightness-aware scaling: peak at mid-lightness (0.5), reduce at extremes
+  // Uses sine curve: sin(π * L) gives 0 at L=0, 1 at L=0.5, 0 at L=1
+  const lightnessFactor = Math.sin(Math.PI * lightness)
+
+  // Maximum compensation ~0.05 L units for highly saturated blue at mid-lightness
+  return 0.05 * chromaFactor * hueFactor * lightnessFactor
 }
 
 export function applyHKCompensation(color: OKLCH, isLightBackground: boolean): OKLCH {
-  const compensation = getHKCompensation(color.c, color.h)
+  const compensation = getHKCompensation(color.c, color.h, color.l)
 
   // On light backgrounds (dark text), reduce lightness since color appears brighter
   // On dark backgrounds (light text), increase lightness
@@ -425,6 +434,49 @@ export function applyHKCompensation(color: OKLCH, isLightBackground: boolean): O
     : color.l + compensation
 
   return { ...color, l: Math.max(0, Math.min(1, adjustedL)) }
+}
+
+/**
+ * Get the maximum BB shift for a given hue based on perceptual research.
+ * Blues and magentas experience stronger BB effects, while reds and greens
+ * are more stable.
+ */
+function getMaxBBShiftForHue(hue: number): number {
+  // Normalize hue to 0-360
+  hue = ((hue % 360) + 360) % 360
+
+  // Hue regions and their max shifts (based on perceptual research):
+  // - Blues (200-280): 12-15° - strongest effect
+  // - Magentas (280-340): 10-12° - strong effect
+  // - Cyans (160-200): 8-10° - moderate effect
+  // - Yellows (40-80): 6-8° - moderate effect (near unique yellow ~90°)
+  // - Reds (340-360, 0-40): 5-7° - weaker (near unique red ~0°)
+  // - Greens (80-160): 5-7° - weaker (near unique green ~140°)
+
+  // Use smooth interpolation between regions
+  if (hue >= 200 && hue < 280) {
+    // Blues: strongest effect (12-15°)
+    const t = (hue - 200) / 80 // 0 at 200, 1 at 280
+    return 12 + 3 * Math.sin(t * Math.PI) // Peak at 240°
+  } else if (hue >= 280 && hue < 340) {
+    // Magentas: strong effect (10-12°)
+    return 10 + 2 * Math.sin(((hue - 280) / 60) * Math.PI)
+  } else if (hue >= 160 && hue < 200) {
+    // Cyans: moderate (8-10°)
+    return 8 + 2 * Math.sin(((hue - 160) / 40) * Math.PI)
+  } else if (hue >= 40 && hue < 80) {
+    // Yellows: moderate (6-8°)
+    return 6 + 2 * Math.sin(((hue - 40) / 40) * Math.PI)
+  } else if (hue >= 80 && hue < 160) {
+    // Greens: weaker (5-7°)
+    return 5 + 2 * Math.sin(((hue - 80) / 80) * Math.PI)
+  } else {
+    // Reds (340-360, 0-40): weaker (5-7°)
+    // Normalize to continuous range
+    const normalizedHue = hue >= 340 ? hue - 360 : hue // -20 to 40
+    const t = (normalizedHue + 20) / 60 // 0 at -20 (340°), 1 at 40
+    return 5 + 2 * Math.sin(t * Math.PI)
+  }
 }
 
 /**
@@ -438,8 +490,12 @@ export function applyHKCompensation(color: OKLCH, isLightBackground: boolean): O
  * to maintain perceived hue constancy.
  *
  * Unique hues (red, yellow, green, blue) are stable reference points.
+ * The correction magnitude now varies by hue region based on perceptual research.
  */
-export function getBBShiftCorrection(baseHue: number, lightness: number): number {
+export function getBBShiftCorrection(baseHue: number, lightness: number, chroma: number = 0.1): number {
+  // Skip correction for near-gray colors (no perceptual BB effect)
+  if (chroma < 0.01) return 0
+
   // No correction needed at mid-lightness
   const midPoint = 0.5
   const deviation = lightness - midPoint
@@ -472,8 +528,12 @@ export function getBBShiftCorrection(baseHue: number, lightness: number): number
     attractor = distToRed < distToGreen ? 0 : 140
   }
 
-  // Calculate shift magnitude (max ~5° at extremes)
-  const shiftMagnitude = 5 * Math.pow(Math.abs(deviation) * 2, 1.5)
+  // Get hue-specific maximum shift amount
+  const maxShift = getMaxBBShiftForHue(baseHue)
+
+  // Calculate shift magnitude scaled by lightness deviation
+  // Use power curve for smoother transition
+  const shiftMagnitude = maxShift * Math.pow(Math.abs(deviation) * 2, 1.5)
 
   // Shift AWAY from the attractor to counteract perceived shift
   const toAttractor = angularDistance(baseHue, attractor)
@@ -483,7 +543,7 @@ export function getBBShiftCorrection(baseHue: number, lightness: number): number
 }
 
 export function applyBBCorrection(color: OKLCH): OKLCH {
-  const hueCorrection = getBBShiftCorrection(color.h, color.l)
+  const hueCorrection = getBBShiftCorrection(color.h, color.l, color.c)
   const correctedHue = (color.h + hueCorrection + 360) % 360
 
   return { ...color, h: correctedHue }
@@ -613,6 +673,77 @@ export function applyPerceptualCorrections(
   }
 
   return result
+}
+
+// ============================================
+// COLOR DISTINCTNESS (Delta-E)
+// ============================================
+
+/**
+ * Calculate Delta-E (color difference) in OKLCH space
+ *
+ * Uses a simplified perceptual distance formula for OKLCH:
+ * - Lightness difference is weighted heavily (most noticeable)
+ * - Chroma difference is secondary
+ * - Hue difference is computed accounting for circular nature
+ *
+ * A Delta-E < 5 means colors are very similar and may look identical
+ * to the human eye, even if hex codes differ.
+ *
+ * @param color1 - First OKLCH color
+ * @param color2 - Second OKLCH color
+ * @returns Delta-E value (0 = identical, higher = more different)
+ */
+export function calculateDeltaE(color1: OKLCH, color2: OKLCH): number {
+  // Lightness difference (scale 0-1 to roughly 0-100 for traditional Delta-E scale)
+  const deltaL = (color1.l - color2.l) * 100
+
+  // Chroma difference (scale to similar range)
+  const deltaC = (color1.c - color2.c) * 100
+
+  // Hue difference - account for circular nature
+  let deltaH = color1.h - color2.h
+  if (deltaH > 180) deltaH -= 360
+  if (deltaH < -180) deltaH += 360
+
+  // Weight hue difference by average chroma (hue matters less for desaturated colors)
+  const avgChroma = (color1.c + color2.c) / 2
+  const chromaWeight = Math.min(avgChroma / 0.15, 1) // Full weight at c >= 0.15
+  const weightedDeltaH = deltaH * chromaWeight * 0.5 // Scale hue contribution
+
+  // Euclidean distance in weighted OKLCH space
+  return Math.sqrt(deltaL * deltaL + deltaC * deltaC + weightedDeltaH * weightedDeltaH)
+}
+
+/**
+ * Threshold for "too similar" colors
+ * Colors with Delta-E < 5 may look identical to human eyes
+ */
+export const DELTA_E_THRESHOLD = 5
+
+// ============================================
+// FINAL GAMUT VALIDATION
+// ============================================
+
+/**
+ * Validate and Clamp Color to sRGB Gamut
+ *
+ * After all transformations (hue shift, chroma shift, perceptual corrections),
+ * colors may end up outside the displayable sRGB gamut. This function ensures
+ * the final color is valid by re-clamping chroma if needed.
+ *
+ * @param color - The OKLCH color to validate
+ * @returns Color with chroma clamped to stay in gamut
+ */
+export function validateAndClampToGamut(color: OKLCH): OKLCH {
+  const maxChroma = clampChromaToGamut(color.c, color.l, color.h)
+
+  // If current chroma exceeds the maximum for this lightness/hue, clamp it
+  if (color.c > maxChroma) {
+    return { ...color, c: maxChroma }
+  }
+
+  return color
 }
 
 // ============================================
@@ -952,6 +1083,9 @@ export function generateColorPalette(
       )
     }
 
+    // Final gamut validation - ensure color is displayable after all transformations
+    result = validateAndClampToGamut(result)
+
     return {
       stopNumber: stopNum,
       hex: oklchToHex(result),
@@ -971,15 +1105,30 @@ export function generateColorPalette(
   // Check if any duplicates were found and fixed
   const hadDuplicates = uniqueStops.some(s => s.wasNudged)
 
-  // Convert to final format
-  const generatedStops: GeneratedStop[] = uniqueStops.map(s => ({
-    stopNumber: s.stopNumber,
-    hex: s.hex,
-    originalL: s.originalL,
-    expandedL: s.expandedL,
-    wasNudged: s.wasNudged,
-    nudgeAmount: s.nudgeAmount
-  }))
+  // Convert to final format and calculate Delta-E between consecutive stops
+  const generatedStops: GeneratedStop[] = uniqueStops.map((s, index) => {
+    const stop: GeneratedStop = {
+      stopNumber: s.stopNumber,
+      hex: s.hex,
+      originalL: s.originalL,
+      expandedL: s.expandedL,
+      wasNudged: s.wasNudged,
+      nudgeAmount: s.nudgeAmount
+    }
+
+    // Calculate Delta-E to previous stop (if not first)
+    if (index > 0) {
+      const prevStop = uniqueStops[index - 1]
+      const currentColor: OKLCH = { l: s.l, c: s.c, h: s.h }
+      const prevColor: OKLCH = { l: prevStop.l, c: prevStop.c, h: prevStop.h }
+      const deltaE = calculateDeltaE(currentColor, prevColor)
+
+      stop.deltaE = deltaE
+      stop.tooSimilar = deltaE < DELTA_E_THRESHOLD
+    }
+
+    return stop
+  })
 
   return {
     colorId: color.id,

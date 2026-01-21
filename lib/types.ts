@@ -137,6 +137,8 @@ export type GeneratedStop = {
     chroma: number         // Chroma adjustment (positive = more saturated)
     hue: number            // Hue adjustment in degrees (positive = clockwise)
   }
+  tooSimilar?: boolean     // Is this stop too similar to previous stop (Delta-E < 5)?
+  deltaE?: number          // Delta-E to previous stop (for debugging/display)
 }
 
 // Result for an entire palette (all stops for one color)

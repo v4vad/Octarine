@@ -44,14 +44,24 @@ function isInGamut(l: number, c: number, h: number): boolean {
 
 /**
  * Find maximum in-gamut chroma for a given lightness and hue
- * using binary search
+ * using binary search.
+ *
+ * Note: Instead of hard-clipping at L < 0.001 or L > 0.999, we let the
+ * binary search find actual (tiny) max chroma values. This provides
+ * smoother transitions at palette edges instead of abrupt jumps to zero.
  */
 function findMaxChroma(l: number, h: number): number {
-  // Edge cases: pure black and white have zero chroma
-  if (l <= 0.001 || l >= 0.999) return 0
+  // Exact black and white have no chroma
+  if (l <= 0 || l >= 1) return 0
+
+  // For near-extremes, use a smaller search range since max chroma is tiny
+  // This is more efficient and avoids numerical issues
+  const maxPossibleChroma = l < 0.02 || l > 0.98
+    ? 0.1  // Smaller search range for extremes
+    : 0.4  // Full search range (max OKLCH chroma for sRGB is ~0.37)
 
   let low = 0
-  let high = 0.4  // Max possible chroma in OKLCH for sRGB is ~0.37
+  let high = maxPossibleChroma
 
   // Binary search with 15 iterations gives precision of ~0.00001
   for (let i = 0; i < 15; i++) {

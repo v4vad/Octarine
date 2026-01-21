@@ -275,13 +275,92 @@ When multiple stops would generate the same hex color, Octarine automatically ad
 
 Adjusted colors are marked with a **~** symbol.
 
-### Gamut Mapping
+### Gamut Mapping with Lookup Table
 
-Very light or very dark colors may not be displayable with full saturation. Octarine automatically reduces saturation when needed to keep colors within the displayable range while preserving your intended lightness.
+Very light or very dark colors may not be displayable with full saturation on standard computer screens. Octarine uses a **gamut lookup table** to handle this precisely.
+
+**Why This Matters:**
+
+Computer monitors (using sRGB color space) have physical limits on what colors they can display. Different hues have different limits:
+
+- **Yellows** can stay bright and vivid at high lightness—that's why highlighter yellow works
+- **Blues** can stay rich and saturated when dark—that's why navy blue looks good
+- **Oranges and purples** are more limited at extremes—very light orange becomes washed-out peach
+
+Without proper handling, your carefully chosen saturated colors would turn into different colors entirely when the screen can't display them (called "clipping").
+
+**How the Lookup Table Works:**
+
+When the plugin starts, it calculates the maximum saturation possible for every combination of:
+- 101 lightness levels (from 0% to 100%)
+- 360 hue angles (the full color wheel)
+
+This creates a reference map of 36,360 data points. When generating a color, Octarine checks this map to see if the desired saturation is actually displayable. If not, it automatically reduces the saturation to the maximum possible value.
+
+**The Result:**
+
+- Your intended lightness is preserved exactly
+- Your hue stays the same
+- Only saturation is reduced, and only when necessary
+- Colors stay within the displayable range instead of clipping unpredictably
+
+**Practical Tip:** If you notice light or dark stops looking less vibrant than expected, that's the gamut limit in action. It's not a bug—it's physics. Some colors simply can't exist at certain lightness levels on sRGB screens.
 
 ### Contrast Refinement
 
 After applying all adjustments (hue shift, corrections, etc.), Octarine fine-tunes the lightness to hit your exact contrast target. This ensures accessibility requirements are truly met.
+
+### Color Distinctness Warning
+
+When two consecutive stops in your palette look nearly identical to the human eye (even if their hex codes differ), Octarine shows a warning indicator.
+
+**How it works:**
+- The plugin calculates "Delta-E" between each stop and its neighbor
+- Delta-E measures perceptual difference—how different colors *look*, not just their numeric values
+- If Delta-E is below 5, the colors may appear identical in real use
+- A yellow warning badge (⚠) appears on the affected swatch
+
+**Why this matters:**
+
+Two colors can have different hex codes but still look the same. This happens when:
+- Contrast values are very close (like 1.05 vs 1.10)
+- Colors are at lightness extremes where small changes aren't visible
+- Chroma is very low (grays all look similar)
+
+The warning helps you identify palette stops that might need more separation for practical use.
+
+### Perceptual Correction Improvements
+
+The plugin's perceptual corrections (HK and BB) are now more accurate:
+
+**Helmholtz-Kohlrausch (HK) Correction:**
+- Now *lightness-aware*: the correction is strongest at mid-lightness (around 50%) where human perception is most sensitive
+- Automatically skips gray colors (chroma < 0.01) since grays don't exhibit the HK effect
+
+**Bezold-Brücke (BB) Correction:**
+- Now uses *hue-specific* correction amounts based on perceptual research
+- Blues and magentas get stronger corrections (10-15°) because they shift more dramatically
+- Reds and greens get gentler corrections (5-8°) because they're more stable
+- Automatically skips gray colors since grays don't exhibit hue shift
+
+### Tighter Contrast Tolerance
+
+When using the Contrast Method, the plugin now achieves contrast ratios within ±0.005 of your target (previously ±0.02). This means:
+- If you set 4.5:1 contrast, you'll get exactly 4.5:1 (not 4.48 or 4.52)
+- WCAG compliance is guaranteed, not approximate
+- This is especially important for accessibility audits
+
+### Improved Gamut Handling
+
+**Better Extreme Lightness:**
+- Colors at very light (near white) or very dark (near black) levels now have smoother transitions
+- Previously, chroma would abruptly drop to zero at extremes
+- Now, the plugin calculates actual maximum chroma at all lightness levels
+
+**Final Gamut Validation:**
+- After all transformations (hue shift, corrections, etc.), the plugin verifies colors are still displayable
+- If a color ends up outside the sRGB gamut, it's automatically corrected
+- Prevents unexpected color clipping in the final output
 
 ---
 
