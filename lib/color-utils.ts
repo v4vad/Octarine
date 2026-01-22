@@ -1,6 +1,6 @@
 import type { ColorMethod, ColorStop, GeneratedStop, PaletteResult, Stop, Color, GlobalSettings } from "./types"
 import { oklch, rgb, formatHex } from "culori"
-import { clampChromaToGamut } from "./gamut-table"
+import { clampChromaToGamut, getMaxChroma } from "./gamut-table"
 
 export interface OKLCH {
   l: number
@@ -51,6 +51,71 @@ export function parseOklch(color: string): OKLCH {
     }
   }
   return { l: 0.5, c: 0.1, h: 0 }
+}
+
+// ============================================
+// SMART MINIMUM CHROMA (Preserve Color Identity)
+// ============================================
+
+/**
+ * Get smart minimum chroma for a hue to preserve color identity.
+ *
+ * Different hues have different gamut limits at high lightness:
+ * - Blues (200-280°): Tightest gamut - need higher minimum chroma
+ * - Cyans/Magentas: Medium gamut
+ * - Reds/Greens: Moderate gamut
+ * - Yellows (40-80°): Most generous gamut at high L - need less minimum
+ *
+ * @param hue - Hue angle in degrees (0-360)
+ * @returns Minimum chroma to preserve color identity
+ */
+export function getMinChromaForHue(hue: number): number {
+  hue = ((hue % 360) + 360) % 360
+
+  // Blues (200-280): Need higher min chroma (gamut is tightest at high L)
+  if (hue >= 200 && hue < 280) return 0.025
+
+  // Cyans (160-200) and Magentas (280-340): Medium
+  if ((hue >= 160 && hue < 200) || (hue >= 280 && hue < 340)) return 0.02
+
+  // Reds (340-360, 0-40) and Greens (80-160): Lower
+  if (hue >= 80 && hue < 160) return 0.015
+  if (hue >= 340 || hue < 40) return 0.015
+
+  // Yellows/Oranges (40-80): Lowest (generous gamut at high L)
+  return 0.012
+}
+
+/**
+ * Find maximum lightness that still allows minimum chroma for this hue.
+ *
+ * Uses binary search against the gamut table to find the highest lightness
+ * where getMaxChroma(L, hue) >= minChroma.
+ *
+ * @param hue - Hue angle in degrees (0-360)
+ * @param minChroma - Minimum chroma required
+ * @returns Maximum lightness that can achieve the minimum chroma
+ */
+export function getMaxLightnessForMinChroma(
+  hue: number,
+  minChroma: number
+): number {
+  // Binary search for the highest L where getMaxChroma(L, hue) >= minChroma
+  let low = 0.5
+  let high = 1.0
+
+  for (let i = 0; i < 15; i++) {
+    const mid = (low + high) / 2
+    const maxC = getMaxChroma(mid, hue)
+
+    if (maxC >= minChroma) {
+      low = mid  // Can go lighter
+    } else {
+      high = mid  // Need to go darker
+    }
+  }
+
+  return low
 }
 
 // Calculate relative luminance for WCAG contrast
@@ -1081,6 +1146,40 @@ export function generateColorPalette(
         stopTargetContrast,
         globalSettings.backgroundColor
       )
+    }
+
+    // Smart Minimum Chroma: Preserve color identity at extreme lightness
+    // When enabled (default), caps lightness to maintain perceptible color
+    // BUT: only if capping wouldn't cause unacceptable contrast deviation (±0.03)
+    const preserveIdentity = color.preserveColorIdentity !== false  // Default: true
+    const MAX_CONTRAST_DEVIATION = 0.03  // ±0.03 tolerance for contrast targets
+
+    if (preserveIdentity && baseOklch.c > 0.02) {  // Only for chromatic base colors
+      const minChroma = getMinChromaForHue(result.h)
+      const maxL = getMaxLightnessForMinChroma(result.h, minChroma)
+
+      // Check if capping is needed
+      if (result.l > maxL) {
+        // For contrast method: only cap if deviation stays within tolerance
+        if (effectiveMethod === "contrast" && stopTargetContrast !== undefined) {
+          // Calculate what contrast we'd get at the capped lightness
+          const cappedC = clampChromaToGamut(baseOklch.c, maxL, result.h)
+          const cappedHex = oklchToHex({ l: maxL, c: cappedC, h: result.h })
+          const cappedContrast = getContrastRatio(cappedHex, globalSettings.backgroundColor)
+          const deviation = Math.abs(cappedContrast - stopTargetContrast)
+
+          // Only apply cap if deviation is acceptable
+          if (deviation <= MAX_CONTRAST_DEVIATION) {
+            result.l = maxL
+            result.c = cappedC
+          }
+          // Otherwise: don't cap, let the color stay lighter (possibly grey) to hit target
+        } else {
+          // For lightness method: always apply the cap (no contrast target to miss)
+          result.l = maxL
+          result.c = clampChromaToGamut(baseOklch.c, result.l, result.h)
+        }
+      }
     }
 
     // Final gamut validation - ensure color is displayable after all transformations

@@ -91,6 +91,11 @@ export type Color = {
   hkCorrection?: boolean   // Helmholtz-Kohlrausch: compensates for saturated colors appearing brighter
   bbCorrection?: boolean   // Bezold-Brücke: corrects for hue shifts at different lightness levels
 
+  // Color identity preservation (default: true)
+  // When enabled, caps lightness to maintain visible color at light/dark extremes
+  // Prevents blues from becoming grey at very light stops
+  preserveColorIdentity?: boolean
+
   // Artistic shifts (only at color level and stop level)
   hueShift?: number                                     // 0-100
   hueShiftDirection?: "warm-cool" | "cool-warm"         // Default: warm-cool

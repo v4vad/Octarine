@@ -1085,6 +1085,19 @@ function ColorSettingsPopup({ color, globalSettings, position, onUpdate, onClose
           )}
         </div>
 
+        {/* Color Quality */}
+        <div className="stop-popup-section">
+          <div className="stop-popup-label">Color Quality</div>
+          <div className="toggle-stack">
+            <Toggle
+              label="Preserve color identity"
+              checked={color.preserveColorIdentity !== false}
+              onChange={(val) => onUpdate({ ...color, preserveColorIdentity: val })}
+              tooltip="Keeps visible color tint at light/dark extremes (may slightly miss contrast targets)"
+            />
+          </div>
+        </div>
+
         {/* Corrections */}
         <div className="stop-popup-section">
           <div className="stop-popup-label">Corrections</div>

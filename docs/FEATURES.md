@@ -191,6 +191,26 @@ The starting color that all stops are generated from. You can edit it via:
 - Clicking the color swatch
 - Using the full color picker
 
+### Color Quality
+
+**Preserve Color Identity** (enabled by default)
+
+When generating very light or very dark color stops, some colors (especially blues) can lose all their saturation and become pure grey. This happens because achieving certain contrast targets requires lightness levels where the sRGB color space has no room for chroma.
+
+When Preserve Color Identity is enabled:
+- The plugin calculates a minimum chroma needed to keep the color visibly tinted
+- Lightness is capped at a level that can still achieve this minimum chroma
+- Light blues stay light blue instead of becoming grey
+- The actual contrast may be slightly different from the target
+
+**When to disable it:** Turn this off if you need exact contrast values even at the cost of losing color identity. For example, if you're generating near-white backgrounds where pure grey is acceptable.
+
+**How minimum chroma varies by hue:**
+- Blues (200-280°) need the highest minimum (0.025) because their gamut is tightest at high lightness
+- Cyans and Magentas need medium minimum (0.02)
+- Reds and Greens need lower minimum (0.015)
+- Yellows need the least (0.012) because they have generous gamut at high lightness
+
 ### Correction Toggles
 
 **HK Correction** (Helmholtz-Kohlrausch Effect)
@@ -449,6 +469,12 @@ Once exported, your colors appear in Figma's Variables panel. You can:
 ### Contrast ratios are wrong
 - Make sure your Background Color is set correctly
 - Check that you're using the Contrast Method (not Lightness)
+- If using very low contrast targets (like 1.1:1), the "Preserve color identity" feature may cap lightness to keep the color visible—disable it in color settings if you need exact contrast
+
+### Light color stops look grey
+- This can happen when the target lightness is so high that no chroma is possible in sRGB
+- Enable "Preserve color identity" in color settings (it's on by default)
+- This caps lightness at a level where the color can still have visible tint
 
 ### Eyedropper doesn't work
 - Make sure you have a shape selected in Figma
