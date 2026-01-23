@@ -1644,3 +1644,119 @@ input[type="range"]::-moz-range-thumb {
   font-size: var(--text-xs);
   color: var(--figma-color-text-brand);
 }
+
+/* --------------------------------------------
+   CHROMA CURVE SELECTOR
+   -------------------------------------------- */
+.chroma-curve-select {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--figma-color-border);
+  background: var(--figma-color-bg);
+  color: var(--figma-color-text);
+  font-size: var(--text-md);
+  cursor: pointer;
+  margin-bottom: var(--space-2);
+}
+
+.chroma-curve-select:focus {
+  outline: none;
+  border-color: var(--figma-color-border-brand);
+}
+
+/* Curve preview - shows 3 bars for light/mid/dark */
+.chroma-curve-preview {
+  display: flex;
+  gap: 2px;
+  height: 16px;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--figma-color-bg-secondary);
+}
+
+.chroma-bar {
+  flex: 1;
+  background: var(--figma-color-bg-brand, #18a0fb);
+  transition: opacity var(--transition-fast);
+}
+
+/* Labels under preview */
+.chroma-curve-preview-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: var(--figma-color-text-tertiary);
+  margin-bottom: var(--space-2);
+}
+
+/* Custom sliders (shown when "Custom" is selected) */
+.chroma-curve-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  background: var(--figma-color-bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.chroma-slider-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.chroma-slider-label {
+  font-size: var(--text-sm);
+  color: var(--figma-color-text-secondary);
+  width: 32px;
+  flex-shrink: 0;
+}
+
+.chroma-slider-row input[type="range"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.chroma-slider-value {
+  font-size: var(--text-sm);
+  color: var(--figma-color-text-secondary);
+  width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* --------------------------------------------
+   HUE SHIFT CURVE PREVIEW
+   -------------------------------------------- */
+.hue-shift-preview {
+  margin-bottom: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  background: var(--figma-color-bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.hue-shift-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  color: var(--figma-color-text-secondary);
+}
+
+.hue-shift-value {
+  font-family: monospace;
+}
+
+.hue-shift-value.light {
+  color: #60a5fa; /* Light blue for light stops (toward cyan) */
+}
+
+.hue-shift-value.dark {
+  color: #c084fc; /* Purple for dark stops */
+}
+
+.hue-shift-arrow {
+  color: var(--figma-color-text-tertiary);
+}

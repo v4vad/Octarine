@@ -5,6 +5,54 @@
 // Color method determines how color stops are calculated
 export type ColorMethod = "lightness" | "contrast"
 
+// ============================================
+// CHROMA CURVES
+// ============================================
+
+// Preset curve types for chroma distribution across lightness
+export type ChromaCurvePreset = "flat" | "bell" | "pastel" | "jewel" | "linear-fade" | "custom"
+
+// Chroma curve configuration
+export type ChromaCurve = {
+  preset: ChromaCurvePreset
+  lightChroma?: number   // 0-100 (only for custom)
+  midChroma?: number     // 0-100 (only for custom)
+  darkChroma?: number    // 0-100 (only for custom)
+}
+
+// Preset values for each curve type (percentage of base chroma)
+export const CHROMA_CURVE_PRESETS: Record<Exclude<ChromaCurvePreset, "custom">, { light: number; mid: number; dark: number }> = {
+  flat: { light: 100, mid: 100, dark: 100 },           // Uniform saturation (default)
+  bell: { light: 45, mid: 100, dark: 65 },             // Colorful throughout, peak at mids
+  pastel: { light: 30, mid: 70, dark: 50 },            // Soft but visibly colored
+  jewel: { light: 55, mid: 100, dark: 85 },            // Rich and vibrant at all stops
+  "linear-fade": { light: 25, mid: 60, dark: 100 }    // Fade from saturated darks to colorful lights
+}
+
+// ============================================
+// HUE SHIFT CURVES
+// ============================================
+
+// Preset curve types for hue shift distribution across lightness
+export type HueShiftCurvePreset = "none" | "subtle" | "natural" | "dramatic" | "vivid" | "custom"
+
+// Hue shift curve configuration
+export type HueShiftCurve = {
+  preset: HueShiftCurvePreset
+  lightShift?: number   // degrees (only for custom) - positive = toward cool/cyan
+  darkShift?: number    // degrees (only for custom) - negative = toward warm/purple
+}
+
+// Preset values for hue shift curves
+// Positive values = shift toward cyan/cool, negative = shift toward purple/warm
+export const HUE_SHIFT_CURVE_PRESETS: Record<Exclude<HueShiftCurvePreset, "custom">, { light: number; dark: number }> = {
+  none: { light: 0, dark: 0 },              // No shift (default)
+  subtle: { light: 4, dark: -5 },           // Gentle professional shift
+  natural: { light: 8, dark: -10 },         // Reference palette match
+  dramatic: { light: 12, dark: -15 },       // Bold artistic effect
+  vivid: { light: 12, dark: -15 }           // Same as dramatic, but yellow-aware in applyHueShift
+}
+
 // Default stop numbers
 export const DEFAULT_STOPS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900]
 
@@ -61,10 +109,6 @@ export type Stop = {
   lightnessOverride?: number
   contrastOverride?: number
 
-  // Override hue/saturation shift for this stop
-  hueShiftOverride?: number
-  saturationShiftOverride?: number
-
   // Manual color override (via color picker)
   manualOverride?: {
     l: number  // Lightness (0-1)
@@ -96,11 +140,12 @@ export type Color = {
   // Prevents blues from becoming grey at very light stops
   preserveColorIdentity?: boolean
 
-  // Artistic shifts (only at color level and stop level)
-  hueShift?: number                                     // 0-100
-  hueShiftDirection?: "warm-cool" | "cool-warm"         // Default: warm-cool
-  saturationShift?: number                              // 0-100
-  saturationShiftDirection?: "vivid-muted" | "muted-vivid"  // Default: vivid-muted
+  // Artistic shifts
+  // Hue shift curve - controls hue variation across lightness levels
+  hueShiftCurve?: HueShiftCurve
+
+  // Chroma curve - controls saturation distribution across lightness levels
+  chromaCurve?: ChromaCurve
 
   // Array of stops for this color
   stops: Stop[]

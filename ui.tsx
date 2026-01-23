@@ -18,6 +18,12 @@ import {
   createDefaultColor,
   createDefaultGlobalSettings,
   DEFAULT_STOPS,
+  ChromaCurve,
+  ChromaCurvePreset,
+  CHROMA_CURVE_PRESETS,
+  HueShiftCurve,
+  HueShiftCurvePreset,
+  HUE_SHIFT_CURVE_PRESETS,
 } from './lib/types';
 
 import { useHistory } from './lib/useHistory';
@@ -34,8 +40,6 @@ import {
   getContrastRatio,
   DELTA_E_THRESHOLD,
   OKLCH,
-  HueShiftDirection,
-  ChromaShiftDirection,
 } from './lib/color-utils';
 
 // ============================================
@@ -807,8 +811,6 @@ interface StopPopupProps {
   effectiveMethod: 'lightness' | 'contrast';
   defaultLightness: number;
   defaultContrast: number;
-  colorHueShift: number;
-  colorSaturationShift: number;
   backgroundColor: string;
   position: { x: number; y: number };
   onUpdate: (updates: Partial<Stop>) => void;
@@ -823,8 +825,6 @@ function StopPopup({
   effectiveMethod,
   defaultLightness,
   defaultContrast,
-  colorHueShift,
-  colorSaturationShift,
   backgroundColor,
   position,
   onUpdate,
@@ -859,8 +859,6 @@ function StopPopup({
       manualOverride: undefined,
       lightnessOverride: undefined,
       contrastOverride: undefined,
-      hueShiftOverride: undefined,
-      saturationShiftOverride: undefined,
     });
   };
 
@@ -940,66 +938,6 @@ function StopPopup({
                   ? { lightnessOverride: undefined }
                   : { contrastOverride: undefined }
                 )}
-                title="Reset to default"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                  <path d="M3 3v5h5"/>
-                </svg>
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Hue Shift Override */}
-        <div className="stop-popup-section">
-          <div className="stop-popup-label">
-            Hue Shift {stop.hueShiftOverride === undefined ? '(Default)' : '(Override)'}
-          </div>
-          <div className="stop-override-controls">
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={stop.hueShiftOverride ?? colorHueShift}
-              onChange={(e) => onUpdate({ hueShiftOverride: parseInt(e.target.value) })}
-              style={{ flex: 1 }}
-            />
-            <span style={{ fontSize: '10px', minWidth: '24px' }}>{stop.hueShiftOverride ?? colorHueShift}</span>
-            {stop.hueShiftOverride !== undefined && (
-              <button
-                className="reset-icon-btn"
-                onClick={() => onUpdate({ hueShiftOverride: undefined })}
-                title="Reset to default"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                  <path d="M3 3v5h5"/>
-                </svg>
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Saturation Shift Override */}
-        <div className="stop-popup-section">
-          <div className="stop-popup-label">
-            Saturation Shift {stop.saturationShiftOverride === undefined ? '(Default)' : '(Override)'}
-          </div>
-          <div className="stop-override-controls">
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={stop.saturationShiftOverride ?? colorSaturationShift}
-              onChange={(e) => onUpdate({ saturationShiftOverride: parseInt(e.target.value) })}
-              style={{ flex: 1 }}
-            />
-            <span style={{ fontSize: '10px', minWidth: '24px' }}>{stop.saturationShiftOverride ?? colorSaturationShift}</span>
-            {stop.saturationShiftOverride !== undefined && (
-              <button
-                className="reset-icon-btn"
-                onClick={() => onUpdate({ saturationShiftOverride: undefined })}
                 title="Reset to default"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1117,66 +1055,202 @@ function ColorSettingsPopup({ color, globalSettings, position, onUpdate, onClose
           </div>
         </div>
 
-        {/* Hue Shift */}
+        {/* Hue Shift Curve */}
         <div className="stop-popup-section">
-          <div className="stop-popup-label">Hue Shift: {color.hueShift ?? 0}</div>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={color.hueShift ?? 0}
-            onChange={(e) => onUpdate({ ...color, hueShift: parseInt(e.target.value) })}
-            className="w-full"
-          />
-          <div className="flex gap-2 mt-2">
-            <label className="radio-label text-xs">
-              <input
-                type="radio"
-                checked={(color.hueShiftDirection ?? 'warm-cool') === 'warm-cool'}
-                onChange={() => onUpdate({ ...color, hueShiftDirection: 'warm-cool' })}
-              />
-              Warm→Cool
-            </label>
-            <label className="radio-label text-xs">
-              <input
-                type="radio"
-                checked={color.hueShiftDirection === 'cool-warm'}
-                onChange={() => onUpdate({ ...color, hueShiftDirection: 'cool-warm' })}
-              />
-              Cool→Warm
-            </label>
+          <div className="stop-popup-label">Hue Shift Curve</div>
+          <select
+            className="chroma-curve-select"
+            value={color.hueShiftCurve?.preset ?? 'none'}
+            onChange={(e) => {
+              const preset = e.target.value as HueShiftCurvePreset;
+              if (preset === 'custom') {
+                // Initialize custom with current preset values or defaults
+                const current = color.hueShiftCurve?.preset && color.hueShiftCurve.preset !== 'custom'
+                  ? HUE_SHIFT_CURVE_PRESETS[color.hueShiftCurve.preset]
+                  : { light: 0, dark: 0 };
+                onUpdate({
+                  ...color,
+                  hueShiftCurve: {
+                    preset: 'custom',
+                    lightShift: current.light,
+                    darkShift: current.dark,
+                  }
+                });
+              } else {
+                onUpdate({ ...color, hueShiftCurve: { preset } });
+              }
+            }}
+          >
+            <option value="none">None (No shift)</option>
+            <option value="subtle">Subtle (+4° / -5°)</option>
+            <option value="natural">Natural (+8° / -10°)</option>
+            <option value="dramatic">Dramatic (+12° / -15°)</option>
+            <option value="vivid">Vivid (+12° / -15°, golden yellows)</option>
+            <option value="custom">Custom</option>
+          </select>
+
+          {/* Curve Preview */}
+          <div className="hue-shift-preview">
+            {(() => {
+              const preset = color.hueShiftCurve?.preset ?? 'none';
+              const values = preset === 'custom'
+                ? {
+                    light: color.hueShiftCurve?.lightShift ?? 0,
+                    dark: color.hueShiftCurve?.darkShift ?? 0
+                  }
+                : (preset === 'none' ? { light: 0, dark: 0 } : HUE_SHIFT_CURVE_PRESETS[preset]);
+              return (
+                <div className="hue-shift-indicator">
+                  <span className="hue-shift-value light" title="Light stops shift">
+                    Light: {values.light > 0 ? '+' : ''}{values.light}°
+                  </span>
+                  <span className="hue-shift-arrow">→ 0° →</span>
+                  <span className="hue-shift-value dark" title="Dark stops shift">
+                    Dark: {values.dark > 0 ? '+' : ''}{values.dark}°
+                  </span>
+                </div>
+              );
+            })()}
           </div>
+
+          {/* Custom Sliders */}
+          {color.hueShiftCurve?.preset === 'custom' && (
+            <div className="chroma-curve-sliders">
+              <div className="chroma-slider-row">
+                <span className="chroma-slider-label">Light</span>
+                <input
+                  type="range"
+                  min="-20"
+                  max="20"
+                  value={color.hueShiftCurve.lightShift ?? 0}
+                  onChange={(e) => onUpdate({
+                    ...color,
+                    hueShiftCurve: { ...color.hueShiftCurve!, lightShift: parseInt(e.target.value) }
+                  })}
+                />
+                <span className="chroma-slider-value">{color.hueShiftCurve.lightShift ?? 0}°</span>
+              </div>
+              <div className="chroma-slider-row">
+                <span className="chroma-slider-label">Dark</span>
+                <input
+                  type="range"
+                  min="-20"
+                  max="20"
+                  value={color.hueShiftCurve.darkShift ?? 0}
+                  onChange={(e) => onUpdate({
+                    ...color,
+                    hueShiftCurve: { ...color.hueShiftCurve!, darkShift: parseInt(e.target.value) }
+                  })}
+                />
+                <span className="chroma-slider-value">{color.hueShiftCurve.darkShift ?? 0}°</span>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Saturation Shift */}
+        {/* Chroma Curve */}
         <div className="stop-popup-section">
-          <div className="stop-popup-label">Saturation Shift: {color.saturationShift ?? 0}</div>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={color.saturationShift ?? 0}
-            onChange={(e) => onUpdate({ ...color, saturationShift: parseInt(e.target.value) })}
-            className="w-full"
-          />
-          <div className="flex gap-2 mt-2">
-            <label className="radio-label text-xs">
-              <input
-                type="radio"
-                checked={(color.saturationShiftDirection ?? 'vivid-muted') === 'vivid-muted'}
-                onChange={() => onUpdate({ ...color, saturationShiftDirection: 'vivid-muted' })}
-              />
-              Vivid→Muted
-            </label>
-            <label className="radio-label text-xs">
-              <input
-                type="radio"
-                checked={color.saturationShiftDirection === 'muted-vivid'}
-                onChange={() => onUpdate({ ...color, saturationShiftDirection: 'muted-vivid' })}
-              />
-              Muted→Vivid
-            </label>
+          <div className="stop-popup-label">Chroma Curve</div>
+          <select
+            className="chroma-curve-select"
+            value={color.chromaCurve?.preset ?? 'flat'}
+            onChange={(e) => {
+              const preset = e.target.value as ChromaCurvePreset;
+              if (preset === 'custom') {
+                // Initialize custom with current preset values or defaults
+                const current = color.chromaCurve?.preset && color.chromaCurve.preset !== 'custom'
+                  ? CHROMA_CURVE_PRESETS[color.chromaCurve.preset]
+                  : { light: 100, mid: 100, dark: 100 };
+                onUpdate({
+                  ...color,
+                  chromaCurve: {
+                    preset: 'custom',
+                    lightChroma: current.light,
+                    midChroma: current.mid,
+                    darkChroma: current.dark,
+                  }
+                });
+              } else {
+                onUpdate({ ...color, chromaCurve: { preset } });
+              }
+            }}
+          >
+            <option value="flat">Flat (Uniform)</option>
+            <option value="bell">Bell (Natural)</option>
+            <option value="pastel">Pastel (Soft lights)</option>
+            <option value="jewel">Jewel (Vibrant mids)</option>
+            <option value="linear-fade">Linear Fade (Rich darks)</option>
+            <option value="custom">Custom</option>
+          </select>
+
+          {/* Curve Preview */}
+          <div className="chroma-curve-preview">
+            {(() => {
+              const preset = color.chromaCurve?.preset ?? 'flat';
+              const values = preset === 'custom'
+                ? {
+                    light: color.chromaCurve?.lightChroma ?? 100,
+                    mid: color.chromaCurve?.midChroma ?? 100,
+                    dark: color.chromaCurve?.darkChroma ?? 100
+                  }
+                : CHROMA_CURVE_PRESETS[preset];
+              return (
+                <>
+                  <div className="chroma-bar" style={{ opacity: values.light / 100 }} title={`Light: ${values.light}%`} />
+                  <div className="chroma-bar" style={{ opacity: values.mid / 100 }} title={`Mid: ${values.mid}%`} />
+                  <div className="chroma-bar" style={{ opacity: values.dark / 100 }} title={`Dark: ${values.dark}%`} />
+                </>
+              );
+            })()}
           </div>
+
+          {/* Custom Sliders */}
+          {color.chromaCurve?.preset === 'custom' && (
+            <div className="chroma-curve-sliders">
+              <div className="chroma-slider-row">
+                <span className="chroma-slider-label">Light</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={color.chromaCurve.lightChroma ?? 100}
+                  onChange={(e) => onUpdate({
+                    ...color,
+                    chromaCurve: { ...color.chromaCurve!, lightChroma: parseInt(e.target.value) }
+                  })}
+                />
+                <span className="chroma-slider-value">{color.chromaCurve.lightChroma ?? 100}%</span>
+              </div>
+              <div className="chroma-slider-row">
+                <span className="chroma-slider-label">Mid</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={color.chromaCurve.midChroma ?? 100}
+                  onChange={(e) => onUpdate({
+                    ...color,
+                    chromaCurve: { ...color.chromaCurve!, midChroma: parseInt(e.target.value) }
+                  })}
+                />
+                <span className="chroma-slider-value">{color.chromaCurve.midChroma ?? 100}%</span>
+              </div>
+              <div className="chroma-slider-row">
+                <span className="chroma-slider-label">Dark</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={color.chromaCurve.darkChroma ?? 100}
+                  onChange={(e) => onUpdate({
+                    ...color,
+                    chromaCurve: { ...color.chromaCurve!, darkChroma: parseInt(e.target.value) }
+                  })}
+                />
+                <span className="chroma-slider-value">{color.chromaCurve.darkChroma ?? 100}%</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>
@@ -1287,9 +1361,7 @@ function ColorRow({ color, globalSettings, onUpdate, onRemove }: ColorRowProps) 
           const contrastRatio = getContrastRatio(displayColor, globalSettings.backgroundColor);
           const hasOverride = !!stop.manualOverride ||
             stop.lightnessOverride !== undefined ||
-            stop.contrastOverride !== undefined ||
-            stop.hueShiftOverride !== undefined ||
-            stop.saturationShiftOverride !== undefined;
+            stop.contrastOverride !== undefined;
 
           const isNudged = generatedStop?.wasNudged && !stop.manualOverride;
           const isTooSimilar = generatedStop?.tooSimilar && !stop.manualOverride;

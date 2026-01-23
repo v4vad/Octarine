@@ -1,4 +1,5 @@
-import type { ColorMethod, ColorStop, GeneratedStop, PaletteResult, Stop, Color, GlobalSettings } from "./types"
+import type { ColorMethod, ColorStop, GeneratedStop, PaletteResult, Stop, Color, GlobalSettings, ChromaCurve, HueShiftCurve } from "./types"
+import { CHROMA_CURVE_PRESETS, HUE_SHIFT_CURVE_PRESETS } from "./types"
 import { oklch, rgb, formatHex } from "culori"
 import { clampChromaToGamut, getMaxChroma } from "./gamut-table"
 
@@ -271,9 +272,6 @@ export function refineContrastToTarget(
   return currentColor
 }
 
-// Hue shift direction type
-export type HueShiftDirection = "warm-cool" | "cool-warm"
-
 // Generate color for a specific stop
 export function generateColor(
   baseColor: string,
@@ -284,10 +282,8 @@ export function generateColor(
   globalContrast?: Record<string, number>,
   backgroundColor?: string,
   perceptualCorrections?: PerceptualCorrectionOptions,
-  hueShiftAmount?: number,
-  hueShiftDirection?: HueShiftDirection,
-  chromaShiftAmount?: number,
-  chromaShiftDirection?: ChromaShiftDirection
+  hueShiftCurve?: HueShiftCurve,
+  chromaCurve?: ChromaCurve
 ): string {
   const bgOklch = backgroundColor ? hexToOklch(backgroundColor) : { l: 1, c: 0, h: 0 }
 
@@ -339,17 +335,14 @@ export function generateColor(
   }
 
   // Apply hue shift if specified (artistic hue variation across stops)
-  if (hueShiftAmount && hueShiftAmount > 0) {
-    // Flip the sign for cool-warm direction
-    const effectiveShift = hueShiftDirection === "cool-warm"
-      ? -hueShiftAmount
-      : hueShiftAmount
-    result = applyHueShift(result, targetL, effectiveShift)
+  if (hueShiftCurve && hueShiftCurve.preset !== "none") {
+    const hueShiftValues = getHueShiftValues(hueShiftCurve)
+    result = applyHueShift(result, targetL, hueShiftValues, hueShiftCurve.preset === "vivid")
   }
 
-  // Apply chroma/saturation shift if specified (artistic saturation variation)
-  if (chromaShiftAmount && chromaShiftAmount > 0) {
-    result = applyChromaShift(result, targetL, chromaShiftAmount, chromaShiftDirection)
+  // Apply chroma curve if specified (artistic saturation distribution)
+  if (chromaCurve && chromaCurve.preset !== "flat") {
+    result = applyChromaCurve(result, targetL, chromaCurve)
   }
 
   // Apply perceptual corrections if enabled
@@ -619,89 +612,181 @@ export function applyBBCorrection(color: OKLCH): OKLCH {
 // ============================================
 
 /**
- * Intentional Hue Shift Across Lightness
+ * Get Hue Shift Values from Curve Configuration
+ *
+ * Extracts the light and dark shift amounts from a HueShiftCurve,
+ * handling both presets and custom configurations.
+ *
+ * @param curve - The hue shift curve configuration
+ * @returns Object with light and dark shift amounts in degrees
+ */
+export function getHueShiftValues(curve: HueShiftCurve | undefined): { light: number; dark: number } {
+  if (!curve || curve.preset === "none") {
+    return { light: 0, dark: 0 }
+  }
+
+  if (curve.preset === "custom") {
+    return {
+      light: curve.lightShift ?? 0,
+      dark: curve.darkShift ?? 0
+    }
+  }
+
+  return HUE_SHIFT_CURVE_PRESETS[curve.preset]
+}
+
+/**
+ * Intentional Hue Shift Across Lightness (Curve-Based)
  *
  * Unlike Bezold-Brücke correction (which counteracts unwanted perceptual shifts),
  * this is an artistic feature that intentionally varies hue across lightness levels.
  *
- * Example: A blue palette can shift toward purple in dark stops and toward cyan in light stops.
+ * The curve-based approach allows asymmetric shifts - for example, darks can shift
+ * more than lights, matching what professional color palettes do.
+ *
+ * Example: A blue palette can shift toward cyan in light stops and toward purple in dark stops.
+ *
+ * Special handling for yellows in Vivid mode:
+ * Yellow (hue ~90°) has a unique problem: the standard light shift (+12°) pushes it
+ * toward green (102°), making it look olive/muddy. Instead of using the standard
+ * light/dark region logic, yellows get a continuous shift toward orange at ALL
+ * lightness levels, with the shift increasing as the color gets darker.
  *
  * @param color - The color to shift
  * @param targetL - The target lightness (0-1)
- * @param shiftAmount - Total degrees to shift (positive = warm→cool, negative = cool→warm)
+ * @param curve - Object with light (shift for L>0.5) and dark (shift for L<0.5) amounts in degrees
+ * @param yellowAware - If true (Vivid preset), apply special yellow handling
+ * @returns Color with hue shifted based on lightness region
  */
 export function applyHueShift(
   color: OKLCH,
   targetL: number,
-  shiftAmount: number
+  curve: { light: number; dark: number },
+  yellowAware: boolean = false
 ): OKLCH {
-  if (shiftAmount === 0) return color
+  // Skip hue shift for near-neutral colors (prevents grey tinting)
+  if (color.c < 0.02) return color
 
-  // Map lightness to shift amount:
-  // - High L (light colors) → shift one direction
-  // - Low L (dark colors) → shift opposite direction
-  // - Mid L (0.5) → no shift
-  //
-  // normalizedL ranges from -1 (at L=0) to +1 (at L=1)
-  const normalizedL = (targetL - 0.5) * 2
+  if (curve.light === 0 && curve.dark === 0) return color
 
-  // For positive shiftAmount (warm→cool):
-  // - Light colors (positive normalizedL) → shift toward warm (subtract from hue)
-  // - Dark colors (negative normalizedL) → shift toward cool (add to hue)
-  const hueOffset = -normalizedL * (shiftAmount / 2)
+  let hueOffset = 0
+
+  // Check if this is a yellow hue (70-110°)
+  const normalizedHue = ((color.h % 360) + 360) % 360
+  const isYellow = normalizedHue >= 70 && normalizedHue <= 110
+
+  if (yellowAware && isYellow) {
+    // For yellows in Vivid mode: continuous shift toward orange
+    // Shift increases as color gets darker (more orange in shadows)
+    // yellowFactor: 1.0 at pure yellow (90°), tapering to 0 at zone edges (70°, 110°)
+    const yellowFactor = 1 - Math.abs(normalizedHue - 90) / 20
+    const maxShift = -45  // Maximum shift toward orange at L=0
+    hueOffset = maxShift * (1 - targetL) * yellowFactor
+  } else {
+    // Standard light/dark region logic for non-yellows
+    // - Light (L > 0.5): use light shift, scaled by how far from midpoint
+    // - Mid (L = 0.5): no shift
+    // - Dark (L < 0.5): use dark shift, scaled by how far from midpoint
+    if (targetL > 0.5) {
+      // Light region: interpolate from 0 at mid to full shift at extremes
+      const t = (targetL - 0.5) / 0.5  // 0 at L=0.5, 1 at L=1.0
+      hueOffset = curve.light * t
+    } else {
+      // Dark region: interpolate from 0 at mid to full shift at extremes
+      const t = (0.5 - targetL) / 0.5  // 0 at L=0.5, 1 at L=0
+      hueOffset = curve.dark * t
+    }
+  }
 
   const newHue = (color.h + hueOffset + 360) % 360
   return { ...color, h: newHue }
 }
 
 // ============================================
-// CHROMA/SATURATION SHIFT (Artistic saturation variation across stops)
+// CHROMA CURVES (Saturation distribution across lightness)
 // ============================================
 
-// Chroma shift direction type
-export type ChromaShiftDirection = "vivid-muted" | "muted-vivid"
+/**
+ * Smooth step function for interpolation
+ * Creates smooth transitions between control points
+ */
+function smoothStep(t: number): number {
+  return t * t * (3 - 2 * t)
+}
 
 /**
- * Intentional Chroma (Saturation) Shift Across Lightness
+ * Interpolate chroma curve based on lightness
  *
- * Varies saturation across lightness levels for artistic effect.
+ * Uses three control points (light, mid, dark) to create a smooth
+ * curve that defines chroma percentage at each lightness level.
  *
- * @param color - The color to shift
- * @param targetL - The target lightness (0-1)
- * @param shiftAmount - Percentage to shift (0-100). At 100%, extremes are fully desaturated.
- * @param direction - "vivid-muted" = light is vivid, dark is muted. "muted-vivid" = opposite.
+ * @param L - Target lightness (0-1)
+ * @param lightPct - Chroma percentage at light end (0-100)
+ * @param midPct - Chroma percentage at mid-range (0-100)
+ * @param darkPct - Chroma percentage at dark end (0-100)
+ * @returns Chroma multiplier percentage (0-100)
  */
-export function applyChromaShift(
-  color: OKLCH,
-  targetL: number,
-  shiftAmount: number,
-  direction: ChromaShiftDirection = "vivid-muted"
-): OKLCH {
-  if (shiftAmount === 0 || color.c === 0) return color
+function interpolateChromaCurve(
+  L: number,
+  lightPct: number,
+  midPct: number,
+  darkPct: number
+): number {
+  // Define lightness positions for control points
+  const LIGHT_L = 0.85  // Light end (stops 50-200)
+  const MID_L = 0.50    // Mid-range (stops 400-600)
+  const DARK_L = 0.15   // Dark end (stops 800-950)
 
-  // Map lightness to a multiplier:
-  // - normalizedL ranges from -1 (at L=0) to +1 (at L=1)
-  const normalizedL = (targetL - 0.5) * 2
-
-  // Calculate how much to reduce chroma (0 = no reduction, 1 = full reduction)
-  // For "vivid-muted": light colors keep chroma, dark colors lose it
-  // For "muted-vivid": dark colors keep chroma, light colors lose it
-  let reductionFactor: number
-  if (direction === "vivid-muted") {
-    // Light (high L, positive normalizedL) → keep chroma (low reduction)
-    // Dark (low L, negative normalizedL) → reduce chroma (high reduction)
-    reductionFactor = Math.max(0, -normalizedL)
+  if (L >= MID_L) {
+    // Interpolate between mid and light
+    const t = Math.max(0, Math.min(1, (L - MID_L) / (LIGHT_L - MID_L)))
+    return midPct + (lightPct - midPct) * smoothStep(t)
   } else {
-    // Light (high L, positive normalizedL) → reduce chroma (high reduction)
-    // Dark (low L, negative normalizedL) → keep chroma (low reduction)
-    reductionFactor = Math.max(0, normalizedL)
+    // Interpolate between dark and mid
+    const t = Math.max(0, Math.min(1, (L - DARK_L) / (MID_L - DARK_L)))
+    return darkPct + (midPct - darkPct) * smoothStep(t)
+  }
+}
+
+/**
+ * Apply Chroma Curve to a Color
+ *
+ * Adjusts chroma based on lightness using a curve defined by three
+ * control points (light, mid, dark). This enables professional-looking
+ * palettes with bell-shaped saturation distributions.
+ *
+ * @param color - The OKLCH color to modify
+ * @param lightness - The target lightness level (0-1)
+ * @param curve - The chroma curve configuration
+ * @returns Color with adjusted chroma
+ */
+export function applyChromaCurve(
+  color: OKLCH,
+  lightness: number,
+  curve: ChromaCurve
+): OKLCH {
+  // If chroma is 0 (grey), no adjustment needed
+  if (color.c === 0) return color
+
+  // Get control points from preset or custom values
+  let lightPct: number, midPct: number, darkPct: number
+
+  if (curve.preset === "custom") {
+    lightPct = curve.lightChroma ?? 100
+    midPct = curve.midChroma ?? 100
+    darkPct = curve.darkChroma ?? 100
+  } else {
+    const preset = CHROMA_CURVE_PRESETS[curve.preset]
+    lightPct = preset.light
+    midPct = preset.mid
+    darkPct = preset.dark
   }
 
-  // Apply the shift amount (0-100 maps to 0-1)
-  const chromaMultiplier = 1 - (reductionFactor * (shiftAmount / 100))
-  const newChroma = color.c * Math.max(0, chromaMultiplier)
+  // Get chroma multiplier for this lightness level
+  const multiplier = interpolateChromaCurve(lightness, lightPct, midPct, darkPct)
 
-  return { ...color, c: newChroma }
+  // Apply multiplier to chroma
+  return { ...color, c: color.c * (multiplier / 100) }
 }
 
 /**
@@ -1109,24 +1194,15 @@ export function generateColorPalette(
       h: baseOklch.h
     }
 
-    // Apply hue shift if specified
-    const hueShift = stop.hueShiftOverride ?? color.hueShift ?? 0
-    if (hueShift > 0) {
-      const effectiveShift = (color.hueShiftDirection ?? "warm-cool") === "cool-warm"
-        ? -hueShift
-        : hueShift
-      result = applyHueShift(result, targetL, effectiveShift)
+    // Apply hue shift if specified (using curve-based approach)
+    if (color.hueShiftCurve && color.hueShiftCurve.preset !== "none") {
+      const hueShiftValues = getHueShiftValues(color.hueShiftCurve)
+      result = applyHueShift(result, targetL, hueShiftValues, color.hueShiftCurve.preset === "vivid")
     }
 
-    // Apply chroma/saturation shift if specified
-    const chromaShift = stop.saturationShiftOverride ?? color.saturationShift ?? 0
-    if (chromaShift > 0) {
-      result = applyChromaShift(
-        result,
-        targetL,
-        chromaShift,
-        color.saturationShiftDirection ?? "vivid-muted"
-      )
+    // Apply chroma curve if specified (color-level setting)
+    if (color.chromaCurve && color.chromaCurve.preset !== "flat") {
+      result = applyChromaCurve(result, targetL, color.chromaCurve)
     }
 
     // Apply perceptual corrections if enabled

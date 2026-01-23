@@ -161,15 +161,7 @@ Each stop can have its own custom settings:
    - Set a different target value for just this stop
    - Click the reset icon to go back to the default
 
-2. **Hue Shift Override**
-   - Adjust how much the hue shifts for this stop (0-100)
-   - Useful for creating warm highlights or cool shadows
-
-3. **Saturation Shift Override**
-   - Adjust how saturated this stop should be (0-100)
-   - Create more vivid or muted variations
-
-4. **Manual Color Override**
+2. **Manual Color Override**
    - Pick a completely custom color for this stop
    - The color won't change when you modify the base color
    - Check "Apply perceptual corrections" to use the plugin's color adjustments
@@ -259,27 +251,66 @@ The color used for contrast calculations. By default, this is white (#FFFFFF).
 
 These controls let you add visual interest and harmony to your palettes.
 
-### Hue Shift
+### Hue Shift Curves
 
-Creates a color temperature gradient across your palette.
+Creates professional-looking color temperature gradients across your palette. Unlike a simple slider, hue shift curves allow asymmetric shifts—darks can shift more than lights, matching what professional color palettes do.
 
-- **Slider (0-100)** - How much hue shift to apply
-- **Direction options:**
-  - **Warm→Cool** - Light stops shift warm (yellow/orange), dark stops shift cool (blue)
-  - **Cool→Warm** - Light stops shift cool, dark stops shift warm
+**How it works:**
+- Light stops (50-200) shift one direction
+- Mid stops (400-600) have no shift
+- Dark stops (700-900) shift the opposite direction
 
-**Example:** A blue palette with Warm→Cool hue shift will have slightly purple-ish light stops and slightly green-ish dark stops.
+**Preset Curves:**
 
-### Saturation Shift
+| Preset | Light Shift | Dark Shift | Effect |
+|--------|-------------|------------|--------|
+| **None** | 0° | 0° | No hue variation (default) |
+| **Subtle** | +4° | -5° | Gentle professional shift |
+| **Natural** | +8° | -10° | Matches professional palettes |
+| **Dramatic** | +12° | -15° | Bold artistic effect |
+| **Vivid** | +12° | -15° | Like Dramatic, but yellows shift toward golden/amber instead of olive |
 
-Creates a saturation gradient across your palette.
+- Positive values shift toward cyan/cool
+- Negative values shift toward purple/warm
 
-- **Slider (0-100)** - How much saturation shift to apply
-- **Direction options:**
-  - **Vivid→Muted** - Light stops are more saturated, dark stops are more muted
-  - **Muted→Vivid** - Light stops are more muted, dark stops are more saturated
+**Custom Curves:**
 
-**Example:** Using Vivid→Muted creates bright, punchy light colors that fade to sophisticated darker tones.
+Select "Custom" to set your own shift amounts:
+- **Light** (-20° to +20°): Controls shift for light stops
+- **Dark** (-20° to +20°): Controls shift for dark stops
+
+**Example:** A blue palette with the "Natural" preset will have light stops that shift slightly toward cyan, while dark stops shift more noticeably toward purple. This creates depth and visual interest that mimics natural lighting.
+
+**Why asymmetric shifts matter:**
+
+Professional color palettes often have different shift amounts for lights vs darks. For example, in natural lighting:
+- Highlights pick up a slight cool (cyan) tint from the sky
+- Shadows shift toward warm (purple/red) due to reflected ambient light
+
+The curve presets capture these natural patterns automatically.
+
+### Chroma Curves
+
+Controls how saturation (chroma) is distributed across lightness levels. Unlike a simple slider, curves let you define different saturation levels for light, mid, and dark tones.
+
+**Preset Curves:**
+
+| Preset | Light Stops | Mid Stops | Dark Stops | Best For |
+|--------|-------------|-----------|------------|----------|
+| **Flat** | 100% | 100% | 100% | Uniform saturation (default) |
+| **Bell** | 45% | 100% | 65% | Colorful throughout, peak at mids |
+| **Pastel** | 30% | 70% | 50% | Soft but visibly colored |
+| **Jewel** | 55% | 100% | 75% | Rich and vibrant at all stops |
+| **Linear Fade** | 25% | 60% | 100% | Fade from saturated darks |
+
+**Custom Curves:**
+
+Select "Custom" to set your own values for light, mid, and dark regions:
+- **Light** (stops 50-200): Controls saturation for lightest colors
+- **Mid** (stops 400-600): Controls peak saturation area
+- **Dark** (stops 800-950): Controls saturation for darkest colors
+
+**Example:** The "Bell" curve mimics professional color palettes where mid-tones are most vibrant, while light and dark extremes are softer. This creates a more sophisticated, natural-looking palette than uniform saturation.
 
 ---
 
@@ -290,7 +321,7 @@ Creates a saturation gradient across your palette.
 When multiple stops would generate the same hex color, Octarine automatically adjusts them to be unique:
 
 1. First tries small hue adjustments
-2. Then tries saturation adjustments
+2. Then tries chroma adjustments
 3. Finally adjusts lightness if needed
 
 Adjusted colors are marked with a **~** symbol.
