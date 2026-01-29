@@ -1,4 +1,4 @@
-import type { ColorMethod, ColorStop, GeneratedStop, PaletteResult, Stop, Color, GlobalSettings, ChromaCurve, HueShiftCurve } from "./types"
+import type { ColorMethod, ColorStop, GeneratedStop, PaletteResult, Stop, Color, EffectiveSettings, ChromaCurve, HueShiftCurve } from "./types"
 import { CHROMA_CURVE_PRESETS, HUE_SHIFT_CURVE_PRESETS } from "./types"
 import { oklch, rgb, formatHex } from "culori"
 import { clampChromaToGamut, getMaxChroma } from "./gamut-table"
@@ -1132,7 +1132,7 @@ export function ensureUniqueHexColors(
  */
 export function generateColorPalette(
   color: Color,
-  globalSettings: GlobalSettings
+  globalSettings: EffectiveSettings
 ): PaletteResult {
   const baseOklch = hexToOklch(color.baseColor)
 

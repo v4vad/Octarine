@@ -26,7 +26,7 @@ Octarine is a Figma plugin for creating professional color palettes. This guide 
 
 The plugin window has two main areas:
 
-- **Left Panel** - Contains global settings, the defaults table, and the export button
+- **Left Panel** - Contains undo/redo buttons, background color picker, color groups, and the export button. This panel scrolls when content exceeds the available space.
 - **Right Panel** - Shows your color palettes with all the color swatches
 
 You can resize the plugin window by dragging the bottom-right corner.

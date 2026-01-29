@@ -3,7 +3,7 @@
 // Functions for creating Figma variables from color data
 // ============================================
 
-import { Color, GlobalSettings } from './types';
+import { Color, EffectiveSettings } from './types';
 import { hexToRgb, generateColorPalette } from './color-utils';
 
 // Convert hex color to Figma's RGBA format (values from 0-1)
@@ -51,21 +51,21 @@ async function getOrCreateColorVariable(
 }
 
 // Main function: Create Figma variables from color data
+// All colors go into a single "Octarine" collection
 export async function createFigmaVariables(
-  colors: Color[],
-  globalSettings: GlobalSettings
+  colorsWithSettings: Array<{ color: Color; settings: EffectiveSettings }>
 ): Promise<{ created: number; updated: number }> {
-  // Get or create the collection
-  const collection = await getOrCreateCollection('Octarine Colors');
+  // Always use "Octarine" as the single collection name
+  const collection = await getOrCreateCollection('Octarine');
   const modeId = collection.modes[0].modeId;  // Use the default mode
 
   let created = 0;
   let updated = 0;
 
-  // Process each color using palette generation (ensures expansion + uniqueness)
-  for (const color of colors) {
+  // Process each color using its group's settings for palette generation
+  for (const { color, settings } of colorsWithSettings) {
     // Generate all stops at once with expansion and uniqueness
-    const paletteResult = generateColorPalette(color, globalSettings);
+    const paletteResult = generateColorPalette(color, settings);
 
     // Create variables for each generated stop
     for (const generatedStop of paletteResult.stops) {
@@ -73,7 +73,7 @@ export async function createFigmaVariables(
       const stop = color.stops.find(s => s.number === generatedStop.stopNumber);
       if (!stop) continue;
 
-      // Variable name: "Primary/500" format
+      // Variable name: "ColorLabel/StopNumber" format (no group prefix)
       const variableName = `${color.label}/${stop.number}`;
 
       // Get or create the variable

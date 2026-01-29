@@ -2,12 +2,12 @@
 // This file runs in Figma's sandbox and can access the Figma API
 
 import { createFigmaVariables } from './lib/figma-utils';
-import { Color, GlobalSettings, STORAGE_KEY, STORAGE_VERSION } from './lib/types';
+import { Color, EffectiveSettings, ColorGroup, GlobalConfig, STORAGE_KEY, STORAGE_VERSION } from './lib/types';
 
 // Show the plugin UI
 // The size can be adjusted later based on UI needs
 figma.showUI(__html__, {
-  width: 700,
+  width: 980,  // Includes always-visible 280px settings panel
   height: 500,
   themeColors: true  // Use Figma's theme colors
 });
@@ -36,11 +36,31 @@ figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
 
     case 'create-variables':
       // Create Figma variables from the color data
+      // All colors from all groups go into a single "Octarine" collection
       try {
-        const colors = msg.colors as Color[];
-        const globalSettings = msg.globalSettings as GlobalSettings;
+        const groups = msg.groups as ColorGroup[];
+        const globalConfig = msg.globalConfig as GlobalConfig | undefined;
+        const backgroundColor = globalConfig?.backgroundColor ?? '#ffffff';
 
-        const result = await createFigmaVariables(colors, globalSettings);
+        // Debug: verify all groups are received
+        console.log('Exporting groups:', groups.length, groups.map(g => `${g.name} (${g.colors.length} colors)`));
+
+        // Flatten all colors with their group's settings into a single array
+        // Merge global backgroundColor into each group's settings
+        const allColorsWithSettings: Array<{ color: Color; settings: EffectiveSettings }> = [];
+        for (const group of groups) {
+          // Merge group settings with global background color
+          const mergedSettings: EffectiveSettings = {
+            ...group.settings,
+            backgroundColor
+          };
+          for (const color of group.colors) {
+            allColorsWithSettings.push({ color, settings: mergedSettings });
+          }
+        }
+
+        // Create all variables in a single collection
+        const result = await createFigmaVariables(allColorsWithSettings);
 
         // Show success notification
         const message = result.created > 0
@@ -51,7 +71,8 @@ figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
         // Let the UI know it succeeded
         figma.ui.postMessage({
           type: 'variables-created',
-          ...result,
+          created: result.created,
+          updated: result.updated,
         });
       } catch (error) {
         // Show error notification
@@ -97,7 +118,12 @@ figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
       if (savedData) {
         try {
           const parsed = JSON.parse(savedData);
-          figma.ui.postMessage({ type: 'load-state', state: parsed.state });
+          // Include version for migration support
+          figma.ui.postMessage({
+            type: 'load-state',
+            state: parsed.state,
+            version: parsed.version ?? 1  // Default to v1 if no version
+          });
         } catch (e) {
           // Invalid data, tell UI there's nothing to load
           figma.ui.postMessage({ type: 'load-state', state: null });

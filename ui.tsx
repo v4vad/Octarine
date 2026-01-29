@@ -11,12 +11,20 @@ import './styles.css';
 import {
   Color,
   GlobalSettings,
+  GroupSettings,
+  GlobalConfig,
+  EffectiveSettings,
+  ColorGroup,
   Stop,
   GeneratedStop,
   PaletteResult,
   AppState,
   createDefaultColor,
-  createDefaultGlobalSettings,
+  createDefaultGroupSettings,
+  createDefaultGlobalConfig,
+  createDefaultGroup,
+  createInitialAppState,
+  migrateState,
   DEFAULT_STOPS,
   ChromaCurve,
   ChromaCurvePreset,
@@ -610,6 +618,144 @@ function MethodToggle({ method, onChange }: MethodToggleProps) {
 }
 
 // ============================================
+// GROUP ACCORDION ITEM (Collapsed/Expanded group in left panel)
+// ============================================
+interface GroupAccordionItemProps {
+  group: ColorGroup;
+  backgroundColor: string;  // Global background color for color strip display
+  isExpanded: boolean;
+  onToggle: () => void;
+  onUpdate: (group: ColorGroup) => void;
+  onDelete: () => void;
+  canDelete: boolean;
+}
+
+function GroupAccordionItem({
+  group,
+  backgroundColor,
+  isExpanded,
+  onToggle,
+  onUpdate,
+  onDelete,
+  canDelete
+}: GroupAccordionItemProps) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleSettingsChange = (newSettings: GroupSettings) => {
+    onUpdate({ ...group, settings: newSettings });
+  };
+
+  // Generate palette for each color to get base colors for strip
+  const colorStripData = useMemo(() => {
+    return group.colors.map(color => ({
+      id: color.id,
+      baseColor: color.baseColor,
+      label: color.label
+    }));
+  }, [group.colors]);
+
+  // Color strip component - used in both collapsed and expanded states
+  const ColorStrip = () => (
+    <div className="group-color-strip" onClick={onToggle}>
+      {colorStripData.length === 0 ? (
+        <div className="group-color-strip-empty">No colors</div>
+      ) : (
+        colorStripData.map(color => (
+          <div
+            key={color.id}
+            className="group-color-segment"
+            style={{ backgroundColor: color.baseColor }}
+            title={color.label}
+          />
+        ))
+      )}
+    </div>
+  );
+
+  // Collapsed view: just the color strip with delete button overlay
+  if (!isExpanded) {
+    return (
+      <div className="group-accordion-item collapsed">
+        <div className="group-strip-container">
+          <ColorStrip />
+          {canDelete && (
+            <button
+              className="group-delete-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDeleteConfirm(true);
+              }}
+              title="Delete group"
+            >
+              ×
+            </button>
+          )}
+        </div>
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
+          <ConfirmModal
+            title="Delete Group"
+            message={`Delete "${group.name || 'Untitled Group'}"? This will delete all ${group.colors.length} color(s) in this group.`}
+            onConfirm={() => {
+              onDelete();
+              setShowDeleteConfirm(false);
+            }}
+            onCancel={() => setShowDeleteConfirm(false)}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Expanded view: color strip + separator + content
+  return (
+    <div className="group-accordion-item expanded">
+      {/* Color strip header with delete button overlay */}
+      <div className="group-strip-container">
+        <ColorStrip />
+        {canDelete && (
+          <button
+            className="group-delete-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowDeleteConfirm(true);
+            }}
+            title="Delete group"
+          >
+            ×
+          </button>
+        )}
+      </div>
+
+      {/* Separator line */}
+      <div className="group-accordion-separator" />
+
+      {/* Expanded content: settings only */}
+      <div className="group-accordion-content">
+        {/* Defaults Table (includes Method Toggle) */}
+        <DefaultsTable
+          settings={group.settings}
+          onUpdate={handleSettingsChange}
+        />
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <ConfirmModal
+          title="Delete Group"
+          message={`Delete "${group.name || 'Untitled Group'}"? This will delete all ${group.colors.length} color(s) in this group.`}
+          onConfirm={() => {
+            onDelete();
+            setShowDeleteConfirm(false);
+          }}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ============================================
 // REF-BASED NUMERIC INPUT
 // ============================================
 interface RefBasedNumericInputProps {
@@ -963,7 +1109,7 @@ function StopPopup({
 // ============================================
 interface ColorSettingsPopupProps {
   color: Color;
-  globalSettings: GlobalSettings;
+  globalSettings: EffectiveSettings;
   position: { x: number; y: number };
   onUpdate: (color: Color) => void;
   onClose: () => void;
@@ -971,7 +1117,24 @@ interface ColorSettingsPopupProps {
 
 function ColorSettingsPopup({ color, globalSettings, position, onUpdate, onClose }: ColorSettingsPopupProps) {
   const popupRef = useRef<HTMLDivElement>(null);
+  const baseSwatchRef = useRef<HTMLDivElement>(null);
   const [showBasePicker, setShowBasePicker] = useState(false);
+  const [pickerOpenUpward, setPickerOpenUpward] = useState(false);
+
+  const handleBaseSwatchClick = () => {
+    if (!baseSwatchRef.current) {
+      setShowBasePicker(!showBasePicker);
+      return;
+    }
+
+    // Calculate if there's enough space below for the picker (~380px)
+    const rect = baseSwatchRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const pickerHeight = 380;
+
+    setPickerOpenUpward(spaceBelow < pickerHeight);
+    setShowBasePicker(!showBasePicker);
+  };
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -1000,20 +1163,30 @@ function ColorSettingsPopup({ color, globalSettings, position, onUpdate, onClose
         </div>
 
         {/* Base Color */}
-        <div className="stop-popup-section">
+        <div className="stop-popup-section" style={{ position: 'relative' }}>
           <div className="color-field-row">
             <span className="color-field-label">Base Color</span>
             <div className="color-field-controls">
               <div
+                ref={baseSwatchRef}
                 className="color-field-swatch"
                 style={{ backgroundColor: color.baseColor }}
-                onClick={() => setShowBasePicker(!showBasePicker)}
+                onClick={handleBaseSwatchClick}
               />
               <span className="color-field-hex">{color.baseColor.toUpperCase()}</span>
             </div>
           </div>
           {showBasePicker && (
-            <div className="mt-2">
+            <div
+              className={pickerOpenUpward ? 'picker-upward' : 'mt-2'}
+              style={pickerOpenUpward ? {
+                position: 'absolute',
+                bottom: '100%',
+                left: 0,
+                marginBottom: '8px',
+                zIndex: 10
+              } : undefined}
+            >
               <ColorPickerPopup
                 color={color.baseColor}
                 onChange={(hex) => onUpdate({ ...color, baseColor: hex })}
@@ -1258,21 +1431,346 @@ function ColorSettingsPopup({ color, globalSettings, position, onUpdate, onClose
 }
 
 // ============================================
+// RIGHT SETTINGS PANEL (Always visible panel)
+// ============================================
+interface RightSettingsPanelProps {
+  color: Color;
+  globalSettings: EffectiveSettings;
+  onUpdate: (color: Color) => void;
+  onDelete: () => void;
+  onClose: () => void;
+}
+
+function RightSettingsPanel({ color, globalSettings, onUpdate, onDelete, onClose }: RightSettingsPanelProps) {
+  const baseSwatchRef = useRef<HTMLDivElement>(null);
+  const [showBasePicker, setShowBasePicker] = useState(false);
+  const [pickerOpenUpward, setPickerOpenUpward] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleBaseSwatchClick = () => {
+    if (!baseSwatchRef.current) {
+      setShowBasePicker(!showBasePicker);
+      return;
+    }
+
+    // Calculate if there's enough space below for the picker (~380px)
+    const rect = baseSwatchRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const pickerHeight = 380;
+
+    setPickerOpenUpward(spaceBelow < pickerHeight);
+    setShowBasePicker(!showBasePicker);
+  };
+
+  return (
+    <div className="right-settings-panel">
+      <div className="right-settings-header">
+        <span className="right-settings-title">{color.label} Settings</span>
+        <div className="right-settings-actions">
+          <button
+            className="right-settings-delete"
+            onClick={() => setShowDeleteConfirm(true)}
+            title="Delete this color"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+
+      {/* Base Color */}
+      <div className="stop-popup-section" style={{ position: 'relative' }}>
+        <div className="color-field-row">
+          <span className="color-field-label">Base Color</span>
+          <div className="color-field-controls">
+            <div
+              ref={baseSwatchRef}
+              className="color-field-swatch"
+              style={{ backgroundColor: color.baseColor }}
+              onClick={handleBaseSwatchClick}
+            />
+            <span className="color-field-hex">{color.baseColor.toUpperCase()}</span>
+          </div>
+        </div>
+        {showBasePicker && (
+          <div
+            className={pickerOpenUpward ? 'picker-upward' : 'mt-2'}
+            style={pickerOpenUpward ? {
+              position: 'absolute',
+              bottom: '100%',
+              left: 0,
+              marginBottom: '8px',
+              zIndex: 10
+            } : undefined}
+          >
+            <ColorPickerPopup
+              color={color.baseColor}
+              onChange={(hex) => onUpdate({ ...color, baseColor: hex })}
+              onClose={() => setShowBasePicker(false)}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Color Quality */}
+      <div className="stop-popup-section">
+        <div className="stop-popup-label">Color Quality</div>
+        <div className="toggle-stack">
+          <Toggle
+            label="Preserve color identity"
+            checked={color.preserveColorIdentity !== false}
+            onChange={(val) => onUpdate({ ...color, preserveColorIdentity: val })}
+            tooltip="Keeps visible color tint at light/dark extremes (may slightly miss contrast targets)"
+          />
+        </div>
+      </div>
+
+      {/* Corrections */}
+      <div className="stop-popup-section">
+        <div className="stop-popup-label">Corrections</div>
+        <div className="toggle-stack">
+          <Toggle
+            label="Helmholtz-Kohlrausch"
+            checked={color.hkCorrection ?? false}
+            onChange={(val) => onUpdate({ ...color, hkCorrection: val })}
+            tooltip="Compensates for saturated colors appearing brighter to the eye"
+          />
+          <Toggle
+            label="Bezold-Brücke"
+            checked={color.bbCorrection ?? false}
+            onChange={(val) => onUpdate({ ...color, bbCorrection: val })}
+            tooltip="Corrects for hue shifts that occur at different lightness levels"
+          />
+        </div>
+      </div>
+
+      {/* Hue Shift Curve */}
+      <div className="stop-popup-section">
+        <div className="stop-popup-label">Hue Shift Curve</div>
+        <select
+          className="chroma-curve-select"
+          value={color.hueShiftCurve?.preset ?? 'none'}
+          onChange={(e) => {
+            const preset = e.target.value as HueShiftCurvePreset;
+            if (preset === 'custom') {
+              // Initialize custom with current preset values or defaults
+              const current = color.hueShiftCurve?.preset && color.hueShiftCurve.preset !== 'custom'
+                ? HUE_SHIFT_CURVE_PRESETS[color.hueShiftCurve.preset]
+                : { light: 0, dark: 0 };
+              onUpdate({
+                ...color,
+                hueShiftCurve: {
+                  preset: 'custom',
+                  lightShift: current.light,
+                  darkShift: current.dark,
+                }
+              });
+            } else {
+              onUpdate({ ...color, hueShiftCurve: { preset } });
+            }
+          }}
+        >
+          <option value="none">None (No shift)</option>
+          <option value="subtle">Subtle (+4° / -5°)</option>
+          <option value="natural">Natural (+8° / -10°)</option>
+          <option value="dramatic">Dramatic (+12° / -15°)</option>
+          <option value="vivid">Vivid (+12° / -15°, golden yellows)</option>
+          <option value="custom">Custom</option>
+        </select>
+
+        {/* Curve Preview */}
+        <div className="hue-shift-preview">
+          {(() => {
+            const preset = color.hueShiftCurve?.preset ?? 'none';
+            const values = preset === 'custom'
+              ? {
+                  light: color.hueShiftCurve?.lightShift ?? 0,
+                  dark: color.hueShiftCurve?.darkShift ?? 0
+                }
+              : (preset === 'none' ? { light: 0, dark: 0 } : HUE_SHIFT_CURVE_PRESETS[preset]);
+            return (
+              <div className="hue-shift-indicator">
+                <span className="hue-shift-value light" title="Light stops shift">
+                  Light: {values.light > 0 ? '+' : ''}{values.light}°
+                </span>
+                <span className="hue-shift-arrow">→ 0° →</span>
+                <span className="hue-shift-value dark" title="Dark stops shift">
+                  Dark: {values.dark > 0 ? '+' : ''}{values.dark}°
+                </span>
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* Custom Sliders */}
+        {color.hueShiftCurve?.preset === 'custom' && (
+          <div className="chroma-curve-sliders">
+            <div className="chroma-slider-row">
+              <span className="chroma-slider-label">Light</span>
+              <input
+                type="range"
+                min="-20"
+                max="20"
+                value={color.hueShiftCurve.lightShift ?? 0}
+                onChange={(e) => onUpdate({
+                  ...color,
+                  hueShiftCurve: { ...color.hueShiftCurve!, lightShift: parseInt(e.target.value) }
+                })}
+              />
+              <span className="chroma-slider-value">{color.hueShiftCurve.lightShift ?? 0}°</span>
+            </div>
+            <div className="chroma-slider-row">
+              <span className="chroma-slider-label">Dark</span>
+              <input
+                type="range"
+                min="-20"
+                max="20"
+                value={color.hueShiftCurve.darkShift ?? 0}
+                onChange={(e) => onUpdate({
+                  ...color,
+                  hueShiftCurve: { ...color.hueShiftCurve!, darkShift: parseInt(e.target.value) }
+                })}
+              />
+              <span className="chroma-slider-value">{color.hueShiftCurve.darkShift ?? 0}°</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Chroma Curve */}
+      <div className="stop-popup-section">
+        <div className="stop-popup-label">Chroma Curve</div>
+        <select
+          className="chroma-curve-select"
+          value={color.chromaCurve?.preset ?? 'flat'}
+          onChange={(e) => {
+            const preset = e.target.value as ChromaCurvePreset;
+            if (preset === 'custom') {
+              // Initialize custom with current preset values or defaults
+              const current = color.chromaCurve?.preset && color.chromaCurve.preset !== 'custom'
+                ? CHROMA_CURVE_PRESETS[color.chromaCurve.preset]
+                : { light: 100, mid: 100, dark: 100 };
+              onUpdate({
+                ...color,
+                chromaCurve: {
+                  preset: 'custom',
+                  lightChroma: current.light,
+                  midChroma: current.mid,
+                  darkChroma: current.dark,
+                }
+              });
+            } else {
+              onUpdate({ ...color, chromaCurve: { preset } });
+            }
+          }}
+        >
+          <option value="flat">Flat (Uniform)</option>
+          <option value="bell">Bell (Natural)</option>
+          <option value="pastel">Pastel (Soft lights)</option>
+          <option value="jewel">Jewel (Vibrant mids)</option>
+          <option value="linear-fade">Linear Fade (Rich darks)</option>
+          <option value="custom">Custom</option>
+        </select>
+
+        {/* Curve Preview */}
+        <div className="chroma-curve-preview">
+          {(() => {
+            const preset = color.chromaCurve?.preset ?? 'flat';
+            const values = preset === 'custom'
+              ? {
+                  light: color.chromaCurve?.lightChroma ?? 100,
+                  mid: color.chromaCurve?.midChroma ?? 100,
+                  dark: color.chromaCurve?.darkChroma ?? 100
+                }
+              : CHROMA_CURVE_PRESETS[preset];
+            return (
+              <>
+                <div className="chroma-bar" style={{ opacity: values.light / 100 }} title={`Light: ${values.light}%`} />
+                <div className="chroma-bar" style={{ opacity: values.mid / 100 }} title={`Mid: ${values.mid}%`} />
+                <div className="chroma-bar" style={{ opacity: values.dark / 100 }} title={`Dark: ${values.dark}%`} />
+              </>
+            );
+          })()}
+        </div>
+
+        {/* Custom Sliders */}
+        {color.chromaCurve?.preset === 'custom' && (
+          <div className="chroma-curve-sliders">
+            <div className="chroma-slider-row">
+              <span className="chroma-slider-label">Light</span>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={color.chromaCurve.lightChroma ?? 100}
+                onChange={(e) => onUpdate({
+                  ...color,
+                  chromaCurve: { ...color.chromaCurve!, lightChroma: parseInt(e.target.value) }
+                })}
+              />
+              <span className="chroma-slider-value">{color.chromaCurve.lightChroma ?? 100}%</span>
+            </div>
+            <div className="chroma-slider-row">
+              <span className="chroma-slider-label">Mid</span>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={color.chromaCurve.midChroma ?? 100}
+                onChange={(e) => onUpdate({
+                  ...color,
+                  chromaCurve: { ...color.chromaCurve!, midChroma: parseInt(e.target.value) }
+                })}
+              />
+              <span className="chroma-slider-value">{color.chromaCurve.midChroma ?? 100}%</span>
+            </div>
+            <div className="chroma-slider-row">
+              <span className="chroma-slider-label">Dark</span>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={color.chromaCurve.darkChroma ?? 100}
+                onChange={(e) => onUpdate({
+                  ...color,
+                  chromaCurve: { ...color.chromaCurve!, darkChroma: parseInt(e.target.value) }
+                })}
+              />
+              <span className="chroma-slider-value">{color.chromaCurve.darkChroma ?? 100}%</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <ConfirmModal
+          title="Delete Color"
+          message={`Are you sure you want to delete "${color.label}"?`}
+          onConfirm={() => {
+            onDelete();
+            setShowDeleteConfirm(false);
+          }}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ============================================
 // COLOR ROW (Horizontal palette row)
 // ============================================
 interface ColorRowProps {
   color: Color;
-  globalSettings: GlobalSettings;
+  globalSettings: EffectiveSettings;
   onUpdate: (color: Color) => void;
   onRemove: () => void;
+  onOpenSettings: () => void;
+  isSettingsOpen: boolean;
 }
 
-function ColorRow({ color, globalSettings, onUpdate, onRemove }: ColorRowProps) {
-  const [showSettings, setShowSettings] = useState(false);
-  const [settingsPosition, setSettingsPosition] = useState({ x: 0, y: 0 });
+function ColorRow({ color, globalSettings, onUpdate, onRemove, onOpenSettings, isSettingsOpen }: ColorRowProps) {
   const [selectedStop, setSelectedStop] = useState<{ index: number; position: { x: number; y: number } } | null>(null);
-  const [showBaseColorPicker, setShowBaseColorPicker] = useState<{ x: number; y: number } | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Generate palette
   const paletteResult = useMemo(() => {
@@ -1283,19 +1781,17 @@ function ColorRow({ color, globalSettings, onUpdate, onRemove }: ColorRowProps) 
   const effectiveMethod = globalSettings.method;
 
   const handleStopClick = (index: number, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering row click
     const rect = (e.target as HTMLElement).getBoundingClientRect();
-    setShowSettings(false); // Close settings if open
     setSelectedStop({
       index,
       position: { x: rect.left, y: rect.bottom + 8 },
     });
   };
 
-  const handleSettingsClick = (e: React.MouseEvent) => {
-    const rect = (e.target as HTMLElement).getBoundingClientRect();
+  const handleRowClick = () => {
     setSelectedStop(null); // Close color picker if open
-    setSettingsPosition({ x: rect.left - 200, y: rect.bottom + 8 });
-    setShowSettings(true);
+    onOpenSettings();
   };
 
   const handleUpdateStop = (stopIndex: number, updates: Partial<Stop>) => {
@@ -1305,43 +1801,19 @@ function ColorRow({ color, globalSettings, onUpdate, onRemove }: ColorRowProps) 
   };
 
   return (
-    <div className="color-row">
-      {/* Header: Name + Base Color + Actions */}
+    <div
+      className={`color-row ${isSettingsOpen ? 'active' : ''}`}
+      onClick={handleRowClick}
+    >
+      {/* Header: Just the name input */}
       <div className="color-row-header">
         <input
           type="text"
           value={color.label}
           onChange={(e) => onUpdate({ ...color, label: e.target.value })}
+          onClick={(e) => e.stopPropagation()}
           className="color-row-name"
         />
-        <div className="color-row-right">
-          <span className="base-color-label">Base color:</span>
-          <div
-            className="base-color-swatch clickable"
-            style={{ backgroundColor: color.baseColor }}
-            title={`Base: ${color.baseColor} (click to edit)`}
-            onClick={(e) => {
-              const rect = (e.target as HTMLElement).getBoundingClientRect();
-              setShowBaseColorPicker({ x: rect.left, y: rect.bottom + 8 });
-            }}
-          />
-          <input
-            type="text"
-            value={color.baseColor.toUpperCase()}
-            onChange={(e) => {
-              let val = e.target.value;
-              if (!val.startsWith('#')) val = '#' + val;
-              if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
-                onUpdate({ ...color, baseColor: val.toLowerCase() });
-              }
-            }}
-            className="base-color-hex"
-          />
-          <div className="color-row-actions">
-            <button onClick={handleSettingsClick}>settings</button>
-            <button className="delete" onClick={() => setShowDeleteConfirm(true)}>delete</button>
-          </div>
-        </div>
       </div>
 
       {/* Duplicate warning */}
@@ -1418,7 +1890,7 @@ function ColorRow({ color, globalSettings, onUpdate, onRemove }: ColorRowProps) 
 
         return (
           <>
-            <div className="popup-backdrop" onClick={() => setSelectedStop(null)} />
+            <div className="popup-backdrop" onClick={(e) => { e.stopPropagation(); setSelectedStop(null); }} />
             <div
               className="stop-color-picker"
               style={{
@@ -1427,6 +1899,7 @@ function ColorRow({ color, globalSettings, onUpdate, onRemove }: ColorRowProps) 
                 top: constrainedTop,
                 zIndex: 1000,
               }}
+              onClick={(e) => e.stopPropagation()}
             >
               <ColorPickerPopup
                 color={displayColor}
@@ -1438,70 +1911,22 @@ function ColorRow({ color, globalSettings, onUpdate, onRemove }: ColorRowProps) 
           </>
         );
       })()}
-
-      {/* Color Settings Popup */}
-      {showSettings && (
-        <ColorSettingsPopup
-          color={color}
-          globalSettings={globalSettings}
-          position={settingsPosition}
-          onUpdate={onUpdate}
-          onClose={() => setShowSettings(false)}
-        />
-      )}
-
-      {/* Base Color Picker */}
-      {showBaseColorPicker && (() => {
-        // Calculate position that stays within viewport
-        const popupWidth = 280;
-        const popupHeight = 380;
-        const constrainedLeft = Math.max(8, Math.min(showBaseColorPicker.x, window.innerWidth - popupWidth - 8));
-        const constrainedTop = Math.max(8, Math.min(showBaseColorPicker.y, window.innerHeight - popupHeight - 8));
-
-        return (
-          <>
-            <div className="popup-backdrop" onClick={() => setShowBaseColorPicker(null)} />
-            <div
-              className="base-color-picker-popup"
-              style={{
-                position: 'fixed',
-                left: constrainedLeft,
-                top: constrainedTop,
-                zIndex: 1000,
-              }}
-            >
-              <ColorPickerPopup
-                color={color.baseColor}
-                onChange={(hex) => onUpdate({ ...color, baseColor: hex })}
-                onClose={() => setShowBaseColorPicker(null)}
-              />
-            </div>
-          </>
-        );
-      })()}
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <ConfirmModal
-          title="Delete Color"
-          message={`Are you sure you want to delete "${color.label}"?`}
-          onConfirm={() => {
-            onRemove();
-            setShowDeleteConfirm(false);
-          }}
-          onCancel={() => setShowDeleteConfirm(false)}
-        />
-      )}
     </div>
   );
 }
 
 // ============================================
-// LEFT PANEL
+// LEFT PANEL (Now contains group accordion)
 // ============================================
 interface LeftPanelProps {
-  settings: GlobalSettings;
-  onUpdate: (settings: GlobalSettings) => void;
+  globalConfig: GlobalConfig;
+  onUpdateGlobalConfig: (config: GlobalConfig) => void;
+  groups: ColorGroup[];
+  activeGroupId: string | null;
+  onSelectGroup: (groupId: string) => void;
+  onUpdateGroup: (group: ColorGroup) => void;
+  onAddGroup: () => void;
+  onDeleteGroup: (groupId: string) => void;
   onExport: () => void;
   onUndo: () => void;
   onRedo: () => void;
@@ -1509,7 +1934,21 @@ interface LeftPanelProps {
   canRedo: boolean;
 }
 
-function LeftPanel({ settings, onUpdate, onExport, onUndo, onRedo, canUndo, canRedo }: LeftPanelProps) {
+function LeftPanel({
+  globalConfig,
+  onUpdateGlobalConfig,
+  groups,
+  activeGroupId,
+  onSelectGroup,
+  onUpdateGroup,
+  onAddGroup,
+  onDeleteGroup,
+  onExport,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo
+}: LeftPanelProps) {
   const [showBgPicker, setShowBgPicker] = useState(false);
 
   return (
@@ -1543,26 +1982,18 @@ function LeftPanel({ settings, onUpdate, onExport, onUndo, onRedo, canUndo, canR
           </svg>
         </button>
       </div>
-      {/* Background Color */}
-      <div className="bg-color-section">
+
+      {/* Global Background Color */}
+      <div className="global-bg-section">
         <div className="color-field-row">
-          <span className="color-field-label">Bg color</span>
+          <span className="color-field-label">Background</span>
           <div className="color-field-controls">
             <div
               className="color-field-swatch"
-              style={{ backgroundColor: settings.backgroundColor }}
+              style={{ backgroundColor: globalConfig.backgroundColor }}
               onClick={() => setShowBgPicker(!showBgPicker)}
             />
-            <input
-              type="text"
-              value={settings.backgroundColor}
-              onChange={(e) => {
-                if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
-                  onUpdate({ ...settings, backgroundColor: e.target.value });
-                }
-              }}
-              className="color-field-hex"
-            />
+            <span className="color-field-hex">{globalConfig.backgroundColor}</span>
           </div>
         </div>
         {showBgPicker && (
@@ -1570,8 +2001,8 @@ function LeftPanel({ settings, onUpdate, onExport, onUndo, onRedo, canUndo, canR
             <div className="popup-backdrop" onClick={() => setShowBgPicker(false)} />
             <div className="bg-color-picker-popup">
               <ColorPickerPopup
-                color={settings.backgroundColor}
-                onChange={(hex) => onUpdate({ ...settings, backgroundColor: hex })}
+                color={globalConfig.backgroundColor}
+                onChange={(hex) => onUpdateGlobalConfig({ ...globalConfig, backgroundColor: hex })}
                 onClose={() => setShowBgPicker(false)}
               />
             </div>
@@ -1579,8 +2010,26 @@ function LeftPanel({ settings, onUpdate, onExport, onUndo, onRedo, canUndo, canR
         )}
       </div>
 
-      {/* Defaults Table */}
-      <DefaultsTable settings={settings} onUpdate={onUpdate} />
+      {/* Group Accordion */}
+      <div className="group-accordion">
+        {groups.map(group => (
+          <GroupAccordionItem
+            key={group.id}
+            group={group}
+            backgroundColor={globalConfig.backgroundColor}
+            isExpanded={group.id === activeGroupId}
+            onToggle={() => onSelectGroup(group.id)}
+            onUpdate={onUpdateGroup}
+            onDelete={() => onDeleteGroup(group.id)}
+            canDelete={groups.length > 1}
+          />
+        ))}
+
+        {/* Add Group Button */}
+        <button className="add-group-btn" onClick={onAddGroup}>
+          + Add Group
+        </button>
+      </div>
 
       {/* Export Button */}
       <button onClick={onExport} className="export-btn">
@@ -1641,19 +2090,56 @@ function ResizeHandle() {
 // ============================================
 function App() {
   // Use history hook for undo/redo support
-  const initialState: AppState = {
-    globalSettings: createDefaultGlobalSettings(),
-    colors: [],
-  };
+  const initialState: AppState = createInitialAppState();
   const { state, setState, replaceState, undo, redo, canUndo, canRedo } = useHistory(initialState);
-  const { globalSettings, colors } = state;
+  const { globalConfig, groups, activeGroupId } = state;
+
+  // Get the active group
+  const activeGroup = activeGroupId
+    ? groups.find(g => g.id === activeGroupId)
+    : groups[0];
+
+  // Get colors from active group
+  const activeGroupColors = activeGroup?.colors ?? [];
+
+  // Track which color's settings panel is open (null = none)
+  const [activeSettingsColorId, setActiveSettingsColorId] = useState<string | null>(null);
+
+  // Get the color object for the active settings panel
+  const activeSettingsColor = activeSettingsColorId
+    ? activeGroupColors.find(c => c.id === activeSettingsColorId)
+    : null;
+
+  // Create merged settings that combines group settings with global backgroundColor
+  // This allows existing components to use globalSettings.backgroundColor
+  const mergedSettings: EffectiveSettings = useMemo(() => {
+    if (!activeGroup) return { ...createDefaultGroupSettings(), backgroundColor: globalConfig.backgroundColor };
+    return {
+      ...activeGroup.settings,
+      backgroundColor: globalConfig.backgroundColor
+    };
+  }, [activeGroup, globalConfig.backgroundColor]);
+
+  // Auto-select first group if none selected
+  useEffect(() => {
+    if (groups.length > 0 && !activeGroupId) {
+      setState({ globalConfig, groups, activeGroupId: groups[0].id });
+    }
+  }, [groups, activeGroupId, globalConfig, setState]);
+
+  // Auto-select first color in active group when group changes
+  useEffect(() => {
+    if (activeGroupColors.length > 0 && !activeSettingsColor) {
+      setActiveSettingsColorId(activeGroupColors[0].id);
+    } else if (activeGroupColors.length === 0) {
+      setActiveSettingsColorId(null);
+    }
+  }, [activeGroup?.id, activeGroupColors.length, activeSettingsColor]);
 
   // Track whether we've received the initial load response
-  // This prevents auto-save from overwriting saved data before it's loaded
   const hasLoadedRef = useRef(false);
 
-  // Request saved state when component mounts (request/response pattern)
-  // This avoids the race condition where the plugin sends data before React mounts
+  // Request saved state when component mounts
   useEffect(() => {
     parent.postMessage({ pluginMessage: { type: 'request-state' } }, '*');
   }, []);
@@ -1668,11 +2154,13 @@ function App() {
         console.log('Plugin ready');
       }
 
-      // Handle load-state response - mark as loaded whether data exists or not
+      // Handle load-state response with migration
       if (msg.type === 'load-state') {
         hasLoadedRef.current = true;
         if (msg.state) {
-          replaceState(msg.state);
+          // Migrate old format if needed
+          const migratedState = migrateState({ version: msg.version ?? 1, state: msg.state });
+          replaceState(migratedState);
         }
       }
     };
@@ -1697,9 +2185,8 @@ function App() {
   }, [undo, redo]);
 
   // Auto-save state to document storage (debounced)
-  // Only save after initial load completes to prevent overwriting saved data
   useEffect(() => {
-    if (!hasLoadedRef.current) return;  // Don't save until we've received load response
+    if (!hasLoadedRef.current) return;
 
     const timer = setTimeout(() => {
       parent.postMessage({ pluginMessage: { type: 'save-state', state } }, '*');
@@ -1707,34 +2194,99 @@ function App() {
     return () => clearTimeout(timer);
   }, [state]);
 
-  const setGlobalSettings = useCallback((newSettings: GlobalSettings) => {
-    setState({ globalSettings: newSettings, colors });
-  }, [setState, colors]);
+  // ============================================
+  // GLOBAL CONFIG OPERATIONS
+  // ============================================
+  const updateGlobalConfig = useCallback((newConfig: GlobalConfig) => {
+    setState({ ...state, globalConfig: newConfig });
+  }, [setState, state]);
 
-  const addColor = () => {
+  // ============================================
+  // GROUP OPERATIONS
+  // ============================================
+  const selectGroup = useCallback((groupId: string) => {
+    setState({ ...state, activeGroupId: groupId });
+    // Clear color selection when switching groups
+    setActiveSettingsColorId(null);
+  }, [setState, state]);
+
+  const addGroup = useCallback(() => {
+    const id = `group-${Date.now()}`;
+    const newGroup = createDefaultGroup(id, '');
+    setState({
+      globalConfig,
+      groups: [...groups, newGroup],
+      activeGroupId: id  // Switch to the new group
+    });
+    setActiveSettingsColorId(null);
+  }, [setState, groups, globalConfig]);
+
+  const updateGroup = useCallback((updatedGroup: ColorGroup) => {
+    setState({
+      ...state,
+      groups: groups.map(g => g.id === updatedGroup.id ? updatedGroup : g)
+    });
+  }, [setState, state, groups]);
+
+  const deleteGroup = useCallback((groupId: string) => {
+    if (groups.length <= 1) return;  // Don't delete last group
+    const newGroups = groups.filter(g => g.id !== groupId);
+    const newActiveId = activeGroupId === groupId ? newGroups[0]?.id ?? null : activeGroupId;
+    setState({
+      globalConfig,
+      groups: newGroups,
+      activeGroupId: newActiveId
+    });
+    setActiveSettingsColorId(null);
+  }, [setState, groups, activeGroupId, globalConfig]);
+
+  // ============================================
+  // COLOR OPERATIONS (within active group)
+  // ============================================
+  const addColor = useCallback(() => {
+    if (!activeGroup) return;
     const id = `color-${Date.now()}`;
-    const label = `Color ${colors.length + 1}`;
+    // Count total colors across ALL groups for globally unique naming
+    const totalColors = groups.reduce((sum, g) => sum + g.colors.length, 0);
+    const label = `Color ${totalColors + 1}`;
     const baseColor = '#0066CC';
-    setState({ globalSettings, colors: [...colors, createDefaultColor(id, label, baseColor)] });
-  };
+    const newColor = createDefaultColor(id, label, baseColor);
+    updateGroup({
+      ...activeGroup,
+      colors: [...activeGroup.colors, newColor]
+    });
+    setActiveSettingsColorId(id);
+  }, [activeGroup, updateGroup, groups]);
 
-  const updateColor = (index: number, updatedColor: Color) => {
-    const newColors = [...colors];
-    newColors[index] = updatedColor;
-    setState({ globalSettings, colors: newColors });
-  };
+  const updateColor = useCallback((colorId: string, updatedColor: Color) => {
+    if (!activeGroup) return;
+    updateGroup({
+      ...activeGroup,
+      colors: activeGroup.colors.map(c => c.id === colorId ? updatedColor : c)
+    });
+  }, [activeGroup, updateGroup]);
 
-  const removeColor = (index: number) => {
-    setState({ globalSettings, colors: colors.filter((_, i) => i !== index) });
-  };
+  const removeColor = useCallback((colorId: string) => {
+    if (!activeGroup) return;
+    if (colorId === activeSettingsColorId) {
+      setActiveSettingsColorId(null);
+    }
+    updateGroup({
+      ...activeGroup,
+      colors: activeGroup.colors.filter(c => c.id !== colorId)
+    });
+  }, [activeGroup, updateGroup, activeSettingsColorId]);
 
+  // ============================================
+  // EXPORT
+  // ============================================
   const createVariables = () => {
     parent.postMessage(
       {
         pluginMessage: {
           type: 'create-variables',
-          colors,
-          globalSettings,
+          groups,  // Send all groups for export
+          globalConfig,  // Send global config for background color
         },
       },
       '*'
@@ -1745,10 +2297,16 @@ function App() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       {/* Main Layout */}
       <div className="app-layout">
-        {/* Left Panel */}
+        {/* Left Panel with Group Accordion */}
         <LeftPanel
-          settings={globalSettings}
-          onUpdate={setGlobalSettings}
+          globalConfig={globalConfig}
+          onUpdateGlobalConfig={updateGlobalConfig}
+          groups={groups}
+          activeGroupId={activeGroupId}
+          onSelectGroup={selectGroup}
+          onUpdateGroup={updateGroup}
+          onAddGroup={addGroup}
+          onDeleteGroup={deleteGroup}
           onExport={createVariables}
           onUndo={undo}
           onRedo={redo}
@@ -1756,27 +2314,52 @@ function App() {
           canRedo={canRedo}
         />
 
-        {/* Right Panel */}
-        <div className="right-panel">
-          {colors.length === 0 ? (
-            <p className="empty-state p-4">No colors yet. Add one to get started.</p>
+        {/* Middle Panel: Colors for active group */}
+        <div className="middle-panel">
+          {!activeGroup ? (
+            <p className="empty-state p-4">Select a group to see its colors.</p>
+          ) : activeGroupColors.length === 0 ? (
+            <p className="empty-state p-4">No colors in this group. Add one to get started.</p>
           ) : (
-            colors.map((color, i) => (
+            activeGroupColors.map((color) => (
               <ColorRow
                 key={color.id}
                 color={color}
-                globalSettings={globalSettings}
-                onUpdate={(c) => updateColor(i, c)}
-                onRemove={() => removeColor(i)}
+                globalSettings={mergedSettings}
+                onUpdate={(c) => updateColor(color.id, c)}
+                onRemove={() => removeColor(color.id)}
+                onOpenSettings={() => {
+                  setActiveSettingsColorId(
+                    activeSettingsColorId === color.id ? null : color.id
+                  );
+                }}
+                isSettingsOpen={activeSettingsColorId === color.id}
               />
             ))
           )}
 
-          {/* Add Color Button */}
-          <button onClick={addColor} className="add-color-btn">
-            + Add Color
-          </button>
+          {/* Add Color Button (only if a group is selected) */}
+          {activeGroup && (
+            <button onClick={addColor} className="add-color-btn">
+              + Add Color
+            </button>
+          )}
         </div>
+
+        {/* Right Settings Panel (per-color settings) */}
+        {activeSettingsColor ? (
+          <RightSettingsPanel
+            color={activeSettingsColor}
+            globalSettings={mergedSettings}
+            onUpdate={(updatedColor) => updateColor(updatedColor.id, updatedColor)}
+            onDelete={() => removeColor(activeSettingsColorId!)}
+            onClose={() => setActiveSettingsColorId(null)}
+          />
+        ) : (
+          <div className="right-panel-empty">
+            <p>Add a color to see settings</p>
+          </div>
+        )}
       </div>
 
       {/* Resize handle for plugin window */}
