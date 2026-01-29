@@ -46,6 +46,7 @@ import {
   generateColor,
   generateColorPalette,
   getContrastRatio,
+  getYellowEquivalentShifts,
   DELTA_E_THRESHOLD,
   OKLCH,
 } from './lib/color-utils';
@@ -1237,10 +1238,17 @@ function ColorSettingsPopup({ color, globalSettings, position, onUpdate, onClose
             onChange={(e) => {
               const preset = e.target.value as HueShiftCurvePreset;
               if (preset === 'custom') {
-                // Initialize custom with current preset values or defaults
-                const current = color.hueShiftCurve?.preset && color.hueShiftCurve.preset !== 'custom'
-                  ? HUE_SHIFT_CURVE_PRESETS[color.hueShiftCurve.preset]
-                  : { light: 0, dark: 0 };
+                // Check if this is a yellow color - use calculated yellow shifts
+                const baseOklch = hexToOklch(color.baseColor);
+                const yellowShifts = getYellowEquivalentShifts(baseOklch.h);
+
+                // Use yellow-calculated values if yellow, otherwise use preset values
+                const current = yellowShifts
+                  ? yellowShifts
+                  : (color.hueShiftCurve?.preset && color.hueShiftCurve.preset !== 'custom'
+                      ? HUE_SHIFT_CURVE_PRESETS[color.hueShiftCurve.preset]
+                      : { light: 0, dark: 0 });
+
                 onUpdate({
                   ...color,
                   hueShiftCurve: {
@@ -1254,16 +1262,15 @@ function ColorSettingsPopup({ color, globalSettings, position, onUpdate, onClose
               }
             }}
           >
-            <option value="none">None (No shift)</option>
-            <option value="subtle">Subtle (+4° / -5°)</option>
-            <option value="natural">Natural (+8° / -10°)</option>
-            <option value="dramatic">Dramatic (+12° / -15°)</option>
-            <option value="vivid">Vivid (+12° / -15°, golden yellows)</option>
+            <option value="none">None</option>
+            <option value="subtle">Subtle</option>
+            <option value="natural">Natural</option>
+            <option value="dramatic">Dramatic</option>
             <option value="custom">Custom</option>
           </select>
 
-          {/* Curve Preview */}
-          <div className="hue-shift-preview">
+          {/* Visual Curve Preview - shows actual shifted colors */}
+          <div className="hue-shift-visual-preview">
             {(() => {
               const preset = color.hueShiftCurve?.preset ?? 'none';
               const values = preset === 'custom'
@@ -1272,16 +1279,32 @@ function ColorSettingsPopup({ color, globalSettings, position, onUpdate, onClose
                     dark: color.hueShiftCurve?.darkShift ?? 0
                   }
                 : (preset === 'none' ? { light: 0, dark: 0 } : HUE_SHIFT_CURVE_PRESETS[preset]);
+
+              // Get base color's OKLCH
+              const baseOklch = hexToOklch(color.baseColor);
+
+              // Calculate shifted colors at different lightness levels
+              const lightL = 0.85;
+              const midL = 0.55;
+              const darkL = 0.25;
+
+              // Light: shift toward cyan (positive)
+              const lightHue = (baseOklch.h + values.light + 360) % 360;
+              const lightColor = oklchToHex({ l: lightL, c: baseOklch.c * 0.6, h: lightHue });
+
+              // Mid: no shift
+              const midColor = oklchToHex({ l: midL, c: baseOklch.c, h: baseOklch.h });
+
+              // Dark: shift toward purple (negative)
+              const darkHue = (baseOklch.h + values.dark + 360) % 360;
+              const darkColor = oklchToHex({ l: darkL, c: baseOklch.c * 0.8, h: darkHue });
+
               return (
-                <div className="hue-shift-indicator">
-                  <span className="hue-shift-value light" title="Light stops shift">
-                    Light: {values.light > 0 ? '+' : ''}{values.light}°
-                  </span>
-                  <span className="hue-shift-arrow">→ 0° →</span>
-                  <span className="hue-shift-value dark" title="Dark stops shift">
-                    Dark: {values.dark > 0 ? '+' : ''}{values.dark}°
-                  </span>
-                </div>
+                <>
+                  <div className="hue-bar" style={{ background: lightColor }} title={`Light: ${values.light > 0 ? '+' : ''}${values.light}°`} />
+                  <div className="hue-bar" style={{ background: midColor }} title="Mid: 0°" />
+                  <div className="hue-bar" style={{ background: darkColor }} title={`Dark: ${values.dark > 0 ? '+' : ''}${values.dark}°`} />
+                </>
               );
             })()}
           </div>
@@ -1348,15 +1371,15 @@ function ColorSettingsPopup({ color, globalSettings, position, onUpdate, onClose
               }
             }}
           >
-            <option value="flat">Flat (Uniform)</option>
-            <option value="bell">Bell (Natural)</option>
-            <option value="pastel">Pastel (Soft lights)</option>
-            <option value="jewel">Jewel (Vibrant mids)</option>
-            <option value="linear-fade">Linear Fade (Rich darks)</option>
+            <option value="flat">Flat</option>
+            <option value="bell">Bell</option>
+            <option value="pastel">Pastel</option>
+            <option value="jewel">Jewel</option>
+            <option value="linear-fade">Linear Fade</option>
             <option value="custom">Custom</option>
           </select>
 
-          {/* Curve Preview */}
+          {/* Curve Preview - uses selected color */}
           <div className="chroma-curve-preview">
             {(() => {
               const preset = color.chromaCurve?.preset ?? 'flat';
@@ -1369,9 +1392,9 @@ function ColorSettingsPopup({ color, globalSettings, position, onUpdate, onClose
                 : CHROMA_CURVE_PRESETS[preset];
               return (
                 <>
-                  <div className="chroma-bar" style={{ opacity: values.light / 100 }} title={`Light: ${values.light}%`} />
-                  <div className="chroma-bar" style={{ opacity: values.mid / 100 }} title={`Mid: ${values.mid}%`} />
-                  <div className="chroma-bar" style={{ opacity: values.dark / 100 }} title={`Dark: ${values.dark}%`} />
+                  <div className="chroma-bar" style={{ background: color.baseColor, opacity: values.light / 100 }} title={`Light: ${values.light}%`} />
+                  <div className="chroma-bar" style={{ background: color.baseColor, opacity: values.mid / 100 }} title={`Mid: ${values.mid}%`} />
+                  <div className="chroma-bar" style={{ background: color.baseColor, opacity: values.dark / 100 }} title={`Dark: ${values.dark}%`} />
                 </>
               );
             })()}
@@ -1552,10 +1575,17 @@ function RightSettingsPanel({ color, globalSettings, onUpdate, onDelete, onClose
           onChange={(e) => {
             const preset = e.target.value as HueShiftCurvePreset;
             if (preset === 'custom') {
-              // Initialize custom with current preset values or defaults
-              const current = color.hueShiftCurve?.preset && color.hueShiftCurve.preset !== 'custom'
-                ? HUE_SHIFT_CURVE_PRESETS[color.hueShiftCurve.preset]
-                : { light: 0, dark: 0 };
+              // Check if this is a yellow color - use calculated yellow shifts
+              const baseOklch = hexToOklch(color.baseColor);
+              const yellowShifts = getYellowEquivalentShifts(baseOklch.h);
+
+              // Use yellow-calculated values if yellow, otherwise use preset values
+              const current = yellowShifts
+                ? yellowShifts
+                : (color.hueShiftCurve?.preset && color.hueShiftCurve.preset !== 'custom'
+                    ? HUE_SHIFT_CURVE_PRESETS[color.hueShiftCurve.preset]
+                    : { light: 0, dark: 0 });
+
               onUpdate({
                 ...color,
                 hueShiftCurve: {
@@ -1569,16 +1599,15 @@ function RightSettingsPanel({ color, globalSettings, onUpdate, onDelete, onClose
             }
           }}
         >
-          <option value="none">None (No shift)</option>
-          <option value="subtle">Subtle (+4° / -5°)</option>
-          <option value="natural">Natural (+8° / -10°)</option>
-          <option value="dramatic">Dramatic (+12° / -15°)</option>
-          <option value="vivid">Vivid (+12° / -15°, golden yellows)</option>
+          <option value="none">None</option>
+          <option value="subtle">Subtle</option>
+          <option value="natural">Natural</option>
+          <option value="dramatic">Dramatic</option>
           <option value="custom">Custom</option>
         </select>
 
-        {/* Curve Preview */}
-        <div className="hue-shift-preview">
+        {/* Visual Curve Preview - shows actual shifted colors */}
+        <div className="hue-shift-visual-preview">
           {(() => {
             const preset = color.hueShiftCurve?.preset ?? 'none';
             const values = preset === 'custom'
@@ -1587,16 +1616,32 @@ function RightSettingsPanel({ color, globalSettings, onUpdate, onDelete, onClose
                   dark: color.hueShiftCurve?.darkShift ?? 0
                 }
               : (preset === 'none' ? { light: 0, dark: 0 } : HUE_SHIFT_CURVE_PRESETS[preset]);
+
+            // Get base color's OKLCH
+            const baseOklch = hexToOklch(color.baseColor);
+
+            // Calculate shifted colors at different lightness levels
+            const lightL = 0.85;
+            const midL = 0.55;
+            const darkL = 0.25;
+
+            // Light: shift toward cyan (positive)
+            const lightHue = (baseOklch.h + values.light + 360) % 360;
+            const lightColor = oklchToHex({ l: lightL, c: baseOklch.c * 0.6, h: lightHue });
+
+            // Mid: no shift
+            const midColor = oklchToHex({ l: midL, c: baseOklch.c, h: baseOklch.h });
+
+            // Dark: shift toward purple (negative)
+            const darkHue = (baseOklch.h + values.dark + 360) % 360;
+            const darkColor = oklchToHex({ l: darkL, c: baseOklch.c * 0.8, h: darkHue });
+
             return (
-              <div className="hue-shift-indicator">
-                <span className="hue-shift-value light" title="Light stops shift">
-                  Light: {values.light > 0 ? '+' : ''}{values.light}°
-                </span>
-                <span className="hue-shift-arrow">→ 0° →</span>
-                <span className="hue-shift-value dark" title="Dark stops shift">
-                  Dark: {values.dark > 0 ? '+' : ''}{values.dark}°
-                </span>
-              </div>
+              <>
+                <div className="hue-bar" style={{ background: lightColor }} title={`Light: ${values.light > 0 ? '+' : ''}${values.light}°`} />
+                <div className="hue-bar" style={{ background: midColor }} title="Mid: 0°" />
+                <div className="hue-bar" style={{ background: darkColor }} title={`Dark: ${values.dark > 0 ? '+' : ''}${values.dark}°`} />
+              </>
             );
           })()}
         </div>
@@ -1663,15 +1708,15 @@ function RightSettingsPanel({ color, globalSettings, onUpdate, onDelete, onClose
             }
           }}
         >
-          <option value="flat">Flat (Uniform)</option>
-          <option value="bell">Bell (Natural)</option>
-          <option value="pastel">Pastel (Soft lights)</option>
-          <option value="jewel">Jewel (Vibrant mids)</option>
-          <option value="linear-fade">Linear Fade (Rich darks)</option>
+          <option value="flat">Flat</option>
+          <option value="bell">Bell</option>
+          <option value="pastel">Pastel</option>
+          <option value="jewel">Jewel</option>
+          <option value="linear-fade">Linear Fade</option>
           <option value="custom">Custom</option>
         </select>
 
-        {/* Curve Preview */}
+        {/* Curve Preview - uses selected color */}
         <div className="chroma-curve-preview">
           {(() => {
             const preset = color.chromaCurve?.preset ?? 'flat';
@@ -1684,9 +1729,9 @@ function RightSettingsPanel({ color, globalSettings, onUpdate, onDelete, onClose
               : CHROMA_CURVE_PRESETS[preset];
             return (
               <>
-                <div className="chroma-bar" style={{ opacity: values.light / 100 }} title={`Light: ${values.light}%`} />
-                <div className="chroma-bar" style={{ opacity: values.mid / 100 }} title={`Mid: ${values.mid}%`} />
-                <div className="chroma-bar" style={{ opacity: values.dark / 100 }} title={`Dark: ${values.dark}%`} />
+                <div className="chroma-bar" style={{ background: color.baseColor, opacity: values.light / 100 }} title={`Light: ${values.light}%`} />
+                <div className="chroma-bar" style={{ background: color.baseColor, opacity: values.mid / 100 }} title={`Mid: ${values.mid}%`} />
+                <div className="chroma-bar" style={{ background: color.baseColor, opacity: values.dark / 100 }} title={`Dark: ${values.dark}%`} />
               </>
             );
           })()}

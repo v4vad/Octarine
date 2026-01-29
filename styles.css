@@ -1687,8 +1687,8 @@ input[type="range"]::-moz-range-thumb {
 
 .chroma-bar {
   flex: 1;
-  background: var(--figma-color-bg-brand, #18a0fb);
-  transition: opacity var(--transition-fast);
+  /* Background color set via inline style using selected color */
+  transition: opacity var(--transition-fast), background var(--transition-fast);
 }
 
 /* Labels under preview */
@@ -1737,8 +1737,24 @@ input[type="range"]::-moz-range-thumb {
 }
 
 /* --------------------------------------------
-   HUE SHIFT CURVE PREVIEW
+   HUE SHIFT CURVE PREVIEW (Visual Bars)
    -------------------------------------------- */
+.hue-shift-visual-preview {
+  display: flex;
+  gap: 2px;
+  height: 16px;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--figma-color-bg-secondary);
+}
+
+.hue-bar {
+  flex: 1;
+  transition: background var(--transition-fast);
+}
+
+/* Legacy text-based preview (deprecated) */
 .hue-shift-preview {
   margin-bottom: var(--space-2);
   padding: var(--space-1) var(--space-2);

@@ -251,3 +251,47 @@ bbCorrectionOverride?: boolean  // Now: bbCorrection?: boolean
 If you want to apply corrections to multiple colors at once:
 - Consider a "batch edit" feature that lets you select multiple colors and toggle settings
 - Or a "preset" system that applies a bundle of settings to new colors
+
+---
+
+## Vivid Hue Shift Preset
+
+**Removed:** January 2026
+
+### What It Did
+
+"Vivid" was a hue shift preset that had the same shift values as "Dramatic" (+12° light, -15° dark) but with special handling for yellow hues.
+
+**Behavior:**
+- For non-yellow colors: identical to "Dramatic"
+- For yellows (hue 70-110°): shifted toward golden/amber instead of applying the standard shift that would push yellows toward green
+
+**The problem it solved:** Standard hue shifts toward cyan in light stops caused yellows to look olive/muddy instead of golden.
+
+### Why It Was Removed
+
+The yellow-aware logic was merged into ALL presets, making "Vivid" redundant.
+
+**Before:**
+- "Dramatic" = +12°/-15° shifts, yellows turn greenish
+- "Vivid" = +12°/-15° shifts, yellows stay golden
+
+**After:**
+- "Dramatic" = +12°/-15° shifts, yellows automatically stay golden
+- All other presets (Subtle, Natural) also have automatic yellow handling
+- Only "Custom" mode bypasses the yellow-aware logic (for users who want full control)
+
+**Benefits:**
+- Simpler dropdown with one less option
+- No confusion about two presets with identical numbers
+- Better default behavior for all presets
+
+### Migration
+
+Saved palettes using "Vivid" are automatically migrated to "Dramatic" when loaded. Since the yellow-aware logic is now applied to all presets, the visual result is identical.
+
+### If Revisiting
+
+If you need to differentiate presets with the same shift values:
+- Consider whether the difference is meaningful enough to warrant a separate preset
+- Automatic intelligent handling (like yellow-awareness) is usually better than manual mode selection

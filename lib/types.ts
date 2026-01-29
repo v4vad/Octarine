@@ -34,7 +34,7 @@ export const CHROMA_CURVE_PRESETS: Record<Exclude<ChromaCurvePreset, "custom">, 
 // ============================================
 
 // Preset curve types for hue shift distribution across lightness
-export type HueShiftCurvePreset = "none" | "subtle" | "natural" | "dramatic" | "vivid" | "custom"
+export type HueShiftCurvePreset = "none" | "subtle" | "natural" | "dramatic" | "custom"
 
 // Hue shift curve configuration
 export type HueShiftCurve = {
@@ -45,12 +45,12 @@ export type HueShiftCurve = {
 
 // Preset values for hue shift curves
 // Positive values = shift toward cyan/cool, negative = shift toward purple/warm
+// All presets automatically use yellow-aware logic to keep yellows golden (not green)
 export const HUE_SHIFT_CURVE_PRESETS: Record<Exclude<HueShiftCurvePreset, "custom">, { light: number; dark: number }> = {
   none: { light: 0, dark: 0 },              // No shift (default)
   subtle: { light: 4, dark: -5 },           // Gentle professional shift
   natural: { light: 8, dark: -10 },         // Reference palette match
   dramatic: { light: 12, dark: -15 },       // Bold artistic effect
-  vivid: { light: 12, dark: -15 }           // Same as dramatic, but yellow-aware in applyHueShift
 }
 
 // Default stop numbers
@@ -280,7 +280,7 @@ export function createInitialAppState(): AppState {
 // STATE PERSISTENCE & MIGRATION
 // ============================================
 export const STORAGE_KEY = 'octarine-state'
-export const STORAGE_VERSION = 3  // Bumped for global background color
+export const STORAGE_VERSION = 4  // Bumped for vivid -> dramatic migration
 
 export type PersistedState = {
   version: number
@@ -346,6 +346,29 @@ export function migrateState(persisted: { version: number; state: unknown }): Ap
     }
   }
 
-  // Already v3 or newer
+  // v3: Need to migrate "vivid" hue shift preset to "dramatic"
+  if (persisted.version === 3) {
+    const oldState = persisted.state as AppState
+    const migratedGroups = oldState.groups.map(group => ({
+      ...group,
+      colors: group.colors.map(color => {
+        // If color has vivid hue shift, change to dramatic
+        // Cast to string since "vivid" is no longer in the type
+        if ((color.hueShiftCurve?.preset as string) === "vivid") {
+          return {
+            ...color,
+            hueShiftCurve: { ...color.hueShiftCurve, preset: "dramatic" as HueShiftCurvePreset }
+          }
+        }
+        return color
+      })
+    }))
+    return {
+      ...oldState,
+      groups: migratedGroups
+    }
+  }
+
+  // Already v4 or newer
   return persisted.state as AppState
 }

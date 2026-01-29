@@ -335,9 +335,12 @@ export function generateColor(
   }
 
   // Apply hue shift if specified (artistic hue variation across stops)
+  // Yellow-aware logic applies to presets (not custom) to keep yellows golden
+  // Custom mode uses slider values directly so users can fine-tune
   if (hueShiftCurve && hueShiftCurve.preset !== "none") {
     const hueShiftValues = getHueShiftValues(hueShiftCurve)
-    result = applyHueShift(result, targetL, hueShiftValues, hueShiftCurve.preset === "vivid")
+    const yellowAware = hueShiftCurve.preset !== "custom"
+    result = applyHueShift(result, targetL, hueShiftValues, yellowAware)
   }
 
   // Apply chroma curve if specified (artistic saturation distribution)
@@ -610,6 +613,37 @@ export function applyBBCorrection(color: OKLCH): OKLCH {
 // ============================================
 // HUE SHIFT (Artistic hue variation across stops)
 // ============================================
+
+/**
+ * Calculate equivalent light/dark shift values for yellows
+ * Used when initializing Custom mode from a preset
+ *
+ * For yellows (hue 70-110°), presets use a special formula instead of
+ * the standard light/dark shift values. This function calculates what
+ * the equivalent slider values would be, so Custom mode can display them.
+ *
+ * @param hue - Hue angle in degrees (0-360)
+ * @returns Object with light and dark shift amounts, or null if not a yellow
+ */
+export function getYellowEquivalentShifts(hue: number): { light: number; dark: number } | null {
+  const normalizedHue = ((hue % 360) + 360) % 360
+  const isYellow = normalizedHue >= 70 && normalizedHue <= 110
+
+  if (!isYellow) return null
+
+  // yellowFactor: 1.0 at pure yellow (90°), tapering to 0 at edges
+  const yellowFactor = 1 - Math.abs(normalizedHue - 90) / 20
+  const maxShift = -45  // Maximum shift toward orange at L=0
+
+  // Calculate shift at representative lightness levels
+  const lightL = 0.85  // Typical light stop
+  const darkL = 0.25   // Typical dark stop
+
+  return {
+    light: Math.round(maxShift * (1 - lightL) * yellowFactor),  // e.g., -7° for pure yellow
+    dark: Math.round(maxShift * (1 - darkL) * yellowFactor)     // e.g., -34° for pure yellow
+  }
+}
 
 /**
  * Get Hue Shift Values from Curve Configuration
@@ -1195,9 +1229,12 @@ export function generateColorPalette(
     }
 
     // Apply hue shift if specified (using curve-based approach)
+    // Yellow-aware logic applies to presets (not custom) to keep yellows golden
+    // Custom mode uses slider values directly so users can fine-tune
     if (color.hueShiftCurve && color.hueShiftCurve.preset !== "none") {
       const hueShiftValues = getHueShiftValues(color.hueShiftCurve)
-      result = applyHueShift(result, targetL, hueShiftValues, color.hueShiftCurve.preset === "vivid")
+      const yellowAware = color.hueShiftCurve.preset !== "custom"
+      result = applyHueShift(result, targetL, hueShiftValues, yellowAware)
     }
 
     // Apply chroma curve if specified (color-level setting)

@@ -268,16 +268,19 @@ Creates professional-looking color temperature gradients across your palette. Un
 | **Subtle** | +4° | -5° | Gentle professional shift |
 | **Natural** | +8° | -10° | Matches professional palettes |
 | **Dramatic** | +12° | -15° | Bold artistic effect |
-| **Vivid** | +12° | -15° | Like Dramatic, but yellows shift toward golden/amber instead of olive |
 
 - Positive values shift toward cyan/cool
 - Negative values shift toward purple/warm
+- All presets automatically handle yellows: instead of shifting toward green, yellows shift toward warm golden/amber tones
 
 **Custom Curves:**
 
 Select "Custom" to set your own shift amounts:
 - **Light** (-20° to +20°): Controls shift for light stops
 - **Dark** (-20° to +20°): Controls shift for dark stops
+- Yellow-aware logic still applies in Custom mode, keeping yellows golden
+
+**Visual Preview:** When you select a hue shift preset, you'll see three colored bars showing exactly how your colors will look at light, mid, and dark stops. The preview uses your actual base color, so you can see the real effect before committing.
 
 **Example:** A blue palette with the "Natural" preset will have light stops that shift slightly toward cyan, while dark stops shift more noticeably toward purple. This creates depth and visual interest that mimics natural lighting.
 
@@ -309,6 +312,8 @@ Select "Custom" to set your own values for light, mid, and dark regions:
 - **Light** (stops 50-200): Controls saturation for lightest colors
 - **Mid** (stops 400-600): Controls peak saturation area
 - **Dark** (stops 800-950): Controls saturation for darkest colors
+
+**Visual Preview:** When you select a chroma curve preset, you'll see three colored bars showing the relative saturation at light, mid, and dark stops. The preview uses your actual base color with varying opacity to represent saturation levels.
 
 **Example:** The "Bell" curve mimics professional color palettes where mid-tones are most vibrant, while light and dark extremes are softer. This creates a more sophisticated, natural-looking palette than uniform saturation.
 
