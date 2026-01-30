@@ -1,10 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
-import {
-  Button,
-  Input,
-  Icon,
-} from 'react-figma-plugin-ds';
 import 'react-figma-plugin-ds/figma-plugin-ds.css';
 import './styles.css';
 
@@ -33,6 +28,8 @@ import {
   HueShiftCurvePreset,
   HUE_SHIFT_CURVE_PRESETS,
 } from './lib/types';
+
+import { Toggle, ConfirmModal, RefBasedNumericInput, MethodToggle } from './components/primitives';
 
 import { useHistory } from './lib/useHistory';
 
@@ -544,88 +541,6 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
   );
 }
 
-// ============================================
-// CONFIRM MODAL
-// ============================================
-interface ConfirmModalProps {
-  title: string;
-  message: string;
-  confirmLabel?: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-}
-
-function ConfirmModal({ title, message, confirmLabel = 'Delete', onConfirm, onCancel }: ConfirmModalProps) {
-  return (
-    <>
-      <div className="modal-backdrop" onClick={onCancel} />
-      <div className="confirm-modal">
-        <div className="confirm-modal-title">{title}</div>
-        <div className="confirm-modal-message">{message}</div>
-        <div className="confirm-modal-actions">
-          <button className="btn-secondary" onClick={onCancel}>Cancel</button>
-          <button className="btn-danger" onClick={onConfirm}>{confirmLabel}</button>
-        </div>
-      </div>
-    </>
-  );
-}
-
-// ============================================
-// TOGGLE SWITCH
-// ============================================
-interface ToggleProps {
-  label: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  onReset?: () => void;
-  tooltip?: string;
-}
-
-function Toggle({ label, checked, onChange, onReset, tooltip }: ToggleProps) {
-  return (
-    <div
-      className="toggle-wrapper"
-      onDoubleClick={onReset ? () => onReset() : undefined}
-      title={tooltip || (onReset ? 'Double-click to reset to global' : undefined)}
-    >
-      <span className="toggle-label">{label}</span>
-      <div
-        className={`toggle-switch ${checked ? 'on' : 'off'}`}
-        onClick={() => onChange(!checked)}
-      >
-        <div className="toggle-thumb" />
-      </div>
-    </div>
-  );
-}
-
-// ============================================
-// METHOD TOGGLE (Lightness / Contrast)
-// ============================================
-interface MethodToggleProps {
-  method: 'lightness' | 'contrast';
-  onChange: (method: 'lightness' | 'contrast') => void;
-}
-
-function MethodToggle({ method, onChange }: MethodToggleProps) {
-  return (
-    <div className="method-toggle">
-      <button
-        className={`method-toggle-btn ${method === 'lightness' ? 'active' : ''}`}
-        onClick={() => onChange('lightness')}
-      >
-        Lightness
-      </button>
-      <button
-        className={`method-toggle-btn ${method === 'contrast' ? 'active' : ''}`}
-        onClick={() => onChange('contrast')}
-      >
-        Contrast
-      </button>
-    </div>
-  );
-}
 
 // ============================================
 // GROUP ACCORDION ITEM (Collapsed/Expanded group in left panel)
@@ -765,64 +680,6 @@ function GroupAccordionItem({
   );
 }
 
-// ============================================
-// REF-BASED NUMERIC INPUT
-// ============================================
-interface RefBasedNumericInputProps {
-  value: number;
-  onChange: (value: number) => void;
-  min?: number;
-  max?: number;
-  decimals?: number;
-  style?: React.CSSProperties;
-  className?: string;
-}
-
-function RefBasedNumericInput({
-  value,
-  onChange,
-  min = -Infinity,
-  max = Infinity,
-  decimals = 1,
-  style,
-  className
-}: RefBasedNumericInputProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const isFocusedRef = useRef(false);
-
-  useEffect(() => {
-    if (inputRef.current && !isFocusedRef.current) {
-      inputRef.current.value = value.toFixed(decimals);
-    }
-  }, [value, decimals]);
-
-  const handleBlur = () => {
-    isFocusedRef.current = false;
-    if (inputRef.current) {
-      const parsed = parseFloat(inputRef.current.value);
-      if (!isNaN(parsed)) {
-        const clamped = Math.max(min, Math.min(max, parsed));
-        onChange(clamped);
-        inputRef.current.value = clamped.toFixed(decimals);
-      } else {
-        inputRef.current.value = value.toFixed(decimals);
-      }
-    }
-  };
-
-  return (
-    <input
-      ref={inputRef}
-      type="text"
-      defaultValue={value.toFixed(decimals)}
-      onFocus={() => { isFocusedRef.current = true; }}
-      onBlur={handleBlur}
-      onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-      style={style}
-      className={className}
-    />
-  );
-}
 
 // ============================================
 // DEFAULTS TABLE (Left Panel)
