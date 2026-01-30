@@ -338,7 +338,7 @@ Variables: `{label}/{stop}` (e.g., `primary/500`)
 
 **Skipped:**
 - React Context (Phase 3): Code review revealed prop drilling was only 2-3 levels deep, not the 4-5 levels originally estimated. Adding context would add complexity without meaningful benefit.
-- Split color-utils.ts (Phase 5): Originally skipped due to tight coupling. Now planned with a multi-phase approach - see "color-utils.ts Refactoring Plan" section above.
+- Split color-utils.ts (Phase 5): ✅ **Now complete** - See "color-utils.ts Refactoring Plan" section above. Split into 7 focused modules (269 lines main file, down from 1,351).
 - Add tests (Phase 6): Requires Vitest setup and configuration. Deferred to future work.
 
 **Remaining in ui.tsx:** App component only (~200 lines) - serves as the main entry point
