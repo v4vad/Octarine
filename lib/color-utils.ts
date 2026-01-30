@@ -1,4 +1,4 @@
-import type { ColorMethod, ColorStop, GeneratedStop, PaletteResult, Color, EffectiveSettings, ChromaCurve, HueShiftCurve } from "./types"
+import type { GeneratedStop, PaletteResult, Color, EffectiveSettings } from "./types"
 
 // Re-export all color conversions for backward compatibility
 export {
@@ -69,90 +69,6 @@ import { getHueShiftValues, applyHueShift, applyChromaCurve } from "./artistic-c
 import { getContrastRatio, findLightnessForContrast, refineContrastToTarget } from "./contrast-utils"
 import { clampChromaToGamut, getMinChromaForHue, getMaxLightnessForMinChroma, validateAndClampToGamut } from "./gamut-utils"
 import { calculateDeltaE, DELTA_E_THRESHOLD, ensureUniqueHexColors } from "./color-distinctness"
-
-// Generate color for a specific stop
-export function generateColor(
-  baseColor: string,
-  stop: string,
-  stopData: ColorStop | undefined,
-  globalMode: ColorMethod,
-  globalLightness?: Record<string, number>,
-  globalContrast?: Record<string, number>,
-  backgroundColor?: string,
-  perceptualCorrections?: PerceptualCorrectionOptions,
-  hueShiftCurve?: HueShiftCurve,
-  chromaCurve?: ChromaCurve
-): string {
-  const bgOklch = backgroundColor ? hexToOklch(backgroundColor) : { l: 1, c: 0, h: 0 }
-
-  // If there's a manual override, optionally apply corrections
-  if (stopData?.manualOverride) {
-    if (stopData.applyCorrectionsToManual && perceptualCorrections &&
-        (perceptualCorrections.hkCompensation || perceptualCorrections.bbCorrection)) {
-      // Apply perceptual corrections to the manually overridden color
-      const corrected = applyPerceptualCorrections(stopData.manualOverride, bgOklch, perceptualCorrections)
-      return oklchToHex(corrected)
-    }
-    // No corrections - use manual override directly
-    return oklchToHex(stopData.manualOverride)
-  }
-
-  const baseOklch = hexToOklch(baseColor)
-
-  // Determine effective method for this stop
-  const effectiveMethod = stopData?.methodOverride === "global" || !stopData?.methodOverride
-    ? globalMode
-    : stopData.methodOverride
-
-  let targetL: number
-
-  if (effectiveMethod === "contrast" && backgroundColor) {
-    // Contrast method: find lightness that achieves target contrast
-    const targetContrast = stopData?.contrast ?? globalContrast?.[stop] ?? 4.5
-    targetL = findLightnessForContrast(baseOklch, backgroundColor, targetContrast)
-  } else {
-    // Lightness method: use target lightness directly
-    if (stopData?.lightness !== undefined) {
-      targetL = stopData.lightness
-    } else if (globalLightness && globalLightness[stop] !== undefined) {
-      targetL = globalLightness[stop]
-    } else {
-      // Default fallback based on stop number
-      const stopNum = Number.parseInt(stop)
-      targetL = stopNum <= 500 ? 0.95 - (stopNum / 500) * 0.45 : 0.5 - ((stopNum - 500) / 450) * 0.45
-    }
-  }
-
-  // Apply chroma reduction to stay in gamut using lookup table
-  const targetC = clampChromaToGamut(baseOklch.c, targetL, baseOklch.h)
-
-  let result: OKLCH = {
-    l: targetL,
-    c: targetC,
-    h: baseOklch.h,
-  }
-
-  // Apply hue shift if specified (artistic hue variation across stops)
-  // Yellow-aware logic applies to presets (not custom) to keep yellows golden
-  // Custom mode uses slider values directly so users can fine-tune
-  if (hueShiftCurve && hueShiftCurve.preset !== "none") {
-    const hueShiftValues = getHueShiftValues(hueShiftCurve)
-    const yellowAware = hueShiftCurve.preset !== "custom"
-    result = applyHueShift(result, targetL, hueShiftValues, yellowAware)
-  }
-
-  // Apply chroma curve if specified (artistic saturation distribution)
-  if (chromaCurve && chromaCurve.preset !== "flat") {
-    result = applyChromaCurve(result, targetL, chromaCurve)
-  }
-
-  // Apply perceptual corrections if enabled
-  if (perceptualCorrections && (perceptualCorrections.hkCompensation || perceptualCorrections.bbCorrection)) {
-    result = applyPerceptualCorrections(result, bgOklch, perceptualCorrections)
-  }
-
-  return oklchToHex(result)
-}
 
 // ============================================
 // PALETTE GENERATION
