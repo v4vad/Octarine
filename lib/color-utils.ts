@@ -1,5 +1,4 @@
 import type { ColorMethod, ColorStop, GeneratedStop, PaletteResult, Color, EffectiveSettings, ChromaCurve, HueShiftCurve } from "./types"
-import { clampChromaToGamut, getMaxChroma } from "./gamut-table"
 
 // Re-export all color conversions for backward compatibility
 export {
@@ -43,77 +42,22 @@ export {
   refineContrastToTarget,
 } from "./contrast-utils"
 
+// Re-export gamut utilities for backward compatibility
+export {
+  getMaxChroma,
+  clampChromaToGamut,
+  isInGamut,
+  getMinChromaForHue,
+  getMaxLightnessForMinChroma,
+  validateAndClampToGamut,
+} from "./gamut-utils"
+
 // Import for internal use
 import { OKLCH, hexToOklch, oklchToHex } from "./color-conversions"
 import { applyPerceptualCorrections, PerceptualCorrectionOptions } from "./perceptual-corrections"
 import { getHueShiftValues, applyHueShift, applyChromaCurve } from "./artistic-curves"
 import { getContrastRatio, findLightnessForContrast, refineContrastToTarget } from "./contrast-utils"
-
-// ============================================
-// SMART MINIMUM CHROMA (Preserve Color Identity)
-// ============================================
-
-/**
- * Get smart minimum chroma for a hue to preserve color identity.
- *
- * Different hues have different gamut limits at high lightness:
- * - Blues (200-280°): Tightest gamut - need higher minimum chroma
- * - Cyans/Magentas: Medium gamut
- * - Reds/Greens: Moderate gamut
- * - Yellows (40-80°): Most generous gamut at high L - need less minimum
- *
- * @param hue - Hue angle in degrees (0-360)
- * @returns Minimum chroma to preserve color identity
- */
-export function getMinChromaForHue(hue: number): number {
-  hue = ((hue % 360) + 360) % 360
-
-  // Blues (200-280): Need higher min chroma (gamut is tightest at high L)
-  if (hue >= 200 && hue < 280) return 0.025
-
-  // Cyans (160-200) and Magentas (280-340): Medium
-  if ((hue >= 160 && hue < 200) || (hue >= 280 && hue < 340)) return 0.02
-
-  // Reds (340-360, 0-40) and Greens (80-160): Lower
-  if (hue >= 80 && hue < 160) return 0.015
-  if (hue >= 340 || hue < 40) return 0.015
-
-  // Yellows/Oranges (40-80): Lowest (generous gamut at high L)
-  return 0.012
-}
-
-/**
- * Find maximum lightness that still allows minimum chroma for this hue.
- *
- * Uses binary search against the gamut table to find the highest lightness
- * where getMaxChroma(L, hue) >= minChroma.
- *
- * @param hue - Hue angle in degrees (0-360)
- * @param minChroma - Minimum chroma required
- * @returns Maximum lightness that can achieve the minimum chroma
- */
-export function getMaxLightnessForMinChroma(
-  hue: number,
-  minChroma: number
-): number {
-  // Binary search for the highest L where getMaxChroma(L, hue) >= minChroma
-  let low = 0.5
-  let high = 1.0
-
-  for (let i = 0; i < 15; i++) {
-    const mid = (low + high) / 2
-    const maxC = getMaxChroma(mid, hue)
-
-    if (maxC >= minChroma) {
-      low = mid  // Can go lighter
-    } else {
-      high = mid  // Need to go darker
-    }
-  }
-
-  return low
-}
-
+import { clampChromaToGamut, getMinChromaForHue, getMaxLightnessForMinChroma, validateAndClampToGamut } from "./gamut-utils"
 
 // Generate color for a specific stop
 export function generateColor(
@@ -261,17 +205,6 @@ export const DELTA_E_THRESHOLD = 5
  * @param color - The OKLCH color to validate
  * @returns Color with chroma clamped to stay in gamut
  */
-export function validateAndClampToGamut(color: OKLCH): OKLCH {
-  const maxChroma = clampChromaToGamut(color.c, color.l, color.h)
-
-  // If current chroma exceeds the maximum for this lightness/hue, clamp it
-  if (color.c > maxChroma) {
-    return { ...color, c: maxChroma }
-  }
-
-  return color
-}
-
 // ============================================
 // DUPLICATE COLOR DETECTION & NUDGING (Phase 8)
 // ============================================

@@ -19,7 +19,10 @@ declare module 'culori' {
   export function rgb(color: string | Color): Color | undefined;
   export function formatHex(color: Color): string;
   export function parse(color: string): Color | undefined;
-  export function clampChroma(color: Color, mode?: string): Color;
+
+  // Gamut functions
+  export function clampChroma(color: Color, mode?: string): Color | undefined;
+  export function displayable(color: string | Color): boolean;
 
   // WCAG contrast functions
   export function wcagLuminance(color: string | Color): number;

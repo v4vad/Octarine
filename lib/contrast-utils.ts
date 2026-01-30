@@ -8,7 +8,7 @@
 import { wcagContrast, wcagLuminance } from "culori"
 import type { OKLCH } from "./color-conversions"
 import { hexToOklch, oklchToHex } from "./color-conversions"
-import { clampChromaToGamut } from "./gamut-table"
+import { clampChromaToGamut } from "./gamut-utils"
 
 /**
  * Calculate WCAG contrast ratio between two colors
