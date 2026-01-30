@@ -144,7 +144,65 @@
    APP CONTAINER
    -------------------------------------------- */
 .app-container {
-  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* --------------------------------------------
+   TOP BAR
+   -------------------------------------------- */
+.top-bar {
+  display: flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--figma-color-border);
+  background: var(--figma-color-bg);
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.top-bar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.top-bar-right {
+  margin-left: auto;
+}
+
+.top-bar-bg-color {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Icon-only buttons for undo/redo */
+.top-bar-icon-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--figma-color-border);
+  border-radius: var(--radius-sm);
+  background: var(--figma-color-bg);
+  color: var(--figma-color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.top-bar-icon-btn:hover:not(:disabled) {
+  background: var(--figma-color-bg-hover);
+  color: var(--figma-color-text);
+}
+
+.top-bar-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .app-title {
@@ -1400,7 +1458,7 @@ input[type="range"]::-moz-range-thumb {
    EXPORT BUTTON (Bottom of left panel)
    -------------------------------------------- */
 .export-btn {
-  padding: var(--space-2);
+  padding: var(--space-1) var(--space-3);
   border: 1px solid var(--figma-color-border);
   border-radius: var(--radius-md);
   background: var(--figma-color-bg);
@@ -1409,7 +1467,6 @@ input[type="range"]::-moz-range-thumb {
   font-weight: 500;
   cursor: pointer;
   transition: all var(--transition-fast);
-  width: 100%;
 }
 
 .export-btn:hover {
@@ -1516,8 +1573,8 @@ input[type="range"]::-moz-range-thumb {
 /* BG color picker popup - floats above everything */
 .bg-color-picker-popup {
   position: fixed;
-  left: 12px;
-  top: 60px;
+  left: 80px;
+  top: 40px;
   z-index: 1000;
 }
 

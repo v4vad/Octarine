@@ -1130,6 +1130,29 @@ function ColorSettingsPopup({ color, globalSettings, position, onUpdate, onClose
   const baseSwatchRef = useRef<HTMLDivElement>(null);
   const [showBasePicker, setShowBasePicker] = useState(false);
   const [pickerOpenUpward, setPickerOpenUpward] = useState(false);
+  const [baseHexInput, setBaseHexInput] = useState(color.baseColor);
+
+  // Keep input in sync when baseColor changes externally
+  useEffect(() => {
+    setBaseHexInput(color.baseColor);
+  }, [color.baseColor]);
+
+  const expandHexShorthand = (hex: string): string => {
+    const h = hex.replace('#', '');
+    if (h.length === 1) return '#' + h.repeat(6);
+    if (h.length === 3) return '#' + h.split('').map(c => c + c).join('');
+    return hex;
+  };
+
+  const applyBaseHex = (newHex: string) => {
+    const expanded = expandHexShorthand(newHex);
+    if (/^#[0-9A-Fa-f]{6}$/.test(expanded)) {
+      setBaseHexInput(expanded.toUpperCase());
+      onUpdate({ ...color, baseColor: expanded.toUpperCase() });
+    } else {
+      setBaseHexInput(color.baseColor);
+    }
+  };
 
   const handleBaseSwatchClick = () => {
     if (!baseSwatchRef.current) {
@@ -1175,7 +1198,7 @@ function ColorSettingsPopup({ color, globalSettings, position, onUpdate, onClose
         {/* Base Color */}
         <div className="stop-popup-section" style={{ position: 'relative' }}>
           <div className="color-field-row">
-            <span className="color-field-label">Base Color</span>
+            <span className="color-field-label">Base color</span>
             <div className="color-field-controls">
               <div
                 ref={baseSwatchRef}
@@ -1183,7 +1206,19 @@ function ColorSettingsPopup({ color, globalSettings, position, onUpdate, onClose
                 style={{ backgroundColor: color.baseColor }}
                 onClick={handleBaseSwatchClick}
               />
-              <span className="color-field-hex">{color.baseColor.toUpperCase()}</span>
+              <input
+                type="text"
+                className="color-field-hex"
+                value={baseHexInput.toUpperCase()}
+                onChange={(e) => setBaseHexInput(e.target.value)}
+                onBlur={(e) => applyBaseHex(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    applyBaseHex((e.target as HTMLInputElement).value);
+                    (e.target as HTMLInputElement).blur();
+                  }
+                }}
+              />
             </div>
           </div>
           {showBasePicker && (
@@ -1478,6 +1513,29 @@ function RightSettingsPanel({ color, globalSettings, onUpdate, onDelete, onClose
   const [showBasePicker, setShowBasePicker] = useState(false);
   const [pickerOpenUpward, setPickerOpenUpward] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [baseHexInput, setBaseHexInput] = useState(color.baseColor);
+
+  // Keep input in sync when baseColor changes externally
+  useEffect(() => {
+    setBaseHexInput(color.baseColor);
+  }, [color.baseColor]);
+
+  const expandHexShorthand = (hex: string): string => {
+    const h = hex.replace('#', '');
+    if (h.length === 1) return '#' + h.repeat(6);
+    if (h.length === 3) return '#' + h.split('').map(c => c + c).join('');
+    return hex;
+  };
+
+  const applyBaseHex = (newHex: string) => {
+    const expanded = expandHexShorthand(newHex);
+    if (/^#[0-9A-Fa-f]{6}$/.test(expanded)) {
+      setBaseHexInput(expanded.toUpperCase());
+      onUpdate({ ...color, baseColor: expanded.toUpperCase() });
+    } else {
+      setBaseHexInput(color.baseColor);
+    }
+  };
 
   const handleBaseSwatchClick = () => {
     if (!baseSwatchRef.current) {
@@ -1512,7 +1570,7 @@ function RightSettingsPanel({ color, globalSettings, onUpdate, onDelete, onClose
       {/* Base Color */}
       <div className="stop-popup-section" style={{ position: 'relative' }}>
         <div className="color-field-row">
-          <span className="color-field-label">Base Color</span>
+          <span className="color-field-label">Base color</span>
           <div className="color-field-controls">
             <div
               ref={baseSwatchRef}
@@ -1520,7 +1578,19 @@ function RightSettingsPanel({ color, globalSettings, onUpdate, onDelete, onClose
               style={{ backgroundColor: color.baseColor }}
               onClick={handleBaseSwatchClick}
             />
-            <span className="color-field-hex">{color.baseColor.toUpperCase()}</span>
+            <input
+              type="text"
+              className="color-field-hex"
+              value={baseHexInput.toUpperCase()}
+              onChange={(e) => setBaseHexInput(e.target.value)}
+              onBlur={(e) => applyBaseHex(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  applyBaseHex((e.target as HTMLInputElement).value);
+                  (e.target as HTMLInputElement).blur();
+                }
+              }}
+            />
           </div>
         </div>
         {showBasePicker && (
@@ -1972,15 +2042,12 @@ function ColorRow({ color, globalSettings, onUpdate, onRemove, onOpenSettings, i
 // ============================================
 // LEFT PANEL (Now contains group accordion)
 // ============================================
-interface LeftPanelProps {
+// ============================================
+// TOP BAR (Undo/Redo, Background Color, Export)
+// ============================================
+interface TopBarProps {
   globalConfig: GlobalConfig;
   onUpdateGlobalConfig: (config: GlobalConfig) => void;
-  groups: ColorGroup[];
-  activeGroupId: string | null;
-  onSelectGroup: (groupId: string) => void;
-  onUpdateGroup: (group: ColorGroup) => void;
-  onAddGroup: () => void;
-  onDeleteGroup: (groupId: string) => void;
   onExport: () => void;
   onUndo: () => void;
   onRedo: () => void;
@@ -1988,31 +2055,50 @@ interface LeftPanelProps {
   canRedo: boolean;
 }
 
-function LeftPanel({
+function TopBar({
   globalConfig,
   onUpdateGlobalConfig,
-  groups,
-  activeGroupId,
-  onSelectGroup,
-  onUpdateGroup,
-  onAddGroup,
-  onDeleteGroup,
   onExport,
   onUndo,
   onRedo,
   canUndo,
   canRedo
-}: LeftPanelProps) {
+}: TopBarProps) {
   const [showBgPicker, setShowBgPicker] = useState(false);
+  const [bgHexInput, setBgHexInput] = useState(globalConfig.backgroundColor);
+
+  // Keep input in sync when backgroundColor changes externally (e.g., from color picker)
+  useEffect(() => {
+    setBgHexInput(globalConfig.backgroundColor);
+  }, [globalConfig.backgroundColor]);
+
+  const expandHexShorthand = (hex: string): string => {
+    const h = hex.replace('#', '');
+    if (h.length === 1) return '#' + h.repeat(6);
+    if (h.length === 3) return '#' + h.split('').map(c => c + c).join('');
+    return hex;
+  };
+
+  const applyBgHex = (newHex: string) => {
+    const expanded = expandHexShorthand(newHex);
+    if (/^#[0-9A-Fa-f]{6}$/.test(expanded)) {
+      setBgHexInput(expanded.toUpperCase());
+      onUpdateGlobalConfig({ ...globalConfig, backgroundColor: expanded.toUpperCase() });
+    } else {
+      // Revert to current valid color if invalid
+      setBgHexInput(globalConfig.backgroundColor);
+    }
+  };
 
   return (
-    <div className="left-panel">
-      {/* Undo/Redo Buttons */}
-      <div className="undo-redo-row">
+    <div className="top-bar">
+      {/* Left side: Undo/Redo + Background Color */}
+      <div className="top-bar-left">
+        {/* Undo Button (icon only) */}
         <button
           onClick={onUndo}
           disabled={!canUndo}
-          className="undo-redo-btn"
+          className="top-bar-icon-btn"
           title="Undo (Cmd+Z)"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -2020,50 +2106,92 @@ function LeftPanel({
             <path d="M3 10l4-4" />
             <path d="M3 10l4 4" />
           </svg>
-          Undo
         </button>
+
+        {/* Redo Button (icon only) */}
         <button
           onClick={onRedo}
           disabled={!canRedo}
-          className="undo-redo-btn"
+          className="top-bar-icon-btn"
           title="Redo (Cmd+Shift+Z)"
         >
-          Redo
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M21 10H11a5 5 0 0 0 0 10h4" />
             <path d="M21 10l-4-4" />
             <path d="M21 10l-4 4" />
           </svg>
         </button>
-      </div>
 
-      {/* Global Background Color */}
-      <div className="global-bg-section">
-        <div className="color-field-row">
-          <span className="color-field-label">Background</span>
-          <div className="color-field-controls">
-            <div
-              className="color-field-swatch"
-              style={{ backgroundColor: globalConfig.backgroundColor }}
-              onClick={() => setShowBgPicker(!showBgPicker)}
-            />
-            <span className="color-field-hex">{globalConfig.backgroundColor}</span>
-          </div>
+        {/* Background Color Picker */}
+        <div className="top-bar-bg-color">
+          <span className="color-field-label">Background color</span>
+          <div
+            className="color-field-swatch"
+            style={{ backgroundColor: globalConfig.backgroundColor }}
+            onClick={() => setShowBgPicker(!showBgPicker)}
+          />
+          <input
+            type="text"
+            className="color-field-hex"
+            value={bgHexInput.toUpperCase()}
+            onChange={(e) => setBgHexInput(e.target.value)}
+            onBlur={(e) => applyBgHex(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                applyBgHex((e.target as HTMLInputElement).value);
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
+          />
+          {showBgPicker && (
+            <>
+              <div className="popup-backdrop" onClick={() => setShowBgPicker(false)} />
+              <div className="bg-color-picker-popup">
+                <ColorPickerPopup
+                  color={globalConfig.backgroundColor}
+                  onChange={(hex) => onUpdateGlobalConfig({ ...globalConfig, backgroundColor: hex })}
+                  onClose={() => setShowBgPicker(false)}
+                />
+              </div>
+            </>
+          )}
         </div>
-        {showBgPicker && (
-          <>
-            <div className="popup-backdrop" onClick={() => setShowBgPicker(false)} />
-            <div className="bg-color-picker-popup">
-              <ColorPickerPopup
-                color={globalConfig.backgroundColor}
-                onChange={(hex) => onUpdateGlobalConfig({ ...globalConfig, backgroundColor: hex })}
-                onClose={() => setShowBgPicker(false)}
-              />
-            </div>
-          </>
-        )}
       </div>
 
+      {/* Right side: Export button */}
+      <div className="top-bar-right">
+        <button onClick={onExport} className="export-btn">
+          export
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// LEFT PANEL (Groups only)
+// ============================================
+interface LeftPanelProps {
+  globalConfig: GlobalConfig;
+  groups: ColorGroup[];
+  activeGroupId: string | null;
+  onSelectGroup: (groupId: string) => void;
+  onUpdateGroup: (group: ColorGroup) => void;
+  onAddGroup: () => void;
+  onDeleteGroup: (groupId: string) => void;
+}
+
+function LeftPanel({
+  globalConfig,
+  groups,
+  activeGroupId,
+  onSelectGroup,
+  onUpdateGroup,
+  onAddGroup,
+  onDeleteGroup
+}: LeftPanelProps) {
+  return (
+    <div className="left-panel">
       {/* Group Accordion */}
       <div className="group-accordion">
         {groups.map(group => (
@@ -2084,11 +2212,6 @@ function LeftPanel({
           + Add Group
         </button>
       </div>
-
-      {/* Export Button */}
-      <button onClick={onExport} className="export-btn">
-        export
-      </button>
     </div>
   );
 }
@@ -2348,24 +2471,29 @@ function App() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      {/* Main Layout */}
+    <div className="app-container">
+      {/* Top Bar: Undo/Redo, Background Color, Export */}
+      <TopBar
+        globalConfig={globalConfig}
+        onUpdateGlobalConfig={updateGlobalConfig}
+        onExport={createVariables}
+        onUndo={undo}
+        onRedo={redo}
+        canUndo={canUndo}
+        canRedo={canRedo}
+      />
+
+      {/* Main Three-Panel Layout */}
       <div className="app-layout">
-        {/* Left Panel with Group Accordion */}
+        {/* Left Panel: Groups only */}
         <LeftPanel
           globalConfig={globalConfig}
-          onUpdateGlobalConfig={updateGlobalConfig}
           groups={groups}
           activeGroupId={activeGroupId}
           onSelectGroup={selectGroup}
           onUpdateGroup={updateGroup}
           onAddGroup={addGroup}
           onDeleteGroup={deleteGroup}
-          onExport={createVariables}
-          onUndo={undo}
-          onRedo={redo}
-          canUndo={canUndo}
-          canRedo={canRedo}
         />
 
         {/* Middle Panel: Colors for active group */}
