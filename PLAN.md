@@ -140,11 +140,11 @@ export function isInGamut(l: number, c: number, h: number): boolean {
 
 **Risk:** Gamut clamping affects color output. Test extensively with edge cases (vivid colors, near-black/white).
 
-### Phase 6: Extract Delta-E & Deduplication (Medium Risk)
-- [ ] Create `lib/color-distinctness.ts`
-- [ ] Move: `calculateDeltaE`, `DELTA_E_THRESHOLD`
-- [ ] Move: `ensureUniqueHexColors` and nudge constants (`MIN_LIGHTNESS_NUDGE`, etc.)
-- [ ] **Keep custom Delta-E** (do NOT replace with culori's `differenceEuclidean`)
+### Phase 6: Extract Delta-E & Deduplication (Medium Risk) ✅
+- [x] Create `lib/color-distinctness.ts`
+- [x] Move: `calculateDeltaE`, `DELTA_E_THRESHOLD`
+- [x] Move: `ensureUniqueHexColors` and nudge constants (`MIN_LIGHTNESS_NUDGE`, etc.)
+- [x] **Keep custom Delta-E** (do NOT replace with culori's `differenceEuclidean`)
 
 **Why custom Delta-E:** See "Culori API Integration" section above. The custom formula weights hue differences by chroma level, which is more perceptually accurate for color palettes where many colors are desaturated.
 
@@ -164,11 +164,11 @@ export function isInGamut(l: number, c: number, h: number): boolean {
 
 **Risk:** Depends on contrast utilities and conversions.
 
-### Phase 7: Final Cleanup (Low Risk)
-- [ ] Keep `lib/color-utils.ts` as main entry point (~250 lines)
-- [ ] Re-export everything from sub-modules for backward compatibility
-- [ ] Keep only `generateColorPalette` in main file
-- [ ] Remove deprecated `generateColor` function (verify unused first)
+### Phase 7: Final Cleanup (Low Risk) ✅
+- [x] Keep `lib/color-utils.ts` as main entry point (~250 lines)
+- [x] Re-export everything from sub-modules for backward compatibility
+- [x] Keep only `generateColorPalette` in main file
+- [x] Remove deprecated `generateColor` function (verify unused first)
 
 **Expected final structure:**
 ```
