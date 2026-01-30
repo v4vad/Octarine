@@ -333,12 +333,12 @@ Variables: `{label}/{stop}` (e.g., `primary/500`)
 - Extracted panels: TopBar, LeftPanel, ResizeHandle → `components/panels/`
 - Extracted color settings: BaseColorField, ColorQualitySection, CorrectionsSection, HueShiftCurveSection, ChromaCurveSection, ColorSettingsContent, ColorSettingsPopup, RightSettingsPanel → `components/color-settings/`
 - Extracted color row: ColorRow → `components/colors/`
+- Split color-utils.ts into 7 focused modules (269 lines main file, down from 1,351) - see "color-utils.ts Refactoring Plan" section above
 
-**Result:** ui.tsx reduced from 2,558 → 318 lines (88% reduction)
+**Result:** ui.tsx reduced from 2,558 → 318 lines (88% reduction). color-utils.ts reduced from 1,351 → 269 lines (80% reduction).
 
 **Skipped:**
 - React Context (Phase 3): Code review revealed prop drilling was only 2-3 levels deep, not the 4-5 levels originally estimated. Adding context would add complexity without meaningful benefit.
-- Split color-utils.ts (Phase 5): ✅ **Now complete** - See "color-utils.ts Refactoring Plan" section above. Split into 7 focused modules (269 lines main file, down from 1,351).
 - Add tests (Phase 6): Requires Vitest setup and configuration. Deferred to future work.
 
 **Remaining in ui.tsx:** App component only (~200 lines) - serves as the main entry point
