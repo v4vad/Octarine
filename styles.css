@@ -725,7 +725,7 @@ input[type="range"]::-moz-range-thumb {
 /* Main three-panel grid layout (always visible settings panel) */
 .app-layout {
   display: grid;
-  grid-template-columns: 180px 1fr 280px;
+  grid-template-columns: 180px 1fr 240px;
   flex: 1;
   min-height: 0; /* Important for flex child to allow shrinking */
   overflow: hidden;
@@ -1175,6 +1175,7 @@ input[type="range"]::-moz-range-thumb {
 /* Stop strip - horizontal row of swatches */
 .stop-strip {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
 }
 
@@ -2080,4 +2081,40 @@ input[type="range"]::-moz-range-thumb {
 /* Global background section (top of left panel) */
 .global-bg-section {
   margin-bottom: var(--space-3);
+}
+
+/* --------------------------------------------
+   PICKER SWATCH + HEX INPUT ROW
+   -------------------------------------------- */
+.picker-swatch-hex-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: 0 var(--space-3);
+}
+
+.picker-swatch {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--figma-color-border);
+  flex-shrink: 0;
+}
+
+.picker-hex-input {
+  flex: 1;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--figma-color-border);
+  border-radius: var(--radius-sm);
+  font-family: monospace;
+  font-size: var(--text-md);
+  background: var(--figma-color-bg);
+  color: var(--figma-color-text);
+}
+
+.picker-hex-input:focus {
+  outline: none;
+  border-color: var(--figma-color-border-brand);
 }

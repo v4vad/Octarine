@@ -208,7 +208,7 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
     return rgbToHsb(rgb.r, rgb.g, rgb.b);
   });
   const popupRef = useRef<HTMLDivElement>(null);
-  const [activeTab, setActiveTab] = useState<'oklch' | 'hex' | 'hsb'>('hsb');
+  const [activeTab, setActiveTab] = useState<'oklch' | 'hsb'>('hsb');
   const [hexInput, setHexInput] = useState(color);
   const [lInput, setLInput] = useState(oklch.l.toFixed(2));
   const [cInput, setCInput] = useState(oklch.c.toFixed(3));
@@ -369,7 +369,7 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
   return (
     <div ref={popupRef} className="popup">
       <div className="tab-bar">
-        {(['hex', 'hsb', 'oklch'] as const).map((tab) => (
+        {(['hsb', 'oklch'] as const).map((tab) => (
           <div
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -436,100 +436,109 @@ function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopu
       </div>
 
       <div className="mt-3">
-        {activeTab === 'hex' && (
-          <div>
-            <input
-              type="text"
-              value={hexInput}
-              onChange={(e) => setHexInput(e.target.value)}
-              onBlur={() => applyHex(hexInput)}
-              onKeyDown={(e) => { if (e.key === 'Enter') applyHex(hexInput); }}
-              placeholder="#000000"
-              className="input input-mono input-center w-full"
-            />
-          </div>
-        )}
-
         {activeTab === 'oklch' && (
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <label className="form-label-sm">L</label>
+          <>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="form-label-sm">L</label>
+                <input
+                  type="text"
+                  value={lInput}
+                  onChange={(e) => setLInput(e.target.value)}
+                  onBlur={handleLBlur}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleLBlur(); }}
+                  className="input w-full"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="form-label-sm">C</label>
+                <input
+                  type="text"
+                  value={cInput}
+                  onChange={(e) => setCInput(e.target.value)}
+                  onBlur={handleCBlur}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleCBlur(); }}
+                  className="input w-full"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="form-label-sm">H</label>
+                <input
+                  type="text"
+                  value={hInput}
+                  onChange={(e) => setHInput(e.target.value)}
+                  onBlur={handleHBlur}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleHBlur(); }}
+                  className="input w-full"
+                />
+              </div>
+            </div>
+            <div className="picker-swatch-hex-row">
+              <div className="picker-swatch" style={{ backgroundColor: hex }} />
               <input
                 type="text"
-                value={lInput}
-                onChange={(e) => setLInput(e.target.value)}
-                onBlur={handleLBlur}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleLBlur(); }}
-                className="input w-full"
+                value={hexInput}
+                onChange={(e) => setHexInput(e.target.value)}
+                onBlur={() => applyHex(hexInput)}
+                onKeyDown={(e) => { if (e.key === 'Enter') applyHex(hexInput); }}
+                placeholder="#000000"
+                className="picker-hex-input"
               />
             </div>
-            <div className="flex-1">
-              <label className="form-label-sm">C</label>
-              <input
-                type="text"
-                value={cInput}
-                onChange={(e) => setCInput(e.target.value)}
-                onBlur={handleCBlur}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleCBlur(); }}
-                className="input w-full"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="form-label-sm">H</label>
-              <input
-                type="text"
-                value={hInput}
-                onChange={(e) => setHInput(e.target.value)}
-                onBlur={handleHBlur}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleHBlur(); }}
-                className="input w-full"
-              />
-            </div>
-          </div>
+          </>
         )}
 
         {activeTab === 'hsb' && (
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <label className="form-label-sm">H</label>
+          <>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="form-label-sm">H</label>
+                <input
+                  type="text"
+                  value={hsbHInput}
+                  onChange={(e) => setHsbHInput(e.target.value)}
+                  onBlur={handleHsbHBlur}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleHsbHBlur(); }}
+                  className="input w-full"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="form-label-sm">S</label>
+                <input
+                  type="text"
+                  value={hsbSInput}
+                  onChange={(e) => setHsbSInput(e.target.value)}
+                  onBlur={handleHsbSBlur}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleHsbSBlur(); }}
+                  className="input w-full"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="form-label-sm">B</label>
+                <input
+                  type="text"
+                  value={hsbBInput}
+                  onChange={(e) => setHsbBInput(e.target.value)}
+                  onBlur={handleHsbBBlur}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleHsbBBlur(); }}
+                  className="input w-full"
+                />
+              </div>
+            </div>
+            <div className="picker-swatch-hex-row">
+              <div className="picker-swatch" style={{ backgroundColor: hex }} />
               <input
                 type="text"
-                value={hsbHInput}
-                onChange={(e) => setHsbHInput(e.target.value)}
-                onBlur={handleHsbHBlur}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleHsbHBlur(); }}
-                className="input w-full"
+                value={hexInput}
+                onChange={(e) => setHexInput(e.target.value)}
+                onBlur={() => applyHex(hexInput)}
+                onKeyDown={(e) => { if (e.key === 'Enter') applyHex(hexInput); }}
+                placeholder="#000000"
+                className="picker-hex-input"
               />
             </div>
-            <div className="flex-1">
-              <label className="form-label-sm">S</label>
-              <input
-                type="text"
-                value={hsbSInput}
-                onChange={(e) => setHsbSInput(e.target.value)}
-                onBlur={handleHsbSBlur}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleHsbSBlur(); }}
-                className="input w-full"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="form-label-sm">B</label>
-              <input
-                type="text"
-                value={hsbBInput}
-                onChange={(e) => setHsbBInput(e.target.value)}
-                onBlur={handleHsbBBlur}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleHsbBBlur(); }}
-                className="input w-full"
-              />
-            </div>
-          </div>
+          </>
         )}
-      </div>
-
-      <div className="color-preview">
-        <div className="color-preview-swatch" style={{ backgroundColor: hex }} />
-        <span className="color-preview-hex">{hex}</span>
       </div>
     </div>
   );
