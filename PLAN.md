@@ -151,22 +151,24 @@ Variables: `{label}/{stop}` (e.g., `primary/500`)
 **Goal:** Reduce ui.tsx from 2,558 lines to improve maintainability.
 
 **Completed:**
-- Extracted primitive components: Toggle, ConfirmModal, RefBasedNumericInput, MethodToggle → `components/primitives/`
+- Extracted primitive components: Toggle, ConfirmModal, RefBasedNumericInput, MethodToggle, Slider → `components/primitives/`
 - Created `useColorPicker` hook to consolidate ~160 lines of duplicated hex/OKLCH/HSB sync logic → `hooks/`
 - Created `useClickOutside` hook for popup dismissal → `hooks/`
 - Extracted color picker: GradientPicker, HueSlider, ColorPickerPopup → `components/color-picker/`
 - Extracted group components: GroupAccordionItem, DefaultsTable → `components/groups/`
 - Extracted popups: StopPopup → `components/popups/`
 - Extracted panels: TopBar, LeftPanel, ResizeHandle → `components/panels/`
+- Extracted color settings: BaseColorField, ColorQualitySection, CorrectionsSection, HueShiftCurveSection, ChromaCurveSection, ColorSettingsContent, ColorSettingsPopup, RightSettingsPanel → `components/color-settings/`
+- Extracted color row: ColorRow → `components/colors/`
 
-**Result:** ui.tsx reduced from 2,558 → 1,273 lines (50% reduction)
+**Result:** ui.tsx reduced from 2,558 → 318 lines (88% reduction)
 
 **Skipped:**
 - React Context (Phase 3): Code review revealed prop drilling was only 2-3 levels deep, not the 4-5 levels originally estimated. Adding context would add complexity without meaningful benefit.
 - Split color-utils.ts (Phase 5): The file has tightly coupled functions with many interdependencies. Splitting would require extensive refactoring and risk breaking the algorithm.
 - Add tests (Phase 6): Requires Vitest setup and configuration. Deferred to future work.
 
-**Remaining in ui.tsx:** ColorSettingsPopup (~380 lines), RightSettingsPanel (~380 lines), ColorRow (~150 lines), App (~200 lines)
+**Remaining in ui.tsx:** App component only (~200 lines) - serves as the main entry point
 
 </details>
 
