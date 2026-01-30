@@ -21,6 +21,10 @@ declare module 'culori' {
   export function parse(color: string): Color | undefined;
   export function clampChroma(color: Color, mode?: string): Color;
 
+  // WCAG contrast functions
+  export function wcagLuminance(color: string | Color): number;
+  export function wcagContrast(colorA: string | Color, colorB: string | Color): number;
+
   // Allow any other exports from culori
   export const converter: any;
   export const formatCss: any;

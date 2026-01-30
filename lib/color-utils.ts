@@ -1,5 +1,4 @@
 import type { ColorMethod, ColorStop, GeneratedStop, PaletteResult, Color, EffectiveSettings, ChromaCurve, HueShiftCurve } from "./types"
-import { rgb } from "culori"
 import { clampChromaToGamut, getMaxChroma } from "./gamut-table"
 
 // Re-export all color conversions for backward compatibility
@@ -35,10 +34,20 @@ export {
   applyChromaCurve,
 } from "./artistic-curves"
 
+// Re-export contrast utilities for backward compatibility
+export {
+  getContrastRatio,
+  getRelativeLuminance,
+  shouldUseLightText,
+  findLightnessForContrast,
+  refineContrastToTarget,
+} from "./contrast-utils"
+
 // Import for internal use
 import { OKLCH, hexToOklch, oklchToHex } from "./color-conversions"
 import { applyPerceptualCorrections, PerceptualCorrectionOptions } from "./perceptual-corrections"
 import { getHueShiftValues, applyHueShift, applyChromaCurve } from "./artistic-curves"
+import { getContrastRatio, findLightnessForContrast, refineContrastToTarget } from "./contrast-utils"
 
 // ============================================
 // SMART MINIMUM CHROMA (Preserve Color Identity)
@@ -105,158 +114,6 @@ export function getMaxLightnessForMinChroma(
   return low
 }
 
-// Calculate relative luminance for WCAG contrast
-function getRelativeLuminance(hex: string): number {
-  const color = rgb(hex)
-  if (!color) return 0
-
-  const toLinear = (c: number) =>
-    c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
-
-  const r = toLinear(color.r ?? 0)
-  const g = toLinear(color.g ?? 0)
-  const b = toLinear(color.b ?? 0)
-
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b
-}
-
-// Calculate WCAG contrast ratio between two colors
-export function getContrastRatio(color1: string, color2: string): number {
-  const lum1 = getRelativeLuminance(color1)
-  const lum2 = getRelativeLuminance(color2)
-
-  const lighter = Math.max(lum1, lum2)
-  const darker = Math.min(lum1, lum2)
-
-  return (lighter + 0.05) / (darker + 0.05)
-}
-
-// Find lightness that achieves target contrast against background
-export function findLightnessForContrast(
-  baseColor: OKLCH,
-  background: string,
-  targetContrast: number
-): number {
-  const bgOklch = hexToOklch(background)
-
-  // Binary search for the right lightness
-  let low = 0
-  let high = 1
-  let bestL = 0.5
-  let bestDiff = Infinity
-
-  // Determine if we need to go lighter or darker than background
-  const goLighter = bgOklch.l < 0.5
-
-  for (let i = 0; i < 20; i++) {
-    const mid = (low + high) / 2
-    const testColor = oklchToHex({ l: mid, c: baseColor.c, h: baseColor.h })
-    const contrast = getContrastRatio(testColor, background)
-    const diff = Math.abs(contrast - targetContrast)
-
-    if (diff < bestDiff) {
-      bestDiff = diff
-      bestL = mid
-    }
-
-    if (Math.abs(contrast - targetContrast) < 0.01) {
-      return mid
-    }
-
-    // Adjust search direction based on whether we need more or less contrast
-    if (goLighter) {
-      // Light colors on dark background: higher L = more contrast
-      if (contrast < targetContrast) {
-        low = mid
-      } else {
-        high = mid
-      }
-    } else {
-      // Dark colors on light background: lower L = more contrast
-      if (contrast < targetContrast) {
-        high = mid
-      } else {
-        low = mid
-      }
-    }
-  }
-
-  return bestL
-}
-
-/**
- * Refine Contrast to Target
- *
- * After color transformations (chroma reduction, hue shift, etc.), the actual
- * contrast may differ from the target. This function iteratively adjusts
- * lightness until the actual contrast matches the target.
- *
- * This fixes the issue where saturated colors (like orange) end up with wrong
- * contrast because chroma reduction changes their luminance.
- *
- * @param color - The color after all transformations
- * @param targetContrast - The desired contrast ratio
- * @param backgroundColor - Background color for contrast calculation
- * @param tolerance - How close to target is acceptable (default 0.005 for WCAG compliance)
- * @returns Color with adjusted lightness to achieve target contrast
- */
-export function refineContrastToTarget(
-  color: OKLCH,
-  targetContrast: number,
-  backgroundColor: string,
-  tolerance: number = 0.005
-): OKLCH {
-  const bgL = hexToOklch(backgroundColor).l
-  const isLightBg = bgL > 0.5
-
-  // Store original chroma - we'll use this as the base for recalculating
-  // chroma at each new lightness level
-  const originalChroma = color.c
-
-  let currentColor = { ...color }
-
-  for (let i = 0; i < 20; i++) {
-    const currentHex = oklchToHex(currentColor)
-    const currentContrast = getContrastRatio(currentHex, backgroundColor)
-    const error = currentContrast - targetContrast
-
-    // Within tolerance? Done!
-    if (Math.abs(error) <= tolerance) break
-
-    // Adjust lightness based on error
-    // Light bg: decrease L = more contrast, increase L = less contrast
-    // Dark bg: increase L = more contrast, decrease L = less contrast
-    //
-    // If error > 0: contrast too high, need less contrast
-    // If error < 0: contrast too low, need more contrast
-    //
-    // Use proportional adjustment that decreases as we get closer
-    const adjustmentMagnitude = Math.min(Math.abs(error) * 0.15, 0.05)
-
-    let direction: number
-    if (error > 0) {
-      // Contrast too high - move TOWARD background
-      direction = isLightBg ? 1 : -1  // lighter on light bg, darker on dark bg
-    } else {
-      // Contrast too low - move AWAY from background
-      direction = isLightBg ? -1 : 1  // darker on light bg, lighter on dark bg
-    }
-
-    const newL = Math.max(0, Math.min(1, currentColor.l + direction * adjustmentMagnitude))
-
-    // KEY FIX: Also adjust chroma to stay in gamut
-    // Use the gamut lookup table to find actual max chroma for this hue/lightness
-    const newC = clampChromaToGamut(originalChroma, newL, currentColor.h)
-
-    currentColor = {
-      l: newL,
-      c: newC,
-      h: currentColor.h
-    }
-  }
-
-  return currentColor
-}
 
 // Generate color for a specific stop
 export function generateColor(
@@ -340,11 +197,6 @@ export function generateColor(
   }
 
   return oklchToHex(result)
-}
-
-export function shouldUseLightText(backgroundColor: string): boolean {
-  const luminance = getRelativeLuminance(backgroundColor)
-  return luminance < 0.4
 }
 
 
