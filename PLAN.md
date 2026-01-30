@@ -73,36 +73,37 @@ The custom `calculateDeltaE()` weights hue by chroma level:
 
 This is more perceptually accurate than culori's standard `differenceEuclidean('oklch')` which weights all channels equally. For example, gray-ish blue vs gray-ish red look almost identical to humans, but standard Euclidean would report a large difference.
 
-### Phase 1: Extract Color Conversions (Low Risk)
-- [ ] Create `lib/color-conversions.ts`
-- [ ] Move: `hexToOklch`, `oklchToHex`, `oklchToCss`, `parseOklch`
-- [ ] Move: `hexToRgb`, `rgbToHex`, `rgbToOklch`, `oklchToRgb`
-- [ ] Move: `rgbToHsb`, `hsbToRgb`, `OKLCH` interface
-- [ ] Re-export from color-utils.ts for backward compatibility
-- [ ] Update 5 consumer imports
+### Phase 1: Extract Color Conversions (Low Risk) ✅
+- [x] Create `lib/color-conversions.ts`
+- [x] Move: `hexToOklch`, `oklchToHex`, `oklchToCss`, `parseOklch`
+- [x] Move: `hexToRgb`, `rgbToHex`, `rgbToOklch`, `oklchToRgb`
+- [x] Move: `rgbToHsb`, `hsbToRgb`, `OKLCH` interface
+- [x] Re-export from color-utils.ts for backward compatibility
+- [x] Consumer imports unchanged (backward compatible)
 
 **Why safe:** No internal dependencies - only uses external `culori` library.
 
-### Phase 2: Extract Perceptual Corrections (Low Risk)
-- [ ] Create `lib/perceptual-corrections.ts`
-- [ ] Move: `getHKCompensation`, `applyHKCompensation`
-- [ ] Move: `getMaxBBShiftForHue`, `getBBShiftCorrection`, `applyBBCorrection`
-- [ ] Move: `applyPerceptualCorrections`, `PerceptualCorrectionOptions` interface
+### Phase 2: Extract Perceptual Corrections (Low Risk) ✅
+- [x] Create `lib/perceptual-corrections.ts`
+- [x] Move: `getHKCompensation`, `applyHKCompensation`
+- [x] Move: `getMaxBBShiftForHue`, `getBBShiftCorrection`, `applyBBCorrection`
+- [x] Move: `applyPerceptualCorrections`, `PerceptualCorrectionOptions` interface
 
 **Why safe:** Pure math functions with no dependencies on other color-utils functions.
 
-### Phase 3: Extract Artistic Curves (Low Risk)
-- [ ] Create `lib/artistic-curves.ts`
-- [ ] Move: `getYellowEquivalentShifts`, `getHueShiftValues`, `applyHueShift`
-- [ ] Move: `smoothStep`, `interpolateChromaCurve`, `applyChromaCurve`
+### Phase 3: Extract Artistic Curves (Low Risk) ✅
+- [x] Create `lib/artistic-curves.ts`
+- [x] Move: `getYellowEquivalentShifts`, `getHueShiftValues`, `applyHueShift`
+- [x] Move: `smoothStep`, `interpolateChromaCurve`, `applyChromaCurve`
 
 **Why safe:** Only depends on `types.ts` for preset constants.
 
-### Phase 4: Extract Contrast Utilities + Use Culori APIs (Medium Risk)
-- [ ] Create `lib/contrast-utils.ts`
-- [ ] Replace `getRelativeLuminance` with culori's `wcagLuminance()`
-- [ ] Replace `getContrastRatio` with culori's `wcagContrast()`
-- [ ] Keep custom: `findLightnessForContrast`, `refineContrastToTarget`, `shouldUseLightText`
+### Phase 4: Extract Contrast Utilities + Use Culori APIs (Medium Risk) ✅
+- [x] Create `lib/contrast-utils.ts`
+- [x] Replace `getRelativeLuminance` with culori's `wcagLuminance()`
+- [x] Replace `getContrastRatio` with culori's `wcagContrast()`
+- [x] Keep custom: `findLightnessForContrast`, `refineContrastToTarget`, `shouldUseLightText`
+- [x] Updated `culori.d.ts` with WCAG function types
 
 **Culori integration:**
 ```typescript
@@ -113,12 +114,12 @@ export const getRelativeLuminance = wcagLuminance
 
 **Risk:** Depends on color conversions from Phase 1. Test contrast calculations thoroughly.
 
-### Phase 5: Replace Gamut Table + Archive (Medium Risk)
-- [ ] Create `lib/gamut-utils.ts`
-- [ ] Replace gamut table lookups with culori's `clampChroma()` and `displayable()`
-- [ ] Archive `lib/gamut-table.ts` → `docs/archived/gamut-table.ts`
-- [ ] Keep custom: `getMinChromaForHue`, `getMaxLightnessForMinChroma` (custom algorithms)
-- [ ] Update: `validateAndClampToGamut` to use culori internally
+### Phase 5: Replace Gamut Table + Archive (Medium Risk) ✅
+- [x] Create `lib/gamut-utils.ts`
+- [x] Replace gamut table lookups with culori's `clampChroma()` and `displayable()`
+- [x] Archive `lib/gamut-table.ts` → `docs/archived/gamut-table.ts`
+- [x] Move `getMinChromaForHue`, `getMaxLightnessForMinChroma`, `validateAndClampToGamut`
+- [x] Updated `culori.d.ts` with `displayable()` type definition
 
 **Culori integration:**
 ```typescript
@@ -189,12 +190,12 @@ docs/archived/
 
 | Phase | Risk | Lines | Status |
 |-------|------|-------|--------|
-| 1. Conversions | Low | ~100 | Not started |
-| 2. Perceptual | Low | ~200 | Not started |
-| 3. Artistic | Low | ~210 | Not started |
-| 4. Contrast + Culori | Medium | ~80 | Not started |
-| 5. Gamut + Archive | Medium | ~60 | Not started |
-| 6. Delta-E (custom) | Medium | ~180 | Not started |
+| 1. Conversions | Low | ~100 | ✅ Complete |
+| 2. Perceptual | Low | ~200 | ✅ Complete |
+| 3. Artistic | Low | ~210 | ✅ Complete |
+| 4. Contrast + Culori | Medium | ~80 | ✅ Complete |
+| 5. Gamut + Archive | Medium | ~60 | ✅ Complete |
+| 6. Delta-E (custom) | Medium | ~180 | ✅ Complete |
 | 7. Cleanup | Low | ~80 | Not started |
 
 ### Risk Mitigation
