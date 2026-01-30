@@ -1,6 +1,8 @@
 # Octarine - Figma Color System Plugin
 
-**Last Updated:** 2026-01-21
+> **OUTDATED:** This file is preserved for historical context. See `PLAN.md` for the current roadmap and specification.
+
+**Last Updated:** 2026-01-21 (archived)
 
 ---
 
