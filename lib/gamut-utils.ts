@@ -46,7 +46,11 @@ export function getMaxChroma(l: number, h: number): number {
   const clamped = clampChroma(color, 'oklch')
 
   // Return the clamped chroma value
-  return clamped?.c ?? 0
+  if (!clamped || clamped.c === undefined) {
+    console.warn(`[getMaxChroma] clampChroma returned invalid result for L=${l}, H=${h}`)
+    return 0
+  }
+  return clamped.c
 }
 
 /**
@@ -71,7 +75,11 @@ export function clampChromaToGamut(c: number, l: number, h: number): number {
   const color = { mode: 'oklch' as const, l, c, h }
   const clamped = clampChroma(color, 'oklch')
 
-  return clamped?.c ?? 0
+  if (!clamped || clamped.c === undefined) {
+    console.warn(`[clampChromaToGamut] clampChroma returned invalid result for L=${l}, C=${c}, H=${h}`)
+    return 0
+  }
+  return clamped.c
 }
 
 // ============================================
@@ -157,9 +165,14 @@ export function validateAndClampToGamut(color: OKLCH): OKLCH {
   // Clamp to gamut
   const clamped = clampChroma({ mode: 'oklch', ...color }, 'oklch')
 
+  if (!clamped || clamped.c === undefined) {
+    console.warn(`[validateAndClampToGamut] clampChroma returned invalid result for:`, color)
+    return { ...color, c: 0 }
+  }
+
   return {
     l: color.l,
-    c: clamped?.c ?? 0,
+    c: clamped.c,
     h: color.h
   }
 }

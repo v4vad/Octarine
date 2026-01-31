@@ -6,7 +6,6 @@ import { ColorPickerPopup } from '../color-picker';
 
 interface StopPopupProps {
   stop: Stop;
-  stopNumber: number;
   generatedColor: string;
   wasNudged: boolean;
   effectiveMethod: 'lightness' | 'contrast';
@@ -20,7 +19,6 @@ interface StopPopupProps {
 
 export function StopPopup({
   stop,
-  stopNumber,
   generatedColor,
   wasNudged,
   effectiveMethod,
@@ -76,7 +74,7 @@ export function StopPopup({
       >
         {/* Header */}
         <div className="stop-popup-header">
-          <span className="stop-popup-title">Stop {stopNumber}</span>
+          <span className="stop-popup-title">Stop {stop.number}</span>
           <span className="stop-popup-close" onClick={onClose}>×</span>
         </div>
 

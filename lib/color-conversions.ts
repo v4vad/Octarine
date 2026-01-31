@@ -22,6 +22,7 @@ export interface OKLCH {
 export function hexToOklch(hex: string): OKLCH {
   const color = oklch(hex)
   if (!color) {
+    console.warn(`[hexToOklch] Failed to parse color: "${hex}". Returning default.`)
     return { l: 0.5, c: 0.1, h: 0 }
   }
   return {
@@ -39,6 +40,9 @@ export function oklchToHex(color: OKLCH): string {
     c: color.c,
     h: color.h,
   })
+  if (!result) {
+    console.warn(`[oklchToHex] Failed to convert OKLCH to hex:`, color)
+  }
   return result || "#000000"
 }
 
@@ -60,6 +64,7 @@ export function parseOklch(color: string): OKLCH {
       h: parsed.h ?? 0,
     }
   }
+  console.warn(`[parseOklch] Failed to parse color: "${color}". Returning default.`)
   return { l: 0.5, c: 0.1, h: 0 }
 }
 
@@ -74,6 +79,9 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } {
 
 export function rgbToHex(r: number, g: number, b: number): string {
   const result = formatHex({ mode: "rgb", r: r / 255, g: g / 255, b: b / 255 })
+  if (!result) {
+    console.warn(`[rgbToHex] Failed to convert RGB(${r}, ${g}, ${b}) to hex.`)
+  }
   return result || "#000000"
 }
 
