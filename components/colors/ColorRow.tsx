@@ -103,10 +103,10 @@ export function ColorRow({
               <div
                 className={`stop-strip-swatch ${hasOverride ? 'has-override' : ''} ${isNudged ? 'was-nudged' : ''} ${isTooSimilar ? 'too-similar' : ''}`}
                 style={{ backgroundColor: displayColor }}
-                title={isTooSimilar ? `Very similar to previous stop (ΔE=${generatedStop?.deltaE?.toFixed(1)})` : undefined}
+                title={isTooSimilar && i > 0 ? `This color looks very similar to stop ${color.stops[i - 1].number} — they may be hard to tell apart` : undefined}
               >
                 {isTooSimilar && (
-                  <span className="similarity-warning" title={`ΔE=${generatedStop?.deltaE?.toFixed(1)} - may look identical`}>
+                  <span className="similarity-warning" title={i > 0 ? `This color looks very similar to stop ${color.stops[i - 1].number} — they may be hard to tell apart` : undefined}>
                     ⚠
                   </span>
                 )}

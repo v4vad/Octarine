@@ -325,6 +325,8 @@ Select "Custom" to set your own values for light, mid, and dark regions:
 
 When multiple stops would generate the same hex color, Octarine automatically adjusts them to be unique:
 
+> **Note:** This feature fixes *identical* hex codes. For colors that have *different* hex codes but still *look* the same, see [Color Distinctness Warning](#color-distinctness-warning) below.
+
 1. First tries small hue adjustments
 2. Then tries chroma adjustments
 3. Finally adjusts lightness if needed
