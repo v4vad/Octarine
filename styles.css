@@ -144,7 +144,65 @@
    APP CONTAINER
    -------------------------------------------- */
 .app-container {
-  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* --------------------------------------------
+   TOP BAR
+   -------------------------------------------- */
+.top-bar {
+  display: flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--figma-color-border);
+  background: var(--figma-color-bg);
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.top-bar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.top-bar-right {
+  margin-left: auto;
+}
+
+.top-bar-bg-color {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Icon-only buttons for undo/redo */
+.top-bar-icon-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--figma-color-border);
+  border-radius: var(--radius-sm);
+  background: var(--figma-color-bg);
+  color: var(--figma-color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.top-bar-icon-btn:hover:not(:disabled) {
+  background: var(--figma-color-bg-hover);
+  color: var(--figma-color-text);
+}
+
+.top-bar-icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .app-title {
@@ -722,10 +780,10 @@ input[type="range"]::-moz-range-thumb {
    DASHBOARD LAYOUT (Phase 11)
    ============================================ */
 
-/* Main two-panel grid layout */
+/* Main three-panel grid layout (always visible settings panel) */
 .app-layout {
   display: grid;
-  grid-template-columns: 180px 1fr;
+  grid-template-columns: 180px 1fr 240px;
   flex: 1;
   min-height: 0; /* Important for flex child to allow shrinking */
   overflow: hidden;
@@ -735,11 +793,11 @@ input[type="range"]::-moz-range-thumb {
 .left-panel {
   display: flex;
   flex-direction: column;
-  padding: var(--space-3);
+  padding: var(--space-2);
   border-right: 1px solid var(--figma-color-border);
   background: var(--figma-color-bg-secondary);
-  overflow-y: auto;
-  overflow-x: hidden; /* Prevent horizontal scroll */
+  overflow-y: auto; /* Entire panel scrolls */
+  min-height: 0;
 }
 
 /* Right panel - colors */
@@ -1061,9 +1119,19 @@ input[type="range"]::-moz-range-thumb {
 .color-row {
   padding: var(--space-3);
   margin-bottom: var(--space-3);
-  border: 1px solid var(--figma-color-border);
+  border: 2px solid var(--figma-color-border);
   border-radius: var(--radius-lg);
   background: var(--figma-color-bg);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.color-row:hover {
+  background: var(--figma-color-bg-hover);
+}
+
+.color-row.active {
+  border-color: var(--figma-color-border-brand, #0d99ff);
 }
 
 .color-row-header {
@@ -1165,6 +1233,7 @@ input[type="range"]::-moz-range-thumb {
 /* Stop strip - horizontal row of swatches */
 .stop-strip {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
 }
 
@@ -1389,8 +1458,7 @@ input[type="range"]::-moz-range-thumb {
    EXPORT BUTTON (Bottom of left panel)
    -------------------------------------------- */
 .export-btn {
-  margin-top: auto;
-  padding: var(--space-2);
+  padding: var(--space-1) var(--space-3);
   border: 1px solid var(--figma-color-border);
   border-radius: var(--radius-md);
   background: var(--figma-color-bg);
@@ -1399,7 +1467,6 @@ input[type="range"]::-moz-range-thumb {
   font-weight: 500;
   cursor: pointer;
   transition: all var(--transition-fast);
-  width: 100%;
 }
 
 .export-btn:hover {
@@ -1506,8 +1573,8 @@ input[type="range"]::-moz-range-thumb {
 /* BG color picker popup - floats above everything */
 .bg-color-picker-popup {
   position: fixed;
-  left: 12px;
-  top: 60px;
+  left: 80px;
+  top: 40px;
   z-index: 1000;
 }
 
@@ -1678,8 +1745,8 @@ input[type="range"]::-moz-range-thumb {
 
 .chroma-bar {
   flex: 1;
-  background: var(--figma-color-bg-brand, #18a0fb);
-  transition: opacity var(--transition-fast);
+  /* Background color set via inline style using selected color */
+  transition: opacity var(--transition-fast), background var(--transition-fast);
 }
 
 /* Labels under preview */
@@ -1728,8 +1795,24 @@ input[type="range"]::-moz-range-thumb {
 }
 
 /* --------------------------------------------
-   HUE SHIFT CURVE PREVIEW
+   HUE SHIFT CURVE PREVIEW (Visual Bars)
    -------------------------------------------- */
+.hue-shift-visual-preview {
+  display: flex;
+  gap: 2px;
+  height: 16px;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--figma-color-bg-secondary);
+}
+
+.hue-bar {
+  flex: 1;
+  transition: background var(--transition-fast);
+}
+
+/* Legacy text-based preview (deprecated) */
 .hue-shift-preview {
   margin-bottom: var(--space-2);
   padding: var(--space-1) var(--space-2);
@@ -1759,4 +1842,336 @@ input[type="range"]::-moz-range-thumb {
 
 .hue-shift-arrow {
   color: var(--figma-color-text-tertiary);
+}
+
+/* --------------------------------------------
+   RIGHT SETTINGS PANEL (Always visible)
+   -------------------------------------------- */
+.right-settings-panel {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-3);
+  border-left: 1px solid var(--figma-color-border);
+  background: var(--figma-color-bg);
+  overflow-y: auto;
+}
+
+/* Empty state for right panel when no color is selected */
+.right-panel-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  border-left: 1px solid var(--figma-color-border);
+  background: var(--figma-color-bg-secondary);
+  color: var(--figma-color-text-tertiary);
+  font-size: var(--text-md);
+  text-align: center;
+}
+
+.right-settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--figma-color-border);
+}
+
+.right-settings-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.right-settings-close {
+  cursor: pointer;
+  color: var(--figma-color-text-secondary);
+  font-size: var(--text-xl);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.right-settings-close:hover {
+  color: var(--figma-color-text);
+  background: var(--figma-color-bg-hover);
+}
+
+.right-settings-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.right-settings-delete {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--figma-color-border);
+  border-radius: var(--radius-sm);
+  background: var(--figma-color-bg);
+  color: var(--figma-color-text-secondary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.right-settings-delete:hover {
+  background: var(--figma-color-bg-hover);
+  color: var(--figma-color-text-danger, #e53935);
+  border-color: var(--figma-color-text-danger, #e53935);
+}
+
+/* Active state for settings button */
+.color-row-actions button.active {
+  background: var(--figma-color-bg-brand-tertiary);
+  border-color: var(--figma-color-border-brand);
+  color: var(--figma-color-text-brand);
+}
+
+/* ============================================
+   GROUP ACCORDION
+   ============================================ */
+.group-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: var(--space-1) 0;
+}
+
+.group-accordion-item {
+  border: 1px solid var(--figma-color-border);
+  border-radius: var(--radius-md);
+  background: var(--figma-color-bg);
+  overflow: hidden;
+}
+
+.group-accordion-item.collapsed {
+  cursor: pointer;
+}
+
+.group-accordion-item.collapsed:hover {
+  border-color: var(--figma-color-border-strong);
+}
+
+.group-accordion-item.expanded {
+  border-color: var(--figma-color-border-brand);
+}
+
+.group-accordion-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  min-height: 32px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.group-accordion-header:hover {
+  background: var(--figma-color-bg-hover);
+}
+
+.group-accordion-arrow {
+  font-size: var(--text-xs);
+  color: var(--figma-color-text-secondary);
+  width: 12px;
+  flex-shrink: 0;
+}
+
+.group-accordion-name {
+  font-size: var(--text-md);
+  font-weight: 500;
+  color: var(--figma-color-text);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.group-name-input {
+  font-size: var(--text-md);
+  font-weight: 500;
+  color: var(--figma-color-text);
+  background: var(--figma-color-bg-secondary);
+  border: 1px solid var(--figma-color-border-brand);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  flex: 1;
+  min-width: 0;
+  outline: none;
+}
+
+.group-accordion-swatches {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.group-swatch-tiny {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid var(--figma-color-border);
+}
+
+.group-swatch-more {
+  font-size: var(--text-xs);
+  color: var(--figma-color-text-tertiary);
+  margin-left: 2px;
+}
+
+.group-delete-btn {
+  position: absolute;
+  top: 50%;
+  right: var(--space-2);
+  transform: translateY(-50%);
+  opacity: 0;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: var(--figma-color-text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.group-accordion-item:hover .group-delete-btn {
+  opacity: 1;
+}
+
+.group-delete-btn:hover {
+  background: var(--figma-color-bg-hover);
+  color: var(--figma-color-text-danger, #e53935);
+}
+
+.group-accordion-content {
+  padding: var(--space-2);
+}
+
+/* Add Group Button */
+.add-group-btn {
+  width: 100%;
+  padding: var(--space-2);
+  border: 1px dashed var(--figma-color-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--figma-color-text-secondary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.add-group-btn:hover {
+  border-color: var(--figma-color-border-brand);
+  color: var(--figma-color-text-brand);
+  background: var(--figma-color-bg-brand-tertiary);
+}
+
+/* Middle Panel (renamed from right-panel for colors) */
+.middle-panel {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-3);
+  border-left: 1px solid var(--figma-color-border);
+}
+
+/* ============================================
+   GROUP COLOR STRIP (New accordion design)
+   ============================================ */
+
+/* Container for strip + delete button positioning */
+.group-strip-container {
+  position: relative;
+}
+
+/* Color strip - full width row of base colors */
+.group-color-strip {
+  display: flex;
+  min-height: 16px;
+  cursor: pointer;
+  margin: var(--space-2);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+  gap: 2px;
+  overflow: hidden;
+  transition: filter var(--transition-fast);
+}
+
+.group-color-strip:hover {
+  filter: brightness(1.05);
+}
+
+/* Each color segment takes equal width */
+.group-color-segment {
+  flex: 1;
+  min-height: 16px;
+  transition: filter var(--transition-fast);
+}
+
+.group-color-segment:hover {
+  filter: brightness(0.95);
+}
+
+/* Empty state for groups with no colors */
+.group-color-strip-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-sm);
+  color: var(--figma-color-text-tertiary);
+  background: var(--figma-color-bg-tertiary);
+}
+
+/* Separator line between strip and content */
+.group-accordion-separator {
+  height: 1px;
+  background: var(--figma-color-border);
+}
+
+/* Global background section (top of left panel) */
+.global-bg-section {
+  margin-bottom: var(--space-3);
+}
+
+/* --------------------------------------------
+   PICKER SWATCH + HEX INPUT ROW
+   -------------------------------------------- */
+.picker-swatch-hex-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: 0 var(--space-3);
+}
+
+.picker-swatch {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--figma-color-border);
+  flex-shrink: 0;
+}
+
+.picker-hex-input {
+  flex: 1;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--figma-color-border);
+  border-radius: var(--radius-sm);
+  font-family: monospace;
+  font-size: var(--text-md);
+  background: var(--figma-color-bg);
+  color: var(--figma-color-text);
+}
+
+.picker-hex-input:focus {
+  outline: none;
+  border-color: var(--figma-color-border-brand);
 }

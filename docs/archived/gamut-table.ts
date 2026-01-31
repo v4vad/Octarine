@@ -1,4 +1,22 @@
 /**
+ * ============================================================================
+ * ARCHIVED: This file was replaced by lib/gamut-utils.ts in January 2026.
+ *
+ * REASON FOR ARCHIVING:
+ * The 101×360 pre-computed lookup table was replaced with culori's built-in
+ * clampChroma() function, which performs binary search on-demand.
+ *
+ * BENEFITS OF THE NEW APPROACH:
+ * - Removed ~170 lines of code
+ * - Eliminated module load time (100-200ms table generation)
+ * - Same accuracy through binary search
+ * - Maintained by culori library (less code to maintain ourselves)
+ *
+ * This file is kept for historical reference and in case we need to revert.
+ * ============================================================================
+ */
+
+/**
  * Gamut Lookup Table for OKLCH → sRGB
  *
  * This module provides pre-calculated maximum chroma values for any
