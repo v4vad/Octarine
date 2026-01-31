@@ -57,6 +57,10 @@ export const HUE_SHIFT_CURVE_PRESETS: Record<Exclude<HueShiftCurvePreset, "custo
 export const DEFAULT_STOPS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900]
 
 // Default lightness values for each stop (0-1)
+// Dark stops (700-900) use lifted values to preserve color identity.
+// At L<0.20, sRGB gamut constraints limit chroma to ~0.02-0.03, making colors
+// nearly indistinguishable from black. These values keep chroma ≥0.04 for
+// visible color while matching industry standards (Tailwind, Primer, etc.)
 export const DEFAULT_LIGHTNESS: Record<number, number> = {
   50: 0.97,
   100: 0.93,
@@ -65,9 +69,9 @@ export const DEFAULT_LIGHTNESS: Record<number, number> = {
   400: 0.65,
   500: 0.55,
   600: 0.45,
-  700: 0.35,
-  800: 0.25,
-  900: 0.15,
+  700: 0.36,
+  800: 0.28,
+  900: 0.22,
 }
 
 // Default contrast values for each stop (WCAG ratio)

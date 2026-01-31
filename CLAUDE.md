@@ -35,7 +35,7 @@ Figma plugins have **two execution contexts** that communicate via messages:
 
 | Document | Purpose |
 |----------|---------|
-| `PLAN.md` | Roadmap, TODOs, product specification |
+| `PLAN.md` | Roadmap, TODOs |
 | `docs/FEATURES.md` | User-facing feature guide |
 | `docs/COLOR-ALGORITHM.md` | Color science and algorithm explanations |
 | `docs/removed-features.md` | Archive of removed features with rationale |

@@ -38,7 +38,7 @@ The gamut lookup table lives in `lib/gamut-table.ts` and provides two key functi
 - `getMaxChroma(L, hue)` - Maximum displayable chroma at a given lightness and hue
 - `clampChromaToGamut(chroma, L, hue)` - Clamp chroma to fit in sRGB
 
-### 3. Smart Minimum Chroma
+### 3. Smart Minimum Chroma (Light Stops)
 
 **Problem:** At very high lightness (like stop 50), colors lose their identity and appear gray.
 
@@ -52,6 +52,25 @@ The gamut lookup table lives in `lib/gamut-table.ts` and provides two key functi
 | Yellows (40-80°) | 0.012 | Most generous gamut |
 
 When generating light stops, we cap lightness at the point where minimum chroma can still be achieved.
+
+### 4. Dark Stop Lightness (Color Identity)
+
+**Problem:** At very low lightness (L<0.20), the sRGB gamut becomes severely constrained. Maximum chroma drops to ~0.02-0.03, making colors nearly indistinguishable from black regardless of hue.
+
+**Our approach:** Dark stops use "lifted" default lightness values:
+
+| Stop | Traditional | Octarine Default | Why |
+|------|-------------|------------------|-----|
+| 700 | 0.35 | 0.36 | Slight lift |
+| 800 | 0.25 | 0.28 | Visible color difference |
+| 900 | 0.15 | 0.22 | Preserves hue identity |
+
+**At L=0.22:** Most hues maintain chroma ≥0.04 (perceptibly colored).
+**At L=0.15:** Chroma drops to 0.02-0.03 (indistinguishable from black).
+
+This aligns with industry practice - Tailwind, Primer, and Atlassian all keep their darkest stops around L=0.22-0.30 to maintain recognizable color identity (navy blue vs near-black, forest green vs near-black).
+
+Users who need darker stops can still override individual values.
 
 ---
 
