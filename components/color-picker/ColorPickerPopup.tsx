@@ -19,7 +19,8 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
   const {
     hex, hexInput, oklch, hsb,
     lInput, cInput, hInput,
-    hsbHInput, hsbSInput, hsbBInput
+    hsbHInput, hsbSInput, hsbBInput,
+    errors
   } = state;
 
   useClickOutside(popupRef, onClose);
@@ -109,7 +110,7 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
         {activeTab === 'oklch' && (
           <>
             <div className="flex gap-2">
-              <div className="flex-1">
+              <div className="flex-1 input-with-error">
                 <label className="form-label-sm">L</label>
                 <input
                   type="text"
@@ -117,10 +118,11 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
                   onChange={(e) => handlers.setLInput(e.target.value)}
                   onBlur={handlers.handleLBlur}
                   onKeyDown={(e) => { if (e.key === 'Enter') handlers.handleLBlur(); }}
-                  className="input w-full"
+                  className={`input w-full ${errors.l ? 'input-error' : ''}`}
                 />
+                {errors.l && <span className="error-text">{errors.l}</span>}
               </div>
-              <div className="flex-1">
+              <div className="flex-1 input-with-error">
                 <label className="form-label-sm">C</label>
                 <input
                   type="text"
@@ -128,10 +130,11 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
                   onChange={(e) => handlers.setCInput(e.target.value)}
                   onBlur={handlers.handleCBlur}
                   onKeyDown={(e) => { if (e.key === 'Enter') handlers.handleCBlur(); }}
-                  className="input w-full"
+                  className={`input w-full ${errors.c ? 'input-error' : ''}`}
                 />
+                {errors.c && <span className="error-text">{errors.c}</span>}
               </div>
-              <div className="flex-1">
+              <div className="flex-1 input-with-error">
                 <label className="form-label-sm">H</label>
                 <input
                   type="text"
@@ -139,8 +142,9 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
                   onChange={(e) => handlers.setHInput(e.target.value)}
                   onBlur={handlers.handleHBlur}
                   onKeyDown={(e) => { if (e.key === 'Enter') handlers.handleHBlur(); }}
-                  className="input w-full"
+                  className={`input w-full ${errors.h ? 'input-error' : ''}`}
                 />
+                {errors.h && <span className="error-text">{errors.h}</span>}
               </div>
             </div>
             <div className="picker-swatch-hex-row">
@@ -152,16 +156,17 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
                 onBlur={() => handlers.applyHex(hexInput)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handlers.applyHex(hexInput); }}
                 placeholder="#000000"
-                className="picker-hex-input"
+                className={`picker-hex-input ${errors.hex ? 'input-error' : ''}`}
               />
             </div>
+            {errors.hex && <span className="error-text" style={{ marginLeft: '38px' }}>{errors.hex}</span>}
           </>
         )}
 
         {activeTab === 'hsb' && (
           <>
             <div className="flex gap-2">
-              <div className="flex-1">
+              <div className="flex-1 input-with-error">
                 <label className="form-label-sm">H</label>
                 <input
                   type="text"
@@ -169,10 +174,11 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
                   onChange={(e) => handlers.setHsbHInput(e.target.value)}
                   onBlur={handlers.handleHsbHBlur}
                   onKeyDown={(e) => { if (e.key === 'Enter') handlers.handleHsbHBlur(); }}
-                  className="input w-full"
+                  className={`input w-full ${errors.hsbH ? 'input-error' : ''}`}
                 />
+                {errors.hsbH && <span className="error-text">{errors.hsbH}</span>}
               </div>
-              <div className="flex-1">
+              <div className="flex-1 input-with-error">
                 <label className="form-label-sm">S</label>
                 <input
                   type="text"
@@ -180,10 +186,11 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
                   onChange={(e) => handlers.setHsbSInput(e.target.value)}
                   onBlur={handlers.handleHsbSBlur}
                   onKeyDown={(e) => { if (e.key === 'Enter') handlers.handleHsbSBlur(); }}
-                  className="input w-full"
+                  className={`input w-full ${errors.hsbS ? 'input-error' : ''}`}
                 />
+                {errors.hsbS && <span className="error-text">{errors.hsbS}</span>}
               </div>
-              <div className="flex-1">
+              <div className="flex-1 input-with-error">
                 <label className="form-label-sm">B</label>
                 <input
                   type="text"
@@ -191,8 +198,9 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
                   onChange={(e) => handlers.setHsbBInput(e.target.value)}
                   onBlur={handlers.handleHsbBBlur}
                   onKeyDown={(e) => { if (e.key === 'Enter') handlers.handleHsbBBlur(); }}
-                  className="input w-full"
+                  className={`input w-full ${errors.hsbB ? 'input-error' : ''}`}
                 />
+                {errors.hsbB && <span className="error-text">{errors.hsbB}</span>}
               </div>
             </div>
             <div className="picker-swatch-hex-row">
@@ -204,9 +212,10 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
                 onBlur={() => handlers.applyHex(hexInput)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handlers.applyHex(hexInput); }}
                 placeholder="#000000"
-                className="picker-hex-input"
+                className={`picker-hex-input ${errors.hex ? 'input-error' : ''}`}
               />
             </div>
+            {errors.hex && <span className="error-text" style={{ marginLeft: '38px' }}>{errors.hex}</span>}
           </>
         )}
       </div>

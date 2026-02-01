@@ -8,14 +8,9 @@
 
 ## Active Roadmap
 
-### Performance Improvements
-- [ ] Faster duplicate detection (Set-based lookup instead of array scanning)
-- [ ] Smarter contrast refinement (adaptive step sizing, early exit)
-- [ ] Skip unnecessary color conversions (direct OKLCH contrast calculation)
-
 ### Polish & Quality
 - [ ] Import/export JSON
-- [ ] Error handling improvements
+- [x] Error handling improvements (toast notifications, input validation feedback, helpful Figma error messages)
 
 ### UI Improvements
 - [ ] Better onboarding & empty state (welcome message, quick-start presets)

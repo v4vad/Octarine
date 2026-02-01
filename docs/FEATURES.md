@@ -494,6 +494,40 @@ Once exported, your colors appear in Figma's Variables panel. You can:
 
 ---
 
+## Error Handling & Feedback
+
+Octarine now provides better feedback when things go wrong:
+
+### Toast Notifications
+
+Brief messages that appear at the bottom of the plugin window:
+- **Success (green)** - Confirms when variables are created/updated
+- **Error (red)** - Shows what went wrong with suggestions to fix it
+- **Warning (yellow)** - Alerts you to potential issues
+
+Toasts automatically disappear after 3 seconds, or you can click them to dismiss.
+
+### Input Validation
+
+When you enter invalid values in input fields:
+- The field shows a **red border** to indicate an error
+- An **error message** appears below explaining what's wrong
+- Your input is automatically corrected when you leave the field
+
+**Common validation messages:**
+- "Invalid hex format" - Use #RRGGBB format (e.g., #FF5500)
+- "Enter a number 0-1" - Lightness values must be between 0 and 1
+- "Enter a number 0-360" - Hue values are in degrees
+
+### Export Error Messages
+
+When exporting to Figma Variables fails, you'll see specific messages:
+- **"No colors to export"** - Add at least one color before exporting
+- **"Could not create variable collection"** - Check file permissions
+- **"Invalid variable name"** - Check that color names don't contain special characters
+
+---
+
 ## Troubleshooting
 
 ### Colors look identical

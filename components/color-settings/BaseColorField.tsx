@@ -19,18 +19,22 @@ export function BaseColorField({ color, onChange }: BaseColorFieldProps) {
   const [showPicker, setShowPicker] = useState(false);
   const [pickerOpenUpward, setPickerOpenUpward] = useState(false);
   const [hexInput, setHexInput] = useState(color);
+  const [hexError, setHexError] = useState<string | null>(null);
 
   // Keep input in sync when color changes externally
   useEffect(() => {
     setHexInput(color);
+    setHexError(null);
   }, [color]);
 
   const applyHex = (newHex: string) => {
     const expanded = expandHexShorthand(newHex);
     if (/^#[0-9A-Fa-f]{6}$/.test(expanded)) {
+      setHexError(null);
       setHexInput(expanded.toUpperCase());
       onChange(expanded.toUpperCase());
     } else {
+      setHexError('Invalid hex');
       setHexInput(color);
     }
   };
@@ -63,9 +67,12 @@ export function BaseColorField({ color, onChange }: BaseColorFieldProps) {
           />
           <input
             type="text"
-            className="color-field-hex"
+            className={`color-field-hex ${hexError ? 'input-error' : ''}`}
             value={hexInput.toUpperCase()}
-            onChange={(e) => setHexInput(e.target.value)}
+            onChange={(e) => {
+              setHexInput(e.target.value);
+              setHexError(null); // Clear error while typing
+            }}
             onBlur={(e) => applyHex(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
@@ -73,6 +80,7 @@ export function BaseColorField({ color, onChange }: BaseColorFieldProps) {
                 (e.target as HTMLInputElement).blur();
               }
             }}
+            title={hexError || undefined}
           />
         </div>
       </div>

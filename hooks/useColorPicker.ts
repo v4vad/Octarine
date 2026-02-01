@@ -7,6 +7,17 @@ export interface HSB {
   b: number;
 }
 
+// Validation error messages
+export interface ValidationErrors {
+  hex?: string;
+  l?: string;
+  c?: string;
+  h?: string;
+  hsbH?: string;
+  hsbS?: string;
+  hsbB?: string;
+}
+
 export interface ColorPickerState {
   hex: string;
   hexInput: string;
@@ -20,6 +31,8 @@ export interface ColorPickerState {
   hsbHInput: string;
   hsbSInput: string;
   hsbBInput: string;
+  // Validation errors
+  errors: ValidationErrors;
 }
 
 export interface ColorPickerHandlers {
@@ -79,6 +92,9 @@ export function useColorPicker(
     return rgbToHsb(rgb.r, rgb.g, rgb.b).b.toFixed(0);
   });
 
+  // Validation errors
+  const [errors, setErrors] = useState<ValidationErrors>({});
+
   // Sync all state from a hex color (used when applying changes)
   const syncAllFromHex = useCallback((newHex: string) => {
     setHex(newHex);
@@ -100,8 +116,11 @@ export function useColorPicker(
   const applyHex = useCallback((newHex: string) => {
     const expanded = expandHexShorthand(newHex);
     if (/^#[0-9A-Fa-f]{6}$/.test(expanded)) {
+      setErrors(prev => ({ ...prev, hex: undefined }));
       syncAllFromHex(expanded);
       onChange(expanded);
+    } else {
+      setErrors(prev => ({ ...prev, hex: 'Invalid hex format (use #RRGGBB)' }));
     }
   }, [syncAllFromHex, onChange]);
 
@@ -144,18 +163,29 @@ export function useColorPicker(
   // Blur handlers for input validation
   const handleLBlur = useCallback(() => {
     const val = parseFloat(lInput);
-    if (!isNaN(val)) {
+    if (!isNaN(val) && val >= 0 && val <= 1) {
+      setErrors(prev => ({ ...prev, l: undefined }));
+      applyOklch({ ...oklch, l: val });
+    } else if (!isNaN(val)) {
+      // Value is a number but out of range - clamp and show brief warning
+      setErrors(prev => ({ ...prev, l: undefined }));
       applyOklch({ ...oklch, l: Math.max(0, Math.min(1, val)) });
     } else {
+      setErrors(prev => ({ ...prev, l: 'Enter a number 0-1' }));
       setLInput(oklch.l.toFixed(2));
     }
   }, [lInput, oklch, applyOklch]);
 
   const handleCBlur = useCallback(() => {
     const val = parseFloat(cInput);
-    if (!isNaN(val)) {
+    if (!isNaN(val) && val >= 0) {
+      setErrors(prev => ({ ...prev, c: undefined }));
+      applyOklch({ ...oklch, c: val });
+    } else if (!isNaN(val)) {
+      setErrors(prev => ({ ...prev, c: undefined }));
       applyOklch({ ...oklch, c: Math.max(0, val) });
     } else {
+      setErrors(prev => ({ ...prev, c: 'Enter a positive number' }));
       setCInput(oklch.c.toFixed(3));
     }
   }, [cInput, oklch, applyOklch]);
@@ -163,8 +193,10 @@ export function useColorPicker(
   const handleHBlur = useCallback(() => {
     const val = parseFloat(hInput);
     if (!isNaN(val)) {
+      setErrors(prev => ({ ...prev, h: undefined }));
       applyOklch({ ...oklch, h: val });
     } else {
+      setErrors(prev => ({ ...prev, h: 'Enter a number 0-360' }));
       setHInput(oklch.h.toFixed(0));
     }
   }, [hInput, oklch, applyOklch]);
@@ -172,8 +204,10 @@ export function useColorPicker(
   const handleHsbHBlur = useCallback(() => {
     const val = parseFloat(hsbHInput);
     if (!isNaN(val)) {
+      setErrors(prev => ({ ...prev, hsbH: undefined }));
       applyHsb({ ...hsb, h: Math.max(0, Math.min(360, val)) });
     } else {
+      setErrors(prev => ({ ...prev, hsbH: 'Enter a number 0-360' }));
       setHsbHInput(hsb.h.toFixed(0));
     }
   }, [hsbHInput, hsb, applyHsb]);
@@ -181,8 +215,10 @@ export function useColorPicker(
   const handleHsbSBlur = useCallback(() => {
     const val = parseFloat(hsbSInput);
     if (!isNaN(val)) {
+      setErrors(prev => ({ ...prev, hsbS: undefined }));
       applyHsb({ ...hsb, s: Math.max(0, Math.min(100, val)) });
     } else {
+      setErrors(prev => ({ ...prev, hsbS: 'Enter a number 0-100' }));
       setHsbSInput(hsb.s.toFixed(0));
     }
   }, [hsbSInput, hsb, applyHsb]);
@@ -190,8 +226,10 @@ export function useColorPicker(
   const handleHsbBBlur = useCallback(() => {
     const val = parseFloat(hsbBInput);
     if (!isNaN(val)) {
+      setErrors(prev => ({ ...prev, hsbB: undefined }));
       applyHsb({ ...hsb, b: Math.max(0, Math.min(100, val)) });
     } else {
+      setErrors(prev => ({ ...prev, hsbB: 'Enter a number 0-100' }));
       setHsbBInput(hsb.b.toFixed(0));
     }
   }, [hsbBInput, hsb, applyHsb]);
@@ -214,6 +252,7 @@ export function useColorPicker(
       hsbHInput,
       hsbSInput,
       hsbBInput,
+      errors,
     },
     handlers: {
       applyHex,

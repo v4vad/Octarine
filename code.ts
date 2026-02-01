@@ -37,7 +37,7 @@ figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
     case 'create-variables':
       // Create Figma variables from the color data
       // All colors from all groups go into a single "Octarine" collection
-      try {
+      {
         const groups = msg.groups as ColorGroup[];
         const globalConfig = msg.globalConfig as GlobalConfig | undefined;
         const backgroundColor = globalConfig?.backgroundColor ?? '#ffffff';
@@ -62,22 +62,30 @@ figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
         // Create all variables in a single collection
         const result = await createFigmaVariables(allColorsWithSettings);
 
-        // Show success notification
-        const message = result.created > 0
-          ? `Created ${result.created} variables, updated ${result.updated}`
-          : `Updated ${result.updated} variables`;
-        figma.notify(message);
+        if (result.success) {
+          // Show success notification
+          const message = result.created > 0
+            ? `Created ${result.created} variables, updated ${result.updated}`
+            : `Updated ${result.updated} variables`;
+          figma.notify(message);
 
-        // Let the UI know it succeeded
-        figma.ui.postMessage({
-          type: 'variables-created',
-          created: result.created,
-          updated: result.updated,
-        });
-      } catch (error) {
-        // Show error notification
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        figma.notify(`Error: ${errorMessage}`, { error: true });
+          // Let the UI know it succeeded
+          figma.ui.postMessage({
+            type: 'variables-created',
+            created: result.created,
+            updated: result.updated,
+          });
+        } else {
+          // Show error notification with helpful message
+          figma.notify(result.error.message, { error: true });
+
+          // Send detailed error to UI for toast display
+          figma.ui.postMessage({
+            type: 'export-error',
+            message: result.error.message,
+            suggestion: result.error.suggestion,
+          });
+        }
       }
       break;
 

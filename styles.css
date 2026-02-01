@@ -2175,3 +2175,113 @@ input[type="range"]::-moz-range-thumb {
   outline: none;
   border-color: var(--figma-color-border-brand);
 }
+
+/* ============================================
+   TOAST NOTIFICATIONS
+   ============================================ */
+.toast-container {
+  position: fixed;
+  bottom: var(--space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: calc(100% - var(--space-6));
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  max-width: 320px;
+}
+
+.toast-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast-leaving {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.toast-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.toast-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.toast-message {
+  font-size: var(--text-md);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.toast-suggestion {
+  font-size: var(--text-sm);
+  margin-top: var(--space-1);
+  opacity: 0.85;
+}
+
+/* Toast types */
+.toast-error {
+  background: #dc3545;
+  color: white;
+}
+
+.toast-warning {
+  background: #fbbf24;
+  color: #1a1a1a;
+}
+
+.toast-success {
+  background: #22c55e;
+  color: white;
+}
+
+.toast-info {
+  background: var(--figma-color-bg-brand, #0d99ff);
+  color: white;
+}
+
+/* ============================================
+   INPUT VALIDATION ERRORS
+   ============================================ */
+.input-error {
+  border-color: #dc3545 !important;
+  background-color: rgba(220, 53, 69, 0.05);
+}
+
+.input-error:focus {
+  border-color: #dc3545 !important;
+  box-shadow: 0 0 0 1px rgba(220, 53, 69, 0.25);
+}
+
+.error-text {
+  color: #dc3545;
+  font-size: var(--text-xs);
+  margin-top: var(--space-1);
+}
+
+.input-wrapper {
+  position: relative;
+}
+
+.input-with-error {
+  display: flex;
+  flex-direction: column;
+}

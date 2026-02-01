@@ -19,6 +19,7 @@ import {
 import { TopBar, LeftPanel, ResizeHandle } from './components/panels';
 import { RightSettingsPanel } from './components/color-settings';
 import { ColorRow } from './components/colors';
+import { ToastContainer, useToast } from './components/primitives';
 
 import { useHistory } from './lib/useHistory';
 
@@ -30,6 +31,9 @@ function App() {
   const initialState: AppState = createInitialAppState();
   const { state, setState, replaceState, undo, redo, canUndo, canRedo } = useHistory(initialState);
   const { globalConfig, groups, activeGroupId } = state;
+
+  // Toast notifications for user feedback
+  const { toasts, dismissToast, showError, showSuccess, showWarning } = useToast();
 
   // Get the active group
   const activeGroup = activeGroupId
@@ -100,10 +104,25 @@ function App() {
           replaceState(migratedState);
         }
       }
+
+      // Handle variable creation success
+      if (msg.type === 'variables-created') {
+        const { created, updated } = msg;
+        if (created > 0) {
+          showSuccess(`Created ${created} variables, updated ${updated}`);
+        } else if (updated > 0) {
+          showSuccess(`Updated ${updated} variables`);
+        }
+      }
+
+      // Handle errors from Figma
+      if (msg.type === 'export-error') {
+        showError(msg.message, msg.suggestion);
+      }
     };
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [replaceState]);
+  }, [replaceState, showSuccess, showError]);
 
   // Keyboard shortcuts for undo/redo
   useEffect(() => {
@@ -232,6 +251,9 @@ function App() {
 
   return (
     <div className="app-container">
+      {/* Toast notifications */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+
       {/* Top Bar: Undo/Redo, Background Color, Export */}
       <TopBar
         globalConfig={globalConfig}
