@@ -5,7 +5,7 @@ import { ColorPickerPopup } from '../color-picker';
 interface TopBarProps {
   globalConfig: GlobalConfig;
   onUpdateGlobalConfig: (config: GlobalConfig) => void;
-  onExport: () => void;
+  onOpenExportModal: () => void;
   onUndo: () => void;
   onRedo: () => void;
   canUndo: boolean;
@@ -15,7 +15,7 @@ interface TopBarProps {
 export function TopBar({
   globalConfig,
   onUpdateGlobalConfig,
-  onExport,
+  onOpenExportModal,
   onUndo,
   onRedo,
   canUndo,
@@ -117,7 +117,7 @@ export function TopBar({
 
       {/* Right side: Export button */}
       <div className="top-bar-right">
-        <button onClick={onExport} className="export-btn">
+        <button onClick={onOpenExportModal} className="export-btn">
           export
         </button>
       </div>

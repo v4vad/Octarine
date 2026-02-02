@@ -19,6 +19,7 @@ import {
 import { TopBar, LeftPanel, ResizeHandle } from './components/panels';
 import { RightSettingsPanel } from './components/color-settings';
 import { ColorRow } from './components/colors';
+import { ExportModal } from './components/export';
 
 import { useHistory } from './lib/useHistory';
 
@@ -41,6 +42,9 @@ function App() {
 
   // Track which color's settings panel is open (null = none)
   const [activeSettingsColorId, setActiveSettingsColorId] = useState<string | null>(null);
+
+  // Track export modal visibility
+  const [showExportModal, setShowExportModal] = useState(false);
 
   // Get the color object for the active settings panel
   const activeSettingsColor = activeSettingsColorId
@@ -217,13 +221,14 @@ function App() {
   // ============================================
   // EXPORT
   // ============================================
-  const createVariables = () => {
+  const createVariables = (collectionName: string) => {
     parent.postMessage(
       {
         pluginMessage: {
           type: 'create-variables',
           groups,  // Send all groups for export
           globalConfig,  // Send global config for background color
+          collectionName,  // Custom collection name
         },
       },
       '*'
@@ -236,7 +241,7 @@ function App() {
       <TopBar
         globalConfig={globalConfig}
         onUpdateGlobalConfig={updateGlobalConfig}
-        onExport={createVariables}
+        onOpenExportModal={() => setShowExportModal(true)}
         onUndo={undo}
         onRedo={redo}
         canUndo={canUndo}
@@ -306,6 +311,16 @@ function App() {
 
       {/* Resize handle for plugin window */}
       <ResizeHandle />
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <ExportModal
+          groups={groups}
+          globalConfig={globalConfig}
+          onExportToFigma={createVariables}
+          onClose={() => setShowExportModal(false)}
+        />
+      )}
     </div>
   );
 }

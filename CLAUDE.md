@@ -22,7 +22,7 @@ Figma plugins have **two execution contexts** that communicate via messages:
 | Plugin Code | `code.ts` → `code.js` | Figma API access (read/modify document, create variables) |
 | UI Code | `ui.tsx` → `ui.html` | React interface (runs in iframe) |
 
-**Key files:** `lib/color-utils.ts` (OKLCH generation), `lib/types.ts` (data model), `lib/figma-utils.ts` (Figma variables)
+**Key files:** `lib/` (color algorithms), `components/` (React UI) - each has its own CLAUDE.md
 
 ## Guidelines
 
@@ -30,6 +30,16 @@ Figma plugins have **two execution contexts** that communicate via messages:
 - When adding/removing features: update `docs/FEATURES.md`
 - When removing features: document in `docs/removed-features.md`
 - Keep `PLAN.md` updated when completing roadmap items
+
+## Agent Delegation
+
+Use subagents for cost-effective model selection:
+
+| Task Type | Agent | Model | Examples |
+|-----------|-------|-------|----------|
+| Quick commands | `quick-executor` | Haiku | `git status`, `npm run build/watch/validate/typecheck` |
+| Coding work | `coder` | Sonnet | Writing TypeScript/React, color algorithm work, component changes |
+| Deep thinking | `architect` | Opus | Architecture decisions, complex color science, refactoring |
 
 ## Documentation
 
