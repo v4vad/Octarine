@@ -37,9 +37,9 @@ export function GroupAccordionItem({
     }));
   }, [group.colors]);
 
-  // Color strip component - used in both collapsed and expanded states
+  // Color strip component - visual preview of colors in the group
   const ColorStrip = () => (
-    <div className="group-color-strip" onClick={onToggle}>
+    <div className="group-color-strip">
       {colorStripData.length === 0 ? (
         <div className="group-color-strip-empty">No colors</div>
       ) : (
@@ -55,24 +55,29 @@ export function GroupAccordionItem({
     </div>
   );
 
+  // Delete button with SVG icon
+  const DeleteButton = () => (
+    <button
+      className="group-delete-btn"
+      onClick={(e) => {
+        e.stopPropagation();
+        setShowDeleteConfirm(true);
+      }}
+      title="Delete group"
+    >
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <path d="M9 3L3 9M3 3L9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+      </svg>
+    </button>
+  );
+
   // Collapsed view: just the color strip with delete button overlay
   if (!isExpanded) {
     return (
-      <div className="group-accordion-item collapsed">
+      <div className="group-accordion-item collapsed" onClick={onToggle}>
         <div className="group-strip-container">
           <ColorStrip />
-          {canDelete && (
-            <button
-              className="group-delete-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowDeleteConfirm(true);
-              }}
-              title="Delete group"
-            >
-              ×
-            </button>
-          )}
+          {canDelete && <DeleteButton />}
         </div>
         {/* Delete Confirmation Modal */}
         {showDeleteConfirm && (
@@ -90,39 +95,20 @@ export function GroupAccordionItem({
     );
   }
 
-  // Expanded view: color strip + separator + content
+  // Expanded view: color strip + separator + content (NO header row)
   return (
     <div className="group-accordion-item expanded">
-      {/* Color strip header with delete button overlay */}
-      <div className="group-strip-container">
+      <div className="group-strip-container" onClick={onToggle}>
         <ColorStrip />
-        {canDelete && (
-          <button
-            className="group-delete-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowDeleteConfirm(true);
-            }}
-            title="Delete group"
-          >
-            ×
-          </button>
-        )}
+        {canDelete && <DeleteButton />}
       </div>
-
-      {/* Separator line */}
       <div className="group-accordion-separator" />
-
-      {/* Expanded content: settings only */}
       <div className="group-accordion-content">
-        {/* Defaults Table (includes Method Toggle) */}
         <DefaultsTable
           settings={group.settings}
           onUpdate={handleSettingsChange}
         />
       </div>
-
-      {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <ConfirmModal
           title="Delete Group"

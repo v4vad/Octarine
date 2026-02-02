@@ -17,6 +17,12 @@
   --space-5: 24px;
   --space-6: 32px;
 
+  /* Spacing aliases (inset padding) */
+  --space-xs: 2px;
+  --space-inset-sm: 4px 6px;
+  --space-inset-md: 6px 8px;
+  --space-inset-lg: 8px 12px; /* RESERVED: Not currently used, kept for future */
+
   /* Border radius */
   --radius-sm: 3px;
   --radius-md: 4px;
@@ -29,13 +35,57 @@
   --text-lg: 12px;
   --text-xl: 14px;
 
+  /* Monospace font stack */
+  --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+
   /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08); /* RESERVED: Not currently used */
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.2); /* RESERVED: Not currently used */
+  --shadow-popup: 0 4px 12px rgba(0, 0, 0, 0.15);  /* Floating popups */
+  --shadow-modal: 0 8px 24px rgba(0, 0, 0, 0.25);  /* Full modals */
 
   /* Transitions */
   --transition-fast: 0.1s ease;
   --transition-normal: 0.15s ease;
+
+  /* Semantic colors (theme-aware) */
+  --color-danger: var(--figma-color-text-danger, #dc3545);
+  --color-danger-hover: #c82333;
+  --color-warning-bg: var(--figma-color-bg-warning, rgba(251, 191, 36, 0.15));
+  --color-warning-text: var(--figma-color-text-warning, #fbbf24);
+  --color-warning-border: var(--figma-color-border-warning, #fbbf24);
+  --color-success: #22c55e;
+  --color-success-hover: #16a34a;
+
+  /* Icon button sizes */
+  --icon-btn-sm: 24px;
+  --icon-btn-md: 28px;
+  --icon-btn-lg: 32px; /* RESERVED: Not currently used */
+
+  /* Control height tokens (for buttons, inputs, selects) */
+  --control-height-sm: 24px;
+  --control-height-md: 28px;
+
+  /* Icon sizes */
+  --icon-xs: 14px;
+
+  /* Input width tokens */
+  --input-width-xs: 40px;
+  --input-width-sm: 50px;
+  --input-width-hex: 65px;
+
+  /* Toggle switch dimensions */
+  --toggle-width: 28px;
+  --toggle-height: 16px;
+  --toggle-thumb-size: 12px;
+  --toggle-thumb-offset: 2px;
+
+  /* Compact padding for dense UI areas */
+  --space-inset-xs: 2px 4px;
+
+  /* Danger background for subtle hover states */
+  --color-danger-bg: rgba(220, 53, 69, 0.1);
 }
 
 /* --------------------------------------------
@@ -74,7 +124,7 @@
 
 .mt-2 { margin-top: var(--space-2); }
 .mt-3 { margin-top: var(--space-3); }
-.popup > .mt-3 { padding: 0 var(--space-3); }
+/* Popup content sections inherit padding from popup container */
 
 .p-2 { padding: var(--space-2); }
 .p-3 { padding: var(--space-3); }
@@ -109,7 +159,7 @@
 }
 
 .font-mono {
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .font-semibold {
@@ -183,8 +233,8 @@
 
 /* Icon-only buttons for undo/redo */
 .top-bar-icon-btn {
-  width: 28px;
-  height: 28px;
+  width: var(--icon-btn-md);
+  height: var(--icon-btn-md);
   padding: 0;
   display: flex;
   align-items: center;
@@ -205,6 +255,11 @@
 .top-bar-icon-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.top-bar-icon-btn:focus-visible {
+  outline: 2px solid var(--figma-color-border-brand);
+  outline-offset: 1px;
 }
 
 .app-title {
@@ -272,12 +327,15 @@
 
 /* Standard input */
 .input {
-  padding: 6px;
+  height: var(--control-height-md);
+  padding: 0 var(--space-2);
   border: 1px solid var(--figma-color-border);
   border-radius: var(--radius-md);
   font-size: var(--text-md);
   background: var(--figma-color-bg);
   color: var(--figma-color-text);
+  transition: border-color var(--transition-fast);
+  box-sizing: border-box;
 }
 
 .input:focus {
@@ -285,8 +343,13 @@
   border-color: var(--figma-color-border-brand);
 }
 
+.input:focus-visible {
+  outline: 2px solid var(--figma-color-border-brand);
+  outline-offset: 1px;
+}
+
 .input-mono {
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .input-center {
@@ -295,24 +358,39 @@
 
 /* Small numeric input */
 .input-sm {
-  width: 50px;
-  padding: var(--space-1);
+  width: var(--input-width-sm);
+  height: var(--control-height-sm);
+  padding: 0 var(--space-1);
   border: 1px solid var(--figma-color-border);
   border-radius: var(--radius-sm);
   font-size: var(--text-sm);
   background: var(--figma-color-bg);
   color: var(--figma-color-text);
+  box-sizing: border-box;
 }
 
 /* Select dropdown */
 .select {
-  padding: 6px 8px;
+  height: var(--control-height-md);
+  padding: 0 var(--space-4) 0 var(--space-2);
   border-radius: var(--radius-md);
   border: 1px solid var(--figma-color-border);
   background: var(--figma-color-bg);
   color: var(--figma-color-text);
   font-size: var(--text-md);
   cursor: pointer;
+  transition: border-color var(--transition-fast);
+  box-sizing: border-box;
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--figma-color-border-brand);
+}
+
+.select:focus-visible {
+  outline: 2px solid var(--figma-color-border-brand);
+  outline-offset: 1px;
 }
 
 /* Checkbox label wrapper */
@@ -336,35 +414,102 @@
 .btn {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-1);
-  padding: 6px 8px;
+  height: var(--control-height-md);
+  padding: 0 var(--space-2);
   border: 1px solid var(--figma-color-border);
   border-radius: var(--radius-md);
   background: var(--figma-color-bg);
   color: var(--figma-color-text);
   cursor: pointer;
   font-size: var(--text-md);
-  transition: background var(--transition-fast);
+  transition: all var(--transition-fast);
 }
 
 .btn:hover {
   background: var(--figma-color-bg-hover);
 }
 
+.btn:focus-visible {
+  outline: 2px solid var(--figma-color-border-brand);
+  outline-offset: 1px;
+}
+
 .btn-full {
   width: 100%;
+}
+
+.btn-compact {
+  height: var(--control-height-sm);
+  padding: 0 var(--space-2);
+  font-size: var(--text-sm);
 }
 
 .btn-icon {
   display: flex;
   align-items: center;
-  padding: 2px;
+  padding: var(--space-xs);
   border-radius: 2px;
   cursor: pointer;
 }
 
 .btn-icon:hover {
   background: var(--figma-color-bg-hover);
+}
+
+/* --------------------------------------------
+   ICON BUTTONS (Standardized Sizes)
+   -------------------------------------------- */
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--figma-color-text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.icon-btn:hover:not(:disabled) {
+  background: var(--figma-color-bg-hover);
+  color: var(--figma-color-text);
+}
+
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.icon-btn:focus-visible {
+  outline: 2px solid var(--figma-color-border-brand);
+  outline-offset: 1px;
+}
+
+/* Icon button sizes */
+.icon-btn-sm {
+  width: var(--icon-btn-sm);
+  height: var(--icon-btn-sm);
+}
+
+.icon-btn-md {
+  width: var(--icon-btn-md);
+  height: var(--icon-btn-md);
+}
+
+/* RESERVED: Not currently used, kept for future large icon buttons */
+.icon-btn-lg {
+  width: var(--icon-btn-lg);
+  height: var(--icon-btn-lg);
+}
+
+/* Icon button with border (for top bar) */
+.icon-btn-bordered {
+  border: 1px solid var(--figma-color-border);
+  background: var(--figma-color-bg);
 }
 
 /* --------------------------------------------
@@ -431,7 +576,7 @@
 
 .stop-hex {
   font-size: var(--text-md);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 /* --------------------------------------------
@@ -445,7 +590,7 @@
   background: var(--figma-color-bg);
   border: 1px solid var(--figma-color-border);
   border-radius: var(--radius-md);
-  padding: var(--space-3) 0;
+  padding: var(--space-3);
   box-shadow: var(--shadow-md);
   width: 220px;
 }
@@ -574,7 +719,7 @@
 }
 
 .color-preview-hex {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: var(--text-sm);
 }
 
@@ -601,13 +746,21 @@
 }
 
 .select-sm {
-  padding: 4px 6px;
+  height: var(--control-height-sm);
+  padding: 0 var(--space-4) 0 var(--space-2);
   border-radius: var(--radius-sm);
   border: 1px solid var(--figma-color-border);
   background: var(--figma-color-bg);
   color: var(--figma-color-text);
   font-size: var(--text-md);
   cursor: pointer;
+  transition: border-color var(--transition-fast);
+  box-sizing: border-box;
+}
+
+.select-sm:focus {
+  outline: none;
+  border-color: var(--figma-color-border-brand);
 }
 
 /* Dividers */
@@ -698,8 +851,9 @@ input[type="range"]::-moz-range-thumb {
    WARNING BANNER
    -------------------------------------------- */
 .warning-banner {
-  background-color: #2d2d2d;
-  color: #fbbf24;
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  border: 1px solid var(--color-warning-border);
   padding: var(--space-2);
   border-radius: var(--radius-md);
   font-size: var(--text-md);
@@ -827,9 +981,9 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .toggle-switch {
-  width: 28px;
-  height: 16px;
-  border-radius: 8px;
+  width: var(--toggle-width);
+  height: var(--toggle-height);
+  border-radius: calc(var(--toggle-height) / 2);
   background: var(--figma-color-bg-disabled, #ccc);
   cursor: pointer;
   position: relative;
@@ -841,19 +995,19 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .toggle-thumb {
-  width: 12px;
-  height: 12px;
+  width: var(--toggle-thumb-size);
+  height: var(--toggle-thumb-size);
   border-radius: 50%;
   background: white;
   position: absolute;
-  top: 2px;
-  left: 2px;
+  top: var(--toggle-thumb-offset);
+  left: var(--toggle-thumb-offset);
   transition: left var(--transition-fast);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .toggle-switch.on .toggle-thumb {
-  left: 14px;
+  left: calc(var(--toggle-width) - var(--toggle-thumb-size) - var(--toggle-thumb-offset));
 }
 
 /* --------------------------------------------
@@ -869,7 +1023,8 @@ input[type="range"]::-moz-range-thumb {
 
 .method-toggle-btn {
   flex: 1;
-  padding: var(--space-1) var(--space-2);
+  height: var(--control-height-sm);
+  padding: 0 var(--space-2);
   font-size: var(--text-sm);
   font-weight: 500;
   border: none;
@@ -911,7 +1066,7 @@ input[type="range"]::-moz-range-thumb {
   font-weight: 600;
   color: var(--figma-color-text-secondary);
   padding: var(--space-1);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
 }
 
 .defaults-table td {
@@ -929,7 +1084,7 @@ input[type="range"]::-moz-range-thumb {
 
 .defaults-table input {
   width: 100%;
-  padding: 2px 4px;
+  padding: var(--space-inset-xs);
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   font-size: var(--text-sm);
@@ -946,6 +1101,10 @@ input[type="range"]::-moz-range-thumb {
   outline: none;
   border-color: var(--figma-color-border-brand);
   background: var(--figma-color-bg);
+}
+
+.defaults-table tbody tr:hover td {
+  background: var(--figma-color-bg-hover);
 }
 
 /* Dual-column table (shows both L and C) */
@@ -1069,10 +1228,10 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .expansion-input {
-  width: 40px;
-  min-width: 40px;
+  width: var(--input-width-xs);
+  min-width: var(--input-width-xs);
   flex-shrink: 0;
-  padding: 2px 4px;
+  padding: var(--space-inset-xs);
   border: 1px solid var(--figma-color-border);
   border-radius: var(--radius-sm);
   font-size: var(--text-sm);
@@ -1093,19 +1252,25 @@ input[type="range"]::-moz-range-thumb {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: var(--icon-btn-sm);
+  height: var(--icon-btn-sm);
   padding: 0;
   border: none;
   background: transparent;
   color: var(--figma-color-text-secondary);
   cursor: pointer;
   border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
 }
 
 .reset-icon-btn:hover {
   background: var(--figma-color-bg-hover);
   color: var(--figma-color-text);
+}
+
+.reset-icon-btn:focus-visible {
+  outline: 2px solid var(--figma-color-border-brand);
+  outline-offset: 1px;
 }
 
 /* Stop override controls (in stop settings popup) */
@@ -1187,14 +1352,14 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .base-color-hex {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: var(--text-sm);
-  padding: 2px 4px;
+  padding: var(--space-inset-xs);
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--figma-color-text);
-  width: 65px;
+  width: var(--input-width-hex);
 }
 
 .base-color-hex:hover {
@@ -1270,20 +1435,20 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .stop-strip-swatch.has-override {
-  border: 3px solid #000;
-  outline: 2px solid #fff;
+  border: 3px solid var(--figma-color-text-brand);
+  outline: 2px solid var(--figma-color-bg);
   outline-offset: -5px;
 }
 
 .stop-strip-swatch.was-nudged {
-  border: 3px dashed #000;
-  outline: 2px solid #fff;
+  border: 3px dashed var(--figma-color-text-brand);
+  outline: 2px solid var(--figma-color-bg);
   outline-offset: -5px;
 }
 
 .stop-strip-hex {
   font-size: var(--text-xs);
-  font-family: monospace;
+  font-family: var(--font-mono);
   color: var(--figma-color-text-secondary);
 }
 
@@ -1299,6 +1464,7 @@ input[type="range"]::-moz-range-thumb {
 
 /* --------------------------------------------
    ADD COLOR BUTTON
+   RESERVED: Not currently used, kept for future add color button
    -------------------------------------------- */
 .add-color-btn {
   display: flex;
@@ -1349,14 +1515,21 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .stop-popup-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-btn-md);
+  height: var(--icon-btn-md);
   cursor: pointer;
   color: var(--figma-color-text-secondary);
   font-size: var(--text-lg);
-  padding: 4px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
 }
 
 .stop-popup-close:hover {
   color: var(--figma-color-text);
+  background: var(--figma-color-bg-hover);
 }
 
 .stop-popup-preview {
@@ -1382,7 +1555,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .stop-popup-hex {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: var(--text-lg);
   font-weight: 600;
 }
@@ -1460,7 +1633,10 @@ input[type="range"]::-moz-range-thumb {
    EXPORT BUTTON (Bottom of left panel)
    -------------------------------------------- */
 .export-btn {
-  padding: var(--space-1) var(--space-3);
+  height: var(--control-height-md);
+  padding: 0 var(--space-2);
+  display: inline-flex;
+  align-items: center;
   border: 1px solid var(--figma-color-border);
   border-radius: var(--radius-md);
   background: var(--figma-color-bg);
@@ -1486,6 +1662,7 @@ input[type="range"]::-moz-range-thumb {
   margin-bottom: var(--space-3);
 }
 
+/* RESERVED: Legacy class, replaced by .top-bar-icon-btn */
 .undo-redo-btn {
   flex: 1;
   display: flex;
@@ -1552,14 +1729,14 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .color-field-hex {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: var(--text-sm);
-  padding: 2px 4px;
+  padding: var(--space-inset-xs);
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--figma-color-text);
-  width: 65px;
+  width: var(--input-width-hex);
 }
 
 .color-field-hex:hover {
@@ -1642,12 +1819,16 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .btn-secondary {
-  padding: var(--space-2) var(--space-3);
+  height: var(--control-height-md);
+  padding: 0 var(--space-3);
   border: 1px solid var(--figma-color-border);
   background: transparent;
   border-radius: var(--radius-sm);
   cursor: pointer;
   color: var(--figma-color-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-secondary:hover {
@@ -1655,16 +1836,26 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .btn-danger {
-  padding: var(--space-2) var(--space-3);
-  background: #dc3545;
+  height: var(--control-height-md);
+  padding: 0 var(--space-3);
+  background: var(--color-danger);
   color: white;
   border: none;
   border-radius: var(--radius-sm);
   cursor: pointer;
+  transition: background var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-danger:hover {
-  background: #c82333;
+  background: var(--color-danger-hover);
+}
+
+.btn-danger:focus-visible {
+  outline: 2px solid var(--color-danger);
+  outline-offset: 1px;
 }
 
 /* Picker action row (pick from selection + reset) */
@@ -1673,7 +1864,6 @@ input[type="range"]::-moz-range-thumb {
   align-items: center;
   gap: var(--space-2);
   margin-top: var(--space-2);
-  padding: 0 var(--space-3);
 }
 
 .picker-action-row .btn-full {
@@ -1688,7 +1878,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .stop-strip-swatch.too-similar {
-  border: 2px solid #fbbf24;
+  border: 2px solid var(--color-warning-border);
 }
 
 .similarity-warning {
@@ -1696,7 +1886,7 @@ input[type="range"]::-moz-range-thumb {
   top: -4px;
   right: -4px;
   font-size: 10px;
-  background: #fbbf24;
+  background: var(--color-warning-text);
   color: #000;
   width: 14px;
   height: 14px;
@@ -1719,7 +1909,8 @@ input[type="range"]::-moz-range-thumb {
    -------------------------------------------- */
 .chroma-curve-select {
   width: 100%;
-  padding: 6px 8px;
+  height: var(--control-height-md);
+  padding: 0 var(--space-4) 0 var(--space-2);
   border-radius: var(--radius-md);
   border: 1px solid var(--figma-color-border);
   background: var(--figma-color-bg);
@@ -1727,6 +1918,8 @@ input[type="range"]::-moz-range-thumb {
   font-size: var(--text-md);
   cursor: pointer;
   margin-bottom: var(--space-2);
+  transition: border-color var(--transition-fast);
+  box-sizing: border-box;
 }
 
 .chroma-curve-select:focus {
@@ -1831,15 +2024,15 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .hue-shift-value {
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .hue-shift-value.light {
-  color: #60a5fa; /* Light blue for light stops (toward cyan) */
+  color: var(--figma-color-text-component, #60a5fa); /* Light blue for light stops (toward cyan) */
 }
 
 .hue-shift-value.dark {
-  color: #c084fc; /* Purple for dark stops */
+  color: var(--figma-color-text-component-secondary, #c084fc); /* Purple for dark stops */
 }
 
 .hue-shift-arrow {
@@ -1936,7 +2129,7 @@ input[type="range"]::-moz-range-thumb {
 .group-accordion {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   margin: var(--space-1) 0;
 }
 
@@ -1945,6 +2138,7 @@ input[type="range"]::-moz-range-thumb {
   border-radius: var(--radius-md);
   background: var(--figma-color-bg);
   overflow: hidden;
+  transition: all var(--transition-fast);
 }
 
 .group-accordion-item.collapsed {
@@ -1953,10 +2147,12 @@ input[type="range"]::-moz-range-thumb {
 
 .group-accordion-item.collapsed:hover {
   border-color: var(--figma-color-border-strong);
+  background: var(--figma-color-bg-hover);
 }
 
 .group-accordion-item.expanded {
   border-color: var(--figma-color-border-brand);
+  box-shadow: 0 0 0 1px var(--figma-color-border-brand);
 }
 
 .group-accordion-header {
@@ -1964,7 +2160,7 @@ input[type="range"]::-moz-range-thumb {
   align-items: center;
   gap: var(--space-1);
   padding: var(--space-1) var(--space-2);
-  min-height: 32px;
+  min-height: var(--control-height-md);
   cursor: pointer;
   user-select: none;
 }
@@ -1978,6 +2174,9 @@ input[type="range"]::-moz-range-thumb {
   color: var(--figma-color-text-secondary);
   width: 12px;
   flex-shrink: 0;
+  overflow: hidden;
+  text-align: center;
+  line-height: 1;
 }
 
 .group-accordion-name {
@@ -2027,13 +2226,12 @@ input[type="range"]::-moz-range-thumb {
   top: 50%;
   right: var(--space-2);
   transform: translateY(-50%);
-  opacity: 0;
-  width: 20px;
-  height: 20px;
+  width: var(--icon-btn-sm);
+  height: var(--icon-btn-sm);
+  padding: 0;
   border: none;
   background: transparent;
-  color: var(--figma-color-text-secondary);
-  font-size: 16px;
+  color: var(--figma-color-text-tertiary);
   cursor: pointer;
   border-radius: var(--radius-sm);
   display: flex;
@@ -2041,6 +2239,7 @@ input[type="range"]::-moz-range-thumb {
   justify-content: center;
   transition: all var(--transition-fast);
   flex-shrink: 0;
+  opacity: 0;
   z-index: 1;
 }
 
@@ -2049,8 +2248,8 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .group-delete-btn:hover {
-  background: var(--figma-color-bg-hover);
-  color: var(--figma-color-text-danger, #e53935);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
 }
 
 .group-accordion-content {
@@ -2150,13 +2349,12 @@ input[type="range"]::-moz-range-thumb {
   align-items: center;
   gap: var(--space-2);
   margin-top: var(--space-2);
-  padding: 0 var(--space-3);
 }
 
 .picker-swatch {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--figma-color-border);
   flex-shrink: 0;
@@ -2164,18 +2362,74 @@ input[type="range"]::-moz-range-thumb {
 
 .picker-hex-input {
   flex: 1;
+  min-width: 0;
   padding: var(--space-1) var(--space-2);
   border: 1px solid var(--figma-color-border);
   border-radius: var(--radius-sm);
-  font-family: monospace;
-  font-size: var(--text-md);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
   background: var(--figma-color-bg);
   color: var(--figma-color-text);
+  box-sizing: border-box;
 }
 
 .picker-hex-input:focus {
   outline: none;
   border-color: var(--figma-color-border-brand);
+}
+
+/* Numeric inputs in color picker (L, C, H / H, S, B) */
+.picker-numeric-input {
+  height: var(--control-height-sm);
+  padding: 0 var(--space-1);
+  border: 1px solid var(--figma-color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  background: var(--figma-color-bg);
+  color: var(--figma-color-text);
+  text-align: center;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.picker-numeric-input:focus {
+  outline: none;
+  border-color: var(--figma-color-border-brand);
+}
+
+/* Shared Swatch + Hex Input component (standardized across all locations) */
+.swatch-hex-input {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: var(--control-height-sm);
+}
+
+.swatch-hex-input-swatch {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--figma-color-border);
+  cursor: pointer;
+}
+
+.swatch-hex-input-field {
+  width: 54px;
+  height: var(--control-height-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--figma-color-text);
+  box-sizing: border-box;
+}
+
+.swatch-hex-input-field:focus {
+  outline: none;
 }
 
 /* ============================================
@@ -2213,15 +2467,15 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .export-modal-close {
-  width: 28px;
-  height: 28px;
+  width: var(--icon-btn-md);
+  height: var(--icon-btn-md);
   display: flex;
   align-items: center;
   justify-content: center;
   border: none;
   background: transparent;
   color: var(--figma-color-text-secondary);
-  font-size: 18px;
+  font-size: 16px;
   cursor: pointer;
   border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
@@ -2230,6 +2484,11 @@ input[type="range"]::-moz-range-thumb {
 .export-modal-close:hover {
   background: var(--figma-color-bg-hover);
   color: var(--figma-color-text);
+}
+
+.export-modal-close:focus-visible {
+  outline: 2px solid var(--figma-color-border-brand);
+  outline-offset: 1px;
 }
 
 /* 3-Column Layout Container */
@@ -2253,14 +2512,19 @@ input[type="range"]::-moz-range-thumb {
 .export-format-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
+  gap: var(--space-1);
+  padding: var(--space-inset-md);
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
   cursor: pointer;
   transition: all var(--transition-fast);
   text-align: left;
+}
+
+.export-format-btn:focus-visible {
+  outline: 2px solid var(--figma-color-border-brand);
+  outline-offset: -2px;
 }
 
 .export-format-btn:hover {
@@ -2309,13 +2573,14 @@ input[type="range"]::-moz-range-thumb {
 
 .export-options-input {
   width: 100%;
-  padding: 6px 8px;
+  padding: var(--space-inset-md);
   border: 1px solid var(--figma-color-border);
   border-radius: var(--radius-sm);
   font-size: var(--text-md);
   background: var(--figma-color-bg);
   color: var(--figma-color-text);
   box-sizing: border-box;
+  transition: border-color var(--transition-fast);
 }
 
 .export-options-input:focus {
@@ -2357,9 +2622,9 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .export-color-format-card.selected {
-  border-width: 2px;
   border-color: var(--figma-color-border-brand);
   background: var(--figma-color-bg-brand-tertiary);
+  box-shadow: 0 0 0 1px var(--figma-color-border-brand);
 }
 
 .export-color-format-card-header {
@@ -2381,7 +2646,7 @@ input[type="range"]::-moz-range-thumb {
 
 .export-color-format-card-example {
   font-size: var(--text-xs);
-  font-family: monospace;
+  font-family: var(--font-mono);
   color: var(--figma-color-text-secondary);
   margin-top: 2px;
 }
@@ -2411,7 +2676,7 @@ input[type="range"]::-moz-range-thumb {
   border: 1px solid var(--figma-color-border);
   border-radius: var(--radius-sm);
   background: var(--figma-color-bg-secondary);
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
   line-height: 1.4;
   overflow: auto;
@@ -2429,28 +2694,28 @@ input[type="range"]::-moz-range-thumb {
 .export-figma-variable {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 2px 0;
+  gap: var(--space-1);
+  padding: var(--space-xs) 0;
   font-size: var(--text-sm);
 }
 
 .export-figma-variable-name {
   min-width: 80px;
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
   color: var(--figma-color-text);
 }
 
 .export-figma-color-swatch {
-  width: 14px;
-  height: 14px;
-  min-width: 14px;
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+  min-width: var(--icon-xs);
   border-radius: 2px;
   border: 1px solid rgba(0,0,0,0.1);
 }
 
 .export-figma-variable-hex {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
   color: var(--figma-color-text-secondary);
 }
@@ -2468,7 +2733,8 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .export-modal-btn {
-  padding: 6px 12px;
+  height: var(--control-height-md);
+  padding: 0 var(--space-3);
   border: 1px solid var(--figma-color-border);
   border-radius: var(--radius-sm);
   font-size: var(--text-md);
@@ -2477,6 +2743,11 @@ input[type="range"]::-moz-range-thumb {
   transition: all var(--transition-fast);
   background: var(--figma-color-bg);
   color: var(--figma-color-text);
+}
+
+.export-modal-btn:focus-visible {
+  outline: 2px solid var(--figma-color-border-brand);
+  outline-offset: 1px;
 }
 
 .export-modal-btn:hover {
@@ -2494,9 +2765,14 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .export-modal-btn.success {
-  background: #22c55e;
-  border-color: #22c55e;
+  background: var(--color-success);
+  border-color: var(--color-success);
   color: white;
+}
+
+.export-modal-btn.success:hover {
+  background: var(--color-success-hover);
+  border-color: var(--color-success-hover);
 }
 
 .export-modal-btn.secondary {

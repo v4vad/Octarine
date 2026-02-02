@@ -123,7 +123,7 @@ export function DefaultsTable({ settings, onUpdate }: DefaultsTableProps) {
           className="input-sm"
           style={{ width: '60px' }}
         />
-        <button onClick={handleAddStop} className="btn" style={{ padding: '4px 8px', fontSize: '10px' }}>
+        <button onClick={handleAddStop} className="btn btn-compact">
           + Add Stop
         </button>
       </div>

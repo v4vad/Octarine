@@ -117,7 +117,7 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
                   onChange={(e) => handlers.setLInput(e.target.value)}
                   onBlur={handlers.handleLBlur}
                   onKeyDown={(e) => { if (e.key === 'Enter') handlers.handleLBlur(); }}
-                  className="input w-full"
+                  className="picker-numeric-input"
                 />
               </div>
               <div className="flex-1">
@@ -128,7 +128,7 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
                   onChange={(e) => handlers.setCInput(e.target.value)}
                   onBlur={handlers.handleCBlur}
                   onKeyDown={(e) => { if (e.key === 'Enter') handlers.handleCBlur(); }}
-                  className="input w-full"
+                  className="picker-numeric-input"
                 />
               </div>
               <div className="flex-1">
@@ -139,7 +139,7 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
                   onChange={(e) => handlers.setHInput(e.target.value)}
                   onBlur={handlers.handleHBlur}
                   onKeyDown={(e) => { if (e.key === 'Enter') handlers.handleHBlur(); }}
-                  className="input w-full"
+                  className="picker-numeric-input"
                 />
               </div>
             </div>
@@ -169,7 +169,7 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
                   onChange={(e) => handlers.setHsbHInput(e.target.value)}
                   onBlur={handlers.handleHsbHBlur}
                   onKeyDown={(e) => { if (e.key === 'Enter') handlers.handleHsbHBlur(); }}
-                  className="input w-full"
+                  className="picker-numeric-input"
                 />
               </div>
               <div className="flex-1">
@@ -180,7 +180,7 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
                   onChange={(e) => handlers.setHsbSInput(e.target.value)}
                   onBlur={handlers.handleHsbSBlur}
                   onKeyDown={(e) => { if (e.key === 'Enter') handlers.handleHsbSBlur(); }}
-                  className="input w-full"
+                  className="picker-numeric-input"
                 />
               </div>
               <div className="flex-1">
@@ -191,7 +191,7 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
                   onChange={(e) => handlers.setHsbBInput(e.target.value)}
                   onBlur={handlers.handleHsbBBlur}
                   onKeyDown={(e) => { if (e.key === 'Enter') handlers.handleHsbBBlur(); }}
-                  className="input w-full"
+                  className="picker-numeric-input"
                 />
               </div>
             </div>
