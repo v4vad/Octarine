@@ -15,7 +15,7 @@
 
 ### Polish & Quality
 - [ ] Import/export JSON
-- [ ] Error handling improvements
+- [x] Error handling improvements (toast notifications, input validation feedback, helpful Figma error messages)
 
 ### UI Improvements
 - [ ] Better onboarding & empty state (welcome message, quick-start presets)
@@ -40,3 +40,26 @@
 - [ ] Multi-anchor palettes (define 2-4 anchor colors, interpolate between them)
 - [ ] Dark stop protection toggle (like `preserveColorIdentity` but for dark stops - automatically lift lightness when chroma would drop below perceptible threshold)
 - [ ] Lightness curve presets (linear, lifted darks, compressed range, custom)
+
+---
+
+## Deferred Features
+
+### Import Figma Variables
+
+**Status:** Deferred - needs design work before implementation.
+
+**The Challenge:** Octarine's model (seed color → algorithmic generation) differs from Figma's model (independent color values). Bridging these requires careful design.
+
+**Unresolved Edge Cases:**
+- Standalone colors with similar hues (e.g., `ButtonBlue`, `LinkBlue`) - should they be grouped?
+- Standalone colors with different hues - how to set meaningful base color with one stop?
+- Split palettes across Figma groups - need to merge across organizational structure
+- Hue grouping threshold - how similar is "similar enough"?
+- Stop number assignment for ungrouped colors
+
+**Future Considerations:**
+- Start with simpler scope (only support clean `Label/StopNumber` format)
+- Let user manually assign imported colors to groups/stops
+- Preview before import with user adjustment
+- Consider implementing after Figma Variable modes support
