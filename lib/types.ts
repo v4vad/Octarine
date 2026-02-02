@@ -376,3 +376,21 @@ export function migrateState(persisted: { version: number; state: unknown }): Ap
   // Already v4 or newer
   return persisted.state as AppState
 }
+
+// ============================================
+// EXPORT TYPES
+// ============================================
+
+// CSS color format options for export
+export type CSSColorFormat = "hex" | "rgb" | "oklch" | "hsl"
+
+// Export format options
+export type ExportFormat = "css" | "json" | "oklch-raw" | "figma"
+
+// Structured color data for export (includes all formats needed)
+export type ExportableStop = {
+  colorLabel: string
+  stopNumber: number
+  hex: string
+  oklch: { l: number; c: number; h: number }
+}
