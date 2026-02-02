@@ -2179,7 +2179,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 /* ============================================
-   EXPORT MODAL
+   EXPORT MODAL (3-Column Layout)
    ============================================ */
 .export-modal {
   position: fixed;
@@ -2189,8 +2189,9 @@ input[type="range"]::-moz-range-thumb {
   background: var(--figma-color-bg);
   border-radius: var(--radius-lg);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  width: 360px;
-  max-height: 80vh;
+  width: 680px;
+  max-width: 95%;
+  height: 380px;
   display: flex;
   flex-direction: column;
   z-index: 2001;
@@ -2200,12 +2201,13 @@ input[type="range"]::-moz-range-thumb {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--figma-color-border);
+  flex-shrink: 0;
 }
 
 .export-modal-title {
-  font-size: var(--text-xl);
+  font-size: var(--text-lg);
   font-weight: 600;
   margin: 0;
 }
@@ -2230,124 +2232,245 @@ input[type="range"]::-moz-range-thumb {
   color: var(--figma-color-text);
 }
 
-.export-modal-body {
-  padding: var(--space-4);
-  overflow-y: auto;
+/* 3-Column Layout Container */
+.export-layout {
+  display: flex;
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.export-modal-section {
-  margin-bottom: var(--space-4);
+/* Left Column - Format Sidebar */
+.export-format-sidebar {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2);
+  border-right: 1px solid var(--figma-color-border);
+  background: var(--figma-color-bg-secondary);
 }
 
-.export-modal-section:last-child {
-  margin-bottom: 0;
+.export-format-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
 }
 
-.export-modal-label {
+.export-format-btn:hover {
+  background: var(--figma-color-bg-hover);
+}
+
+.export-format-btn.selected {
+  background: var(--figma-color-bg-brand-tertiary);
+}
+
+.export-format-btn-icon {
+  font-size: 14px;
+  line-height: 1;
+  color: var(--figma-color-text-secondary);
+}
+
+.export-format-btn.selected .export-format-btn-icon {
+  color: var(--figma-color-text-brand);
+}
+
+.export-format-btn-name {
+  font-size: var(--text-md);
+  color: var(--figma-color-text);
+}
+
+.export-format-btn.selected .export-format-btn-name {
+  color: var(--figma-color-text-brand);
+  font-weight: 500;
+}
+
+/* Middle Column - Options */
+.export-options-column {
+  width: 200px;
+  flex-shrink: 0;
+  padding: var(--space-3) var(--space-3);
+  border-right: 1px solid var(--figma-color-border);
+  overflow-y: auto;
+}
+
+.export-options-label {
   display: block;
   font-size: var(--text-sm);
-  font-weight: 500;
   color: var(--figma-color-text-secondary);
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-1);
 }
 
-.export-modal-input {
+.export-options-input {
   width: 100%;
-  padding: var(--space-2) var(--space-3);
+  padding: 6px 8px;
   border: 1px solid var(--figma-color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   font-size: var(--text-md);
   background: var(--figma-color-bg);
   color: var(--figma-color-text);
   box-sizing: border-box;
 }
 
-.export-modal-input:focus {
+.export-options-input:focus {
   outline: none;
   border-color: var(--figma-color-border-brand);
 }
 
-.export-format-options {
+.export-options-summary {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--figma-color-text-tertiary);
+}
+
+.export-options-description {
+  font-size: var(--text-sm);
+  color: var(--figma-color-text-secondary);
+  line-height: 1.5;
+}
+
+/* CSS Color Format Card Tiles */
+.export-color-format-cards {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
-.export-format-option {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+.export-color-format-card {
   padding: var(--space-2);
   border: 1px solid var(--figma-color-border);
   border-radius: var(--radius-md);
+  background: var(--figma-color-bg);
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
-.export-format-option:hover {
+.export-color-format-card:hover {
   background: var(--figma-color-bg-hover);
+  border-color: var(--figma-color-border-strong, var(--figma-color-border));
 }
 
-.export-format-option:has(input:checked) {
+.export-color-format-card.selected {
+  border-width: 2px;
   border-color: var(--figma-color-border-brand);
   background: var(--figma-color-bg-brand-tertiary);
 }
 
-.export-format-option input[type="radio"] {
-  accent-color: var(--figma-color-bg-brand);
+.export-color-format-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.export-format-option span {
-  font-size: var(--text-md);
-}
-
-.export-modal-select {
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--figma-color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--text-md);
-  background: var(--figma-color-bg);
+.export-color-format-card-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
   color: var(--figma-color-text);
-  cursor: pointer;
 }
 
-.export-modal-select:focus {
-  outline: none;
-  border-color: var(--figma-color-border-brand);
+.export-color-format-card-check {
+  color: var(--figma-color-text-brand);
+  font-size: var(--text-md);
 }
 
-.export-modal-preview {
-  width: 100%;
-  max-height: 180px;
-  padding: var(--space-3);
+.export-color-format-card-example {
+  font-size: var(--text-xs);
+  font-family: monospace;
+  color: var(--figma-color-text-secondary);
+  margin-top: 2px;
+}
+
+/* Right Column - Preview */
+.export-preview-column {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2) var(--space-3);
+  overflow: hidden;
+}
+
+.export-preview-header {
+  font-size: var(--text-sm);
+  color: var(--figma-color-text-secondary);
+  margin-bottom: var(--space-2);
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--figma-color-border);
+}
+
+.export-preview-code {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-2);
   border: 1px solid var(--figma-color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background: var(--figma-color-bg-secondary);
   font-family: monospace;
-  font-size: var(--text-sm);
-  line-height: 1.5;
+  font-size: var(--text-xs);
+  line-height: 1.4;
   overflow: auto;
   white-space: pre;
   margin: 0;
-  box-sizing: border-box;
 }
 
+/* Figma Variables Preview */
+.export-figma-preview {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.export-figma-variable {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: var(--text-sm);
+}
+
+.export-figma-variable-name {
+  min-width: 80px;
+  font-family: monospace;
+  font-size: var(--text-xs);
+  color: var(--figma-color-text);
+}
+
+.export-figma-color-swatch {
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  border-radius: 2px;
+  border: 1px solid rgba(0,0,0,0.1);
+}
+
+.export-figma-variable-hex {
+  font-family: monospace;
+  font-size: var(--text-xs);
+  color: var(--figma-color-text-secondary);
+}
+
+/* Footer Actions */
 .export-modal-actions {
   display: flex;
+  justify-content: flex-end;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-3);
   border-top: 1px solid var(--figma-color-border);
   background: var(--figma-color-bg-secondary);
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  flex-shrink: 0;
 }
 
 .export-modal-btn {
-  flex: 1;
-  padding: var(--space-2) var(--space-3);
+  padding: 6px 12px;
   border: 1px solid var(--figma-color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   font-size: var(--text-md);
   font-weight: 500;
   cursor: pointer;
@@ -2384,5 +2507,17 @@ input[type="range"]::-moz-range-thumb {
 .export-modal-btn.secondary:hover {
   background: var(--figma-color-bg-hover);
   color: var(--figma-color-text);
+}
+
+/* Legacy classes for backwards compatibility - can be removed */
+.export-modal-body,
+.export-modal-section,
+.export-modal-label,
+.export-modal-input,
+.export-format-options,
+.export-format-option,
+.export-modal-select,
+.export-modal-preview {
+  /* These are no longer used but kept for safety */
 }
 

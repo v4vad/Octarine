@@ -18,6 +18,30 @@ interface ExportModalProps {
   onClose: () => void
 }
 
+// Format configuration for the sidebar
+const FORMAT_CONFIG: {
+  id: ExportFormat
+  icon: string
+  name: string
+}[] = [
+  { id: "figma", icon: "◇", name: "Figma Variables" },
+  { id: "css", icon: "{ }", name: "CSS" },
+  { id: "json", icon: "{ }", name: "Design Tokens" },
+  { id: "oklch-raw", icon: "☰", name: "CSV" }
+]
+
+// CSS color format options
+const CSS_FORMAT_OPTIONS: {
+  id: CSSColorFormat
+  name: string
+  example: string
+}[] = [
+  { id: "hex", name: "Hex", example: "#3B82F6" },
+  { id: "rgb", name: "RGB", example: "rgb(59, 130, 246)" },
+  { id: "oklch", name: "OKLCH", example: "oklch(62% 0.19 264)" },
+  { id: "hsl", name: "HSL", example: "hsl(217, 91%, 60%)" }
+]
+
 export function ExportModal({
   groups,
   globalConfig,
@@ -35,15 +59,12 @@ export function ExportModal({
     [groups, globalConfig]
   )
 
+  // Count colors and variables for summary
+  const colorCount = groups.reduce((sum, g) => sum + g.colors.length, 0)
+  const variableCount = exportData.length
+
   // Generate preview content based on selected format
   const previewContent = useMemo(() => {
-    if (exportFormat === "figma") {
-      // Show a summary for Figma export
-      const colorCount = groups.reduce((sum, g) => sum + g.colors.length, 0)
-      const stopCount = exportData.length
-      return `Figma Variables Export\n\nCollection: "${collectionName}"\nColors: ${colorCount}\nVariables: ${stopCount}\n\nClick "Export to Figma" to create variables.`
-    }
-
     let fullContent: string
     switch (exportFormat) {
       case "css":
@@ -58,14 +79,8 @@ export function ExportModal({
       default:
         fullContent = ""
     }
-
-    // Limit preview to first ~15 lines
-    const lines = fullContent.split("\n")
-    if (lines.length > 15) {
-      return lines.slice(0, 15).join("\n") + "\n..."
-    }
     return fullContent
-  }, [exportFormat, cssColorFormat, exportData, collectionName, groups])
+  }, [exportFormat, cssColorFormat, exportData])
 
   // Generate full content for copy/download
   const generateFullContent = (): string => {
@@ -103,96 +118,160 @@ export function ExportModal({
     onClose()
   }
 
+  // Get preview title based on format
+  const getPreviewTitle = (): string => {
+    switch (exportFormat) {
+      case "figma":
+        return "Figma Variables"
+      case "css":
+        return "CSS Custom Properties"
+      case "json":
+        return "JSON Design Tokens"
+      case "oklch-raw":
+        return "OKLCH Raw Data"
+      default:
+        return "Preview"
+    }
+  }
+
+  // Render the options column content based on format
+  const renderOptionsColumn = () => {
+    switch (exportFormat) {
+      case "figma":
+        return (
+          <>
+            <label className="export-options-label">Collection Name</label>
+            <input
+              type="text"
+              className="export-options-input"
+              value={collectionName}
+              onChange={(e) => setCollectionName(e.target.value)}
+              placeholder="Enter collection name..."
+            />
+            <div className="export-options-summary">
+              {colorCount} color{colorCount !== 1 ? "s" : ""}, {variableCount} variable{variableCount !== 1 ? "s" : ""} will be created
+            </div>
+          </>
+        )
+
+      case "css":
+        return (
+          <>
+            <label className="export-options-label">Color Format</label>
+            <div className="export-color-format-cards">
+              {CSS_FORMAT_OPTIONS.map((format) => (
+                <div
+                  key={format.id}
+                  className={`export-color-format-card ${cssColorFormat === format.id ? "selected" : ""}`}
+                  onClick={() => setCssColorFormat(format.id)}
+                >
+                  <div className="export-color-format-card-header">
+                    <span className="export-color-format-card-name">{format.name}</span>
+                    {cssColorFormat === format.id && (
+                      <span className="export-color-format-card-check">✓</span>
+                    )}
+                  </div>
+                  <div className="export-color-format-card-example">{format.example}</div>
+                </div>
+              ))}
+            </div>
+          </>
+        )
+
+      case "json":
+        return (
+          <div className="export-options-description">
+            <strong>W3C Design Token format</strong>
+            <br /><br />
+            Standard for sharing design tokens across tools and platforms.
+            <br /><br />
+            Includes OKLCH values with hex fallback.
+          </div>
+        )
+
+      case "oklch-raw":
+        return (
+          <div className="export-options-description">
+            <strong>Raw OKLCH Data</strong>
+            <br /><br />
+            CSV format with color name, stop, and L/C/H values.
+            <br /><br />
+            Useful for spreadsheets or data analysis.
+          </div>
+        )
+
+      default:
+        return null
+    }
+  }
+
+  // Render the preview column content based on format
+  const renderPreviewColumn = () => {
+    if (exportFormat === "figma") {
+      return (
+        <div className="export-figma-preview">
+          {exportData.map((stop, index) => (
+            <div key={index} className="export-figma-variable">
+              <span className="export-figma-variable-name">
+                {stop.colorLabel}/{stop.stopNumber}
+              </span>
+              <div
+                className="export-figma-color-swatch"
+                style={{ backgroundColor: stop.hex }}
+              />
+              <span className="export-figma-variable-hex">
+                {stop.hex.toUpperCase()}
+              </span>
+            </div>
+          ))}
+        </div>
+      )
+    }
+
+    return (
+      <pre className="export-preview-code">{previewContent}</pre>
+    )
+  }
+
   return (
     <>
       <div className="modal-backdrop" onClick={onClose} />
       <div className="export-modal">
+        {/* Header */}
         <div className="export-modal-header">
           <h2 className="export-modal-title">Export Colors</h2>
           <button className="export-modal-close" onClick={onClose}>×</button>
         </div>
 
-        <div className="export-modal-body">
-          {/* Collection Name Input */}
-          <div className="export-modal-section">
-            <label className="export-modal-label">Collection Name</label>
-            <input
-              type="text"
-              className="export-modal-input"
-              value={collectionName}
-              onChange={(e) => setCollectionName(e.target.value)}
-              placeholder="Enter collection name..."
-            />
-          </div>
-
-          {/* Format Selection */}
-          <div className="export-modal-section">
-            <label className="export-modal-label">Export Format</label>
-            <div className="export-format-options">
-              <label className="export-format-option">
-                <input
-                  type="radio"
-                  name="format"
-                  checked={exportFormat === "figma"}
-                  onChange={() => setExportFormat("figma")}
-                />
-                <span>Figma Variables</span>
-              </label>
-              <label className="export-format-option">
-                <input
-                  type="radio"
-                  name="format"
-                  checked={exportFormat === "css"}
-                  onChange={() => setExportFormat("css")}
-                />
-                <span>CSS Custom Properties</span>
-              </label>
-              <label className="export-format-option">
-                <input
-                  type="radio"
-                  name="format"
-                  checked={exportFormat === "json"}
-                  onChange={() => setExportFormat("json")}
-                />
-                <span>JSON (W3C Design Tokens)</span>
-              </label>
-              <label className="export-format-option">
-                <input
-                  type="radio"
-                  name="format"
-                  checked={exportFormat === "oklch-raw"}
-                  onChange={() => setExportFormat("oklch-raw")}
-                />
-                <span>OKLCH Values (CSV)</span>
-              </label>
-            </div>
-          </div>
-
-          {/* CSS Color Format (only shown when CSS is selected) */}
-          {exportFormat === "css" && (
-            <div className="export-modal-section">
-              <label className="export-modal-label">Color Format</label>
-              <select
-                className="export-modal-select"
-                value={cssColorFormat}
-                onChange={(e) => setCssColorFormat(e.target.value as CSSColorFormat)}
+        {/* 3-Column Layout */}
+        <div className="export-layout">
+          {/* Left Column - Format Sidebar */}
+          <div className="export-format-sidebar">
+            {FORMAT_CONFIG.map((format) => (
+              <button
+                key={format.id}
+                className={`export-format-btn ${exportFormat === format.id ? "selected" : ""}`}
+                onClick={() => setExportFormat(format.id)}
               >
-                <option value="hex">Hex (#FFFFFF)</option>
-                <option value="rgb">RGB (rgb(255, 255, 255))</option>
-                <option value="oklch">OKLCH (oklch(100% 0 0))</option>
-                <option value="hsl">HSL (hsl(0, 0%, 100%))</option>
-              </select>
-            </div>
-          )}
+                <span className="export-format-btn-icon">{format.icon}</span>
+                <span className="export-format-btn-name">{format.name}</span>
+              </button>
+            ))}
+          </div>
 
-          {/* Preview */}
-          <div className="export-modal-section">
-            <label className="export-modal-label">Preview</label>
-            <pre className="export-modal-preview">{previewContent}</pre>
+          {/* Middle Column - Options */}
+          <div className="export-options-column">
+            {renderOptionsColumn()}
+          </div>
+
+          {/* Right Column - Preview */}
+          <div className="export-preview-column">
+            <div className="export-preview-header">{getPreviewTitle()}</div>
+            {renderPreviewColumn()}
           </div>
         </div>
 
-        {/* Actions */}
+        {/* Footer Actions */}
         <div className="export-modal-actions">
           {exportFormat === "figma" ? (
             <button className="export-modal-btn primary" onClick={handleExportToFigma}>
@@ -204,16 +283,13 @@ export function ExportModal({
                 className={`export-modal-btn ${copySuccess ? "success" : ""}`}
                 onClick={handleCopy}
               >
-                {copySuccess ? "Copied!" : "Copy to Clipboard"}
+                {copySuccess ? "Copied!" : "Copy"}
               </button>
               <button className="export-modal-btn" onClick={handleDownload}>
                 Download
               </button>
             </>
           )}
-          <button className="export-modal-btn secondary" onClick={onClose}>
-            Cancel
-          </button>
         </div>
       </div>
     </>
