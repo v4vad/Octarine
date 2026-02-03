@@ -116,25 +116,33 @@ Creates stops based on accessibility contrast ratios (WCAG standards).
 
 ### Switching Between Methods
 
-Click the **"L"** or **"C"** column header in the Defaults Table to switch between Lightness and Contrast methods.
+Use the **Lightness / Contrast toggle** above the Defaults Table to switch between methods.
 
 ---
 
 ## The Defaults Table
 
-The Defaults Table (in the left panel) shows all your stop numbers and their default values.
+The Defaults Table (in the left panel) shows all your stop numbers and their default values for the currently selected method.
 
 ### Understanding the Table
 
-| Stop | L (Lightness) | C (Contrast) |
-|------|---------------|--------------|
-| 50   | 0.97          | 1.05         |
-| 100  | 0.94          | 1.15         |
-| ...  | ...           | ...          |
-| 900  | 0.20          | 12.0         |
+**Lightness mode:**
+| Stop | Lightness |
+|------|-----------|
+| 50   | 0.97      |
+| 100  | 0.94      |
+| ...  | ...       |
+| 900  | 0.20      |
 
-- The **active column** (L or C) determines how colors are generated
-- The **inactive column** appears grayed out
+**Contrast mode:**
+| Stop | Contrast |
+|------|----------|
+| 50   | 1.05     |
+| 100  | 1.15     |
+| ...  | ...      |
+| 900  | 12.0     |
+
+The table shows only the active method's column for a cleaner, focused view. Values for both methods are preserved when you switch.
 
 ### Editing Default Values
 
