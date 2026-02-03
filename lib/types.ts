@@ -53,6 +53,41 @@ export const HUE_SHIFT_CURVE_PRESETS: Record<Exclude<HueShiftCurvePreset, "custo
   dramatic: { light: 12, dark: -15 },       // Bold artistic effect
 }
 
+// ============================================
+// STOP VALUE CURVES
+// ============================================
+
+// Preset curve types for stop value distribution (lightness or contrast)
+export type StopValueCurvePreset = "linear" | "lifted-darks" | "compressed-range" | "expanded-ends" | "custom"
+
+// Stop value curve configuration
+// Works for both lightness (0-1) and contrast (1-21) methods
+export type StopValueCurve = {
+  preset: StopValueCurvePreset
+  // Custom control points (only used when preset is "custom")
+  lightValue?: number    // Value at light end (stop 50-100)
+  midValue?: number      // Value at middle (stop 400-600)
+  darkValue?: number     // Value at dark end (stop 800-900)
+  // Per-stop overrides (take precedence over curve interpolation)
+  overrides?: Record<number, number>
+}
+
+// Lightness curve presets (output: 0-1)
+export const LIGHTNESS_CURVE_PRESETS: Record<Exclude<StopValueCurvePreset, "custom">, { light: number; mid: number; dark: number }> = {
+  "linear": { light: 0.95, mid: 0.55, dark: 0.20 },           // Balanced distribution
+  "lifted-darks": { light: 0.97, mid: 0.55, dark: 0.28 },     // More visible dark stops
+  "compressed-range": { light: 0.88, mid: 0.55, dark: 0.30 }, // Tighter range, less extreme
+  "expanded-ends": { light: 0.98, mid: 0.55, dark: 0.15 },    // Maximum range
+}
+
+// Contrast curve presets (output: 1-21 WCAG ratio)
+export const CONTRAST_CURVE_PRESETS: Record<Exclude<StopValueCurvePreset, "custom">, { light: number; mid: number; dark: number }> = {
+  "linear": { light: 1.2, mid: 4.5, dark: 15 },               // Balanced distribution
+  "lifted-darks": { light: 1.1, mid: 4.5, dark: 11 },         // Less extreme dark contrast
+  "compressed-range": { light: 1.5, mid: 4.5, dark: 10 },     // Tighter range
+  "expanded-ends": { light: 1.05, mid: 4.5, dark: 18 },       // Maximum range
+}
+
 // Default stop numbers
 export const DEFAULT_STOPS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900]
 
@@ -162,8 +197,14 @@ export type GroupSettings = {
   method: ColorMethod      // "lightness" or "contrast"
 
   // Default lightness/contrast values per stop number
+  // DEPRECATED: These are kept for backward compatibility during migration
+  // New code should use lightnessCurve and contrastCurve instead
   defaultLightness: Record<number, number>
   defaultContrast: Record<number, number>
+
+  // Curve-based stop value generation (new in v5)
+  lightnessCurve?: StopValueCurve
+  contrastCurve?: StopValueCurve
 }
 
 // Alias for backward compatibility
@@ -248,6 +289,9 @@ export function createDefaultGroupSettings(): GroupSettings {
     method: "lightness",
     defaultLightness: { ...DEFAULT_LIGHTNESS },
     defaultContrast: { ...DEFAULT_CONTRAST },
+    // Default curves use "linear" preset
+    lightnessCurve: { preset: "linear" },
+    contrastCurve: { preset: "linear" },
   }
 }
 
@@ -286,7 +330,7 @@ export function createInitialAppState(): AppState {
 // STATE PERSISTENCE & MIGRATION
 // ============================================
 export const STORAGE_KEY = 'octarine-state'
-export const STORAGE_VERSION = 4  // Bumped for vivid -> dramatic migration
+export const STORAGE_VERSION = 5  // Bumped for curve-based stop values
 
 export type PersistedState = {
   version: number
@@ -386,17 +430,71 @@ export function migrateState(persisted: { version: number; state: unknown }): Ap
     }
   }
 
-  // v4: Add expandedGroupId if missing (backward compatibility)
+  // v4: Add expandedGroupId if missing and migrate to curves
   if (persisted.version === 4) {
     const oldState = persisted.state as AppStateV3V4
+    // Migrate groups to use curve-based stop values
+    const migratedGroups = oldState.groups.map(group => {
+      // Check if the group has custom (non-default) lightness/contrast values
+      const hasCustomLightness = !isDefaultLightnessValues(group.settings.defaultLightness)
+      const hasCustomContrast = !isDefaultContrastValues(group.settings.defaultContrast)
+
+      return {
+        ...group,
+        settings: {
+          ...group.settings,
+          // If custom values exist, migrate to "custom" curve with overrides
+          lightnessCurve: hasCustomLightness
+            ? { preset: "custom" as StopValueCurvePreset, overrides: { ...group.settings.defaultLightness } }
+            : { preset: "linear" as StopValueCurvePreset },
+          contrastCurve: hasCustomContrast
+            ? { preset: "custom" as StopValueCurvePreset, overrides: { ...group.settings.defaultContrast } }
+            : { preset: "linear" as StopValueCurvePreset },
+        }
+      }
+    })
     return {
-      ...oldState,
+      globalConfig: oldState.globalConfig,
+      groups: migratedGroups,
+      activeGroupId: oldState.activeGroupId,
       expandedGroupId: (oldState as AppState).expandedGroupId ?? oldState.activeGroupId
     }
   }
 
-  // v5 or newer - already has expandedGroupId
+  // v5 or newer - already has curve-based stop values
   return persisted.state as AppState
+}
+
+// Helper to check if lightness values match defaults
+function isDefaultLightnessValues(values: Record<number, number>): boolean {
+  const keys = Object.keys(values).map(Number)
+  const defaultKeys = Object.keys(DEFAULT_LIGHTNESS).map(Number)
+
+  // Different number of stops means custom
+  if (keys.length !== defaultKeys.length) return false
+
+  // Check if all values match defaults (within small tolerance for floating point)
+  for (const key of keys) {
+    if (DEFAULT_LIGHTNESS[key] === undefined) return false
+    if (Math.abs(values[key] - DEFAULT_LIGHTNESS[key]) > 0.001) return false
+  }
+  return true
+}
+
+// Helper to check if contrast values match defaults
+function isDefaultContrastValues(values: Record<number, number>): boolean {
+  const keys = Object.keys(values).map(Number)
+  const defaultKeys = Object.keys(DEFAULT_CONTRAST).map(Number)
+
+  // Different number of stops means custom
+  if (keys.length !== defaultKeys.length) return false
+
+  // Check if all values match defaults (within small tolerance)
+  for (const key of keys) {
+    if (DEFAULT_CONTRAST[key] === undefined) return false
+    if (Math.abs(values[key] - DEFAULT_CONTRAST[key]) > 0.01) return false
+  }
+  return true
 }
 
 // ============================================

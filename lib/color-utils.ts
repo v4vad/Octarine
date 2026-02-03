@@ -1,4 +1,4 @@
-import type { GeneratedStop, PaletteResult, Color, EffectiveSettings } from "./types"
+import type { GeneratedStop, PaletteResult, Color, EffectiveSettings, StopValueCurve } from "./types"
 
 // Re-export all color conversions for backward compatibility
 export {
@@ -62,6 +62,17 @@ export {
   ensureUniqueHexColors,
 } from "./color-distinctness"
 
+// Re-export stop value curve utilities
+export {
+  normalizeStopPosition,
+  interpolateCurveValue,
+  getLightnessFromCurve,
+  getContrastFromCurve,
+  getCurveControlPoints,
+  LIGHTNESS_CURVE_PRESETS,
+  CONTRAST_CURVE_PRESETS,
+} from "./stop-value-curves"
+
 // Import for internal use
 import { OKLCH, hexToOklch, oklchToHex } from "./color-conversions"
 import { applyPerceptualCorrections, PerceptualCorrectionOptions } from "./perceptual-corrections"
@@ -69,6 +80,7 @@ import { getHueShiftValues, applyHueShift, applyChromaCurve } from "./artistic-c
 import { getContrastRatio, findLightnessForContrast, refineContrastToTarget } from "./contrast-utils"
 import { clampChromaToGamut, getMinChromaForHue, getMaxLightnessForMinChroma, validateAndClampToGamut } from "./gamut-utils"
 import { calculateDeltaE, DELTA_E_THRESHOLD, ensureUniqueHexColors } from "./color-distinctness"
+import { getLightnessFromCurve, getContrastFromCurve } from "./stop-value-curves"
 
 // ============================================
 // PALETTE GENERATION
@@ -127,13 +139,18 @@ export function generateColorPalette(
     let targetL: number
     let stopTargetContrast: number | undefined = undefined
 
+    // Get all stop numbers for curve interpolation
+    const allStopNumbers = color.stops.map(s => s.number)
+
     if (effectiveMethod === "contrast") {
+      // Priority: stop override > curve value > legacy lookup > default
       stopTargetContrast = stop.contrastOverride ??
-        globalSettings.defaultContrast[stopNum] ?? 4.5
+        getContrastValue(stopNum, allStopNumbers, globalSettings) ?? 4.5
       targetL = findLightnessForContrast(baseOklch, globalSettings.backgroundColor, stopTargetContrast)
     } else {
+      // Priority: stop override > curve value > legacy lookup > default
       targetL = stop.lightnessOverride ??
-        globalSettings.defaultLightness[stopNum] ?? 0.5
+        getLightnessValue(stopNum, allStopNumbers, globalSettings) ?? 0.5
     }
 
     const originalL = targetL
@@ -266,4 +283,42 @@ export function generateColorPalette(
     stops: generatedStops,
     hadDuplicates
   }
+}
+
+// ============================================
+// HELPER FUNCTIONS FOR CURVE-BASED VALUES
+// ============================================
+
+/**
+ * Get lightness value for a stop using curve-based approach
+ * Falls back to legacy lookup table if no curve is defined
+ */
+function getLightnessValue(
+  stopNum: number,
+  allStops: number[],
+  settings: EffectiveSettings
+): number {
+  // If curve is defined, use it
+  if (settings.lightnessCurve) {
+    return getLightnessFromCurve(stopNum, allStops, settings.lightnessCurve)
+  }
+  // Fall back to legacy lookup table
+  return settings.defaultLightness[stopNum] ?? 0.5
+}
+
+/**
+ * Get contrast value for a stop using curve-based approach
+ * Falls back to legacy lookup table if no curve is defined
+ */
+function getContrastValue(
+  stopNum: number,
+  allStops: number[],
+  settings: EffectiveSettings
+): number {
+  // If curve is defined, use it
+  if (settings.contrastCurve) {
+    return getContrastFromCurve(stopNum, allStops, settings.contrastCurve)
+  }
+  // Fall back to legacy lookup table
+  return settings.defaultContrast[stopNum] ?? 4.5
 }
