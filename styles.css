@@ -1053,7 +1053,7 @@ input[type="range"]::-moz-range-thumb {
    DEFAULTS TABLE
    -------------------------------------------- */
 .defaults-section {
-  margin-bottom: var(--space-4);
+  /* No bottom margin - Add Group button follows directly */
 }
 
 .defaults-table {
@@ -1091,7 +1091,7 @@ input[type="range"]::-moz-range-thumb {
   font-size: var(--text-sm);
   background: transparent;
   color: var(--figma-color-text);
-  text-align: center;
+  text-align: right;
 }
 
 .defaults-table input:hover {
@@ -1106,34 +1106,6 @@ input[type="range"]::-moz-range-thumb {
 
 .defaults-table tbody tr:hover td {
   background: var(--figma-color-bg-hover);
-}
-
-/* Dual-column table (shows both L and C) */
-.defaults-table.dual-column th.clickable {
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.defaults-table.dual-column th.clickable:hover {
-  background: var(--figma-color-bg-hover);
-}
-
-.defaults-table.dual-column th.active {
-  background: var(--figma-color-bg-brand-tertiary);
-  color: var(--figma-color-text-brand);
-  font-weight: 600;
-}
-
-.defaults-table.dual-column th.inactive {
-  color: var(--figma-color-text-tertiary);
-}
-
-.defaults-table.dual-column td.inactive {
-  opacity: 0.4;
-}
-
-.defaults-table.dual-column td.inactive input {
-  pointer-events: none;
 }
 
 /* Tab bar for Lightness/Contrast switching */
@@ -2160,6 +2132,16 @@ input[type="range"]::-moz-range-thumb {
 
 .group-accordion-item.collapsed:hover {
   border-color: var(--figma-color-border-strong);
+  background: var(--figma-color-bg-hover);
+}
+
+/* Selected but collapsed - shows this group's colors are in the middle panel */
+.group-accordion-item.collapsed.selected {
+  border-color: var(--figma-color-border-brand);
+  background: var(--figma-color-bg-secondary);
+}
+
+.group-accordion-item.collapsed.selected:hover {
   background: var(--figma-color-bg-hover);
 }
 
