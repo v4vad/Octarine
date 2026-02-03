@@ -6,7 +6,7 @@ UI components for Octarine's Figma plugin interface. Uses `react-figma-plugin-ds
 
 | Folder | Purpose |
 |--------|---------|
-| `primitives/` | Reusable building blocks (Slider, Toggle, ConfirmModal) |
+| `primitives/` | Reusable building blocks (Slider, Toggle, ConfirmModal, SwatchHexInput) |
 | `panels/` | Layout containers (LeftPanel, TopBar, ResizeHandle) |
 | `groups/` | Color group management (GroupAccordionItem, DefaultsTable) |
 | `colors/` | Color row display |
