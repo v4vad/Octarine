@@ -201,7 +201,8 @@ export type ColorGroup = {
 export type AppState = {
   globalConfig: GlobalConfig
   groups: ColorGroup[]
-  activeGroupId: string | null  // Which group is currently selected/expanded
+  activeGroupId: string | null     // Which group is selected (affects middle/right panels)
+  expandedGroupId: string | null   // Which group's accordion is expanded (can differ from active)
 }
 
 // ============================================
@@ -276,7 +277,8 @@ export function createInitialAppState(): AppState {
   return {
     globalConfig: createDefaultGlobalConfig(),
     groups: [defaultGroup],
-    activeGroupId: defaultGroup.id
+    activeGroupId: defaultGroup.id,
+    expandedGroupId: defaultGroup.id
   }
 }
 
@@ -308,6 +310,13 @@ type AppStateV2 = {
   activeGroupId: string | null
 }
 
+// Type for old v3/v4 state format (before expandedGroupId)
+type AppStateV3V4 = {
+  globalConfig: GlobalConfig
+  groups: ColorGroup[]
+  activeGroupId: string | null
+}
+
 // Migrate from older versions to current
 export function migrateState(persisted: { version: number; state: unknown }): AppState {
   if (persisted.version === 1) {
@@ -326,7 +335,8 @@ export function migrateState(persisted: { version: number; state: unknown }): Ap
     return {
       globalConfig: { backgroundColor },
       groups: [defaultGroup],
-      activeGroupId: defaultGroup.id
+      activeGroupId: defaultGroup.id,
+      expandedGroupId: defaultGroup.id
     }
   }
 
@@ -346,13 +356,14 @@ export function migrateState(persisted: { version: number; state: unknown }): Ap
     return {
       globalConfig: { backgroundColor },
       groups: migratedGroups,
-      activeGroupId: oldState.activeGroupId
+      activeGroupId: oldState.activeGroupId,
+      expandedGroupId: oldState.activeGroupId
     }
   }
 
   // v3: Need to migrate "vivid" hue shift preset to "dramatic"
   if (persisted.version === 3) {
-    const oldState = persisted.state as AppState
+    const oldState = persisted.state as AppStateV3V4
     const migratedGroups = oldState.groups.map(group => ({
       ...group,
       colors: group.colors.map(color => {
@@ -368,12 +379,23 @@ export function migrateState(persisted: { version: number; state: unknown }): Ap
       })
     }))
     return {
-      ...oldState,
-      groups: migratedGroups
+      globalConfig: oldState.globalConfig,
+      groups: migratedGroups,
+      activeGroupId: oldState.activeGroupId,
+      expandedGroupId: oldState.activeGroupId
     }
   }
 
-  // Already v4 or newer
+  // v4: Add expandedGroupId if missing (backward compatibility)
+  if (persisted.version === 4) {
+    const oldState = persisted.state as AppStateV3V4
+    return {
+      ...oldState,
+      expandedGroupId: (oldState as AppState).expandedGroupId ?? oldState.activeGroupId
+    }
+  }
+
+  // v5 or newer - already has expandedGroupId
   return persisted.state as AppState
 }
 

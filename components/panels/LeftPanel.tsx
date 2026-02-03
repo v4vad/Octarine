@@ -6,7 +6,8 @@ interface LeftPanelProps {
   globalConfig: GlobalConfig;
   groups: ColorGroup[];
   activeGroupId: string | null;
-  onSelectGroup: (groupId: string) => void;
+  expandedGroupId: string | null;
+  onToggleExpansion: (groupId: string) => void;
   onUpdateGroup: (group: ColorGroup) => void;
   onAddGroup: () => void;
   onDeleteGroup: (groupId: string) => void;
@@ -16,7 +17,8 @@ export function LeftPanel({
   globalConfig,
   groups,
   activeGroupId,
-  onSelectGroup,
+  expandedGroupId,
+  onToggleExpansion,
   onUpdateGroup,
   onAddGroup,
   onDeleteGroup
@@ -30,8 +32,9 @@ export function LeftPanel({
             key={group.id}
             group={group}
             backgroundColor={globalConfig.backgroundColor}
-            isExpanded={group.id === activeGroupId}
-            onToggle={() => onSelectGroup(group.id)}
+            isExpanded={group.id === expandedGroupId}
+            isSelected={group.id === activeGroupId}
+            onToggle={() => onToggleExpansion(group.id)}
             onUpdate={onUpdateGroup}
             onDelete={() => onDeleteGroup(group.id)}
             canDelete={groups.length > 1}

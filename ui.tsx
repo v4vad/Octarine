@@ -30,7 +30,7 @@ function App() {
   // Use history hook for undo/redo support
   const initialState: AppState = createInitialAppState();
   const { state, setState, replaceState, undo, redo, canUndo, canRedo } = useHistory(initialState);
-  const { globalConfig, groups, activeGroupId } = state;
+  const { globalConfig, groups, activeGroupId, expandedGroupId } = state;
 
   // Get the active group
   const activeGroup = activeGroupId
@@ -64,7 +64,7 @@ function App() {
   // Auto-select first group if none selected
   useEffect(() => {
     if (groups.length > 0 && !activeGroupId) {
-      setState({ globalConfig, groups, activeGroupId: groups[0].id });
+      setState({ globalConfig, groups, activeGroupId: groups[0].id, expandedGroupId: groups[0].id });
     }
   }, [groups, activeGroupId, globalConfig, setState]);
 
@@ -146,10 +146,22 @@ function App() {
   // GROUP OPERATIONS
   // ============================================
   const selectGroup = useCallback((groupId: string) => {
-    setState({ ...state, activeGroupId: groupId });
+    setState({ ...state, activeGroupId: groupId, expandedGroupId: groupId });
     // Clear color selection when switching groups
     setActiveSettingsColorId(null);
   }, [setState, state]);
+
+  // Toggle accordion expansion without changing selection
+  const toggleGroupExpansion = useCallback((groupId: string) => {
+    if (groupId === activeGroupId) {
+      // Clicking the active group toggles its expansion
+      setState({ ...state, expandedGroupId: expandedGroupId === groupId ? null : groupId });
+    } else {
+      // Clicking a different group selects and expands it
+      setState({ ...state, activeGroupId: groupId, expandedGroupId: groupId });
+      setActiveSettingsColorId(null);
+    }
+  }, [setState, state, activeGroupId, expandedGroupId]);
 
   const addGroup = useCallback(() => {
     const id = `group-${Date.now()}`;
@@ -157,7 +169,8 @@ function App() {
     setState({
       globalConfig,
       groups: [...groups, newGroup],
-      activeGroupId: id  // Switch to the new group
+      activeGroupId: id,      // Switch to the new group
+      expandedGroupId: id     // Expand the new group
     });
     setActiveSettingsColorId(null);
   }, [setState, groups, globalConfig]);
@@ -173,13 +186,15 @@ function App() {
     if (groups.length <= 1) return;  // Don't delete last group
     const newGroups = groups.filter(g => g.id !== groupId);
     const newActiveId = activeGroupId === groupId ? newGroups[0]?.id ?? null : activeGroupId;
+    const newExpandedId = expandedGroupId === groupId ? newGroups[0]?.id ?? null : expandedGroupId;
     setState({
       globalConfig,
       groups: newGroups,
-      activeGroupId: newActiveId
+      activeGroupId: newActiveId,
+      expandedGroupId: newExpandedId
     });
     setActiveSettingsColorId(null);
-  }, [setState, groups, activeGroupId, globalConfig]);
+  }, [setState, groups, activeGroupId, expandedGroupId, globalConfig]);
 
   // ============================================
   // COLOR OPERATIONS (within active group)
@@ -255,7 +270,8 @@ function App() {
           globalConfig={globalConfig}
           groups={groups}
           activeGroupId={activeGroupId}
-          onSelectGroup={selectGroup}
+          expandedGroupId={expandedGroupId}
+          onToggleExpansion={toggleGroupExpansion}
           onUpdateGroup={updateGroup}
           onAddGroup={addGroup}
           onDeleteGroup={deleteGroup}

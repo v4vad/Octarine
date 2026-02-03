@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { GlobalConfig } from '../../lib/types';
 import { ColorPickerPopup } from '../color-picker';
+import { SwatchHexInput } from '../primitives';
 
 interface TopBarProps {
   globalConfig: GlobalConfig;
@@ -22,30 +23,6 @@ export function TopBar({
   canRedo
 }: TopBarProps) {
   const [showBgPicker, setShowBgPicker] = useState(false);
-  const [bgHexInput, setBgHexInput] = useState(globalConfig.backgroundColor);
-
-  // Keep input in sync when backgroundColor changes externally (e.g., from color picker)
-  useEffect(() => {
-    setBgHexInput(globalConfig.backgroundColor);
-  }, [globalConfig.backgroundColor]);
-
-  const expandHexShorthand = (hex: string): string => {
-    const h = hex.replace('#', '');
-    if (h.length === 1) return '#' + h.repeat(6);
-    if (h.length === 3) return '#' + h.split('').map(c => c + c).join('');
-    return hex;
-  };
-
-  const applyBgHex = (newHex: string) => {
-    const expanded = expandHexShorthand(newHex);
-    if (/^#[0-9A-Fa-f]{6}$/.test(expanded)) {
-      setBgHexInput(expanded.toUpperCase());
-      onUpdateGlobalConfig({ ...globalConfig, backgroundColor: expanded.toUpperCase() });
-    } else {
-      // Revert to current valid color if invalid
-      setBgHexInput(globalConfig.backgroundColor);
-    }
-  };
 
   return (
     <div className="top-bar">
@@ -82,23 +59,10 @@ export function TopBar({
         {/* Background Color Picker */}
         <div className="top-bar-bg-color">
           <span className="color-field-label">Background color</span>
-          <div
-            className="color-field-swatch"
-            style={{ backgroundColor: globalConfig.backgroundColor }}
-            onClick={() => setShowBgPicker(!showBgPicker)}
-          />
-          <input
-            type="text"
-            className="color-field-hex"
-            value={bgHexInput.toUpperCase()}
-            onChange={(e) => setBgHexInput(e.target.value)}
-            onBlur={(e) => applyBgHex(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                applyBgHex((e.target as HTMLInputElement).value);
-                (e.target as HTMLInputElement).blur();
-              }
-            }}
+          <SwatchHexInput
+            color={globalConfig.backgroundColor}
+            onChange={(hex) => onUpdateGlobalConfig({ ...globalConfig, backgroundColor: hex })}
+            onSwatchClick={() => setShowBgPicker(!showBgPicker)}
           />
           {showBgPicker && (
             <>

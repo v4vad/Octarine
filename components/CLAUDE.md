@@ -6,7 +6,7 @@ UI components for Octarine's Figma plugin interface. Uses `react-figma-plugin-ds
 
 | Folder | Purpose |
 |--------|---------|
-| `primitives/` | Reusable building blocks (Slider, Toggle, ConfirmModal) |
+| `primitives/` | Reusable building blocks (Slider, Toggle, ConfirmModal, SwatchHexInput) |
 | `panels/` | Layout containers (LeftPanel, TopBar, ResizeHandle) |
 | `groups/` | Color group management (GroupAccordionItem, DefaultsTable) |
 | `colors/` | Color row display |
@@ -33,6 +33,17 @@ export function Slider({ label, value }: SliderProps) { ... }
 ```
 
 **CSS classes** - Defined in `/styles.css`, not CSS modules. Class names use kebab-case (e.g., `chroma-slider-row`, `right-settings-panel`).
+
+## Layout Structure
+
+The app uses a 3-panel layout defined in `ui.tsx`:
+
+| Component | Location | Contents |
+|-----------|----------|----------|
+| `TopBar` | Top | Undo/redo, background color picker, export button |
+| `LeftPanel` | Left column | Group strips (accordion items), Lightness/Contrast toggle, DefaultsTable |
+| Middle (inline) | Center column | ColorRow components, Add Color button |
+| `RightSettingsPanel` | Right column | Per-color settings (base color, corrections, curves) |
 
 ## Key Components
 

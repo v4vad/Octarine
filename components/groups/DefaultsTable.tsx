@@ -62,16 +62,13 @@ export function DefaultsTable({ settings, onUpdate }: DefaultsTableProps) {
         onChange={(method) => onUpdate({ ...settings, method })}
       />
 
-      {/* Table with both columns */}
-      <table className="defaults-table dual-column">
+      {/* Table with single active column */}
+      <table className="defaults-table">
         <thead>
           <tr>
             <th className="stop-col">stop</th>
-            <th className={`value-col ${isLightnessActive ? '' : 'inactive'}`}>
-              Lightness
-            </th>
-            <th className={`value-col ${!isLightnessActive ? '' : 'inactive'}`}>
-              Contrast
+            <th className="value-col" style={{ textAlign: 'right' }}>
+              {isLightnessActive ? 'Lightness' : 'Contrast'}
             </th>
           </tr>
         </thead>
@@ -79,33 +76,34 @@ export function DefaultsTable({ settings, onUpdate }: DefaultsTableProps) {
           {stopNumbers.map((num) => (
             <tr key={num}>
               <td className="stop-col">{num}</td>
-              <td className={`value-col ${isLightnessActive ? '' : 'inactive'}`}>
-                <RefBasedNumericInput
-                  value={settings.defaultLightness[num] ?? 0.5}
-                  onChange={(val) => {
-                    onUpdate({
-                      ...settings,
-                      defaultLightness: { ...settings.defaultLightness, [num]: val },
-                    });
-                  }}
-                  min={0}
-                  max={1}
-                  decimals={2}
-                />
-              </td>
-              <td className={`value-col ${!isLightnessActive ? '' : 'inactive'}`}>
-                <RefBasedNumericInput
-                  value={settings.defaultContrast[num] ?? 1}
-                  onChange={(val) => {
-                    onUpdate({
-                      ...settings,
-                      defaultContrast: { ...settings.defaultContrast, [num]: val },
-                    });
-                  }}
-                  min={1}
-                  max={21}
-                  decimals={2}
-                />
+              <td className="value-col">
+                {isLightnessActive ? (
+                  <RefBasedNumericInput
+                    value={settings.defaultLightness[num] ?? 0.5}
+                    onChange={(val) => {
+                      onUpdate({
+                        ...settings,
+                        defaultLightness: { ...settings.defaultLightness, [num]: val },
+                      });
+                    }}
+                    min={0}
+                    max={1}
+                    decimals={2}
+                  />
+                ) : (
+                  <RefBasedNumericInput
+                    value={settings.defaultContrast[num] ?? 1}
+                    onChange={(val) => {
+                      onUpdate({
+                        ...settings,
+                        defaultContrast: { ...settings.defaultContrast, [num]: val },
+                      });
+                    }}
+                    min={1}
+                    max={21}
+                    decimals={2}
+                  />
+                )}
               </td>
             </tr>
           ))}
@@ -121,9 +119,9 @@ export function DefaultsTable({ settings, onUpdate }: DefaultsTableProps) {
           onKeyDown={(e) => { if (e.key === 'Enter') handleAddStop(); }}
           placeholder="e.g. 150"
           className="input-sm"
-          style={{ width: '60px' }}
+          style={{ flex: 1 }}
         />
-        <button onClick={handleAddStop} className="btn" style={{ padding: '4px 8px', fontSize: '10px' }}>
+        <button onClick={handleAddStop} className="btn btn-compact">
           + Add Stop
         </button>
       </div>

@@ -24,10 +24,12 @@ Octarine is a Figma plugin for creating professional color palettes. This guide 
 
 ### Plugin Layout
 
-The plugin window has two main areas:
+The plugin window has four main areas:
 
-- **Left Panel** - Contains undo/redo buttons, background color picker, color groups, and the export button. This panel scrolls when content exceeds the available space.
-- **Right Panel** - Shows your color palettes with all the color swatches
+- **Top Bar** - Undo/redo buttons, background color picker with hex input, and export button
+- **Left Panel** - Color group strips (click to select), Lightness/Contrast method toggle, Defaults table with stop values, Add Stop input, and Add Group button
+- **Middle Panel** - Color palette rows showing each color's swatches (50-900) with hex codes and contrast ratios, plus Add Color button
+- **Right Panel** - Per-color settings for the selected color: base color, preserve identity toggle, HK/BB corrections, hue shift curve, and chroma curve
 
 You can resize the plugin window by dragging the bottom-right corner.
 
@@ -114,25 +116,33 @@ Creates stops based on accessibility contrast ratios (WCAG standards).
 
 ### Switching Between Methods
 
-Click the **"L"** or **"C"** column header in the Defaults Table to switch between Lightness and Contrast methods.
+Use the **Lightness / Contrast toggle** above the Defaults Table to switch between methods.
 
 ---
 
 ## The Defaults Table
 
-The Defaults Table (in the left panel) shows all your stop numbers and their default values.
+The Defaults Table (in the left panel) shows all your stop numbers and their default values for the currently selected method.
 
 ### Understanding the Table
 
-| Stop | L (Lightness) | C (Contrast) |
-|------|---------------|--------------|
-| 50   | 0.97          | 1.05         |
-| 100  | 0.94          | 1.15         |
-| ...  | ...           | ...          |
-| 900  | 0.20          | 12.0         |
+**Lightness mode:**
+| Stop | Lightness |
+|------|-----------|
+| 50   | 0.97      |
+| 100  | 0.94      |
+| ...  | ...       |
+| 900  | 0.20      |
 
-- The **active column** (L or C) determines how colors are generated
-- The **inactive column** appears grayed out
+**Contrast mode:**
+| Stop | Contrast |
+|------|----------|
+| 50   | 1.05     |
+| 100  | 1.15     |
+| ...  | ...      |
+| 900  | 12.0     |
+
+The table shows only the active method's column for a cleaner, focused view. Values for both methods are preserved when you switch.
 
 ### Editing Default Values
 
@@ -422,14 +432,26 @@ When using the Contrast Method, the plugin now achieves contrast ratios within Â
 
 ---
 
-## Exporting to Figma
+## Exporting Colors
 
-### Creating Figma Variables
+Click the **"export"** button in the top bar to open the Export Modal. You can export your palette in four different formats.
 
-Click the **"export"** button in the left panel to create Figma Variables from your palette.
+### Export Modal Layout
+
+The export modal has three columns:
+- **Left sidebar** - Choose your export format (Figma, CSS, Design Tokens, CSV)
+- **Middle column** - Format-specific options
+- **Right column** - Live preview of the output
+
+### Figma Variables
+
+Creates native Figma Variables from your palette.
+
+**Options:**
+- **Collection Name** - Name for the variable collection (default: "Octarine")
 
 **What happens:**
-1. A variable collection called "Octarine Colors" is created (or updated if it exists)
+1. A variable collection is created (or updated if it exists)
 2. Each color stop becomes a variable
 3. Variables are named using your color labels: `ColorName/StopNumber`
 
@@ -437,15 +459,68 @@ Click the **"export"** button in the left panel to create Figma Variables from y
 - Primary/50
 - Primary/100
 - Primary/500
-- Secondary/500
 - etc.
 
-### Using Your Variables
+Once exported, your colors appear in Figma's Variables panel. You can apply them to fills, strokes, and effects, or reference them in other variables.
 
-Once exported, your colors appear in Figma's Variables panel. You can:
-- Apply them to fills, strokes, and effects
-- Reference them in other variables
-- Use them across all your Figma files in the same library
+### CSS Custom Properties
+
+Exports your palette as CSS variables you can use in web projects.
+
+**Color Format Options:**
+| Format | Example |
+|--------|---------|
+| Hex | `#3B82F6` |
+| RGB | `rgb(59, 130, 246)` |
+| OKLCH | `oklch(62% 0.19 264)` |
+| HSL | `hsl(217, 91%, 60%)` |
+
+**Example output:**
+```css
+:root {
+  --primary-50: #EFF6FF;
+  --primary-100: #DBEAFE;
+  --primary-500: #3B82F6;
+  /* ... */
+}
+```
+
+Click **Copy** to copy to clipboard, or **Download** to save as a `.css` file.
+
+### Design Tokens (JSON)
+
+Exports in W3C Design Token format for use with design systems and token management tools.
+
+**Features:**
+- Standard W3C format for cross-tool compatibility
+- Includes OKLCH values with hex fallback
+- Nested structure by color name and stop
+
+**Example output:**
+```json
+{
+  "primary": {
+    "50": { "$value": "#EFF6FF", "$type": "color" },
+    "500": { "$value": "#3B82F6", "$type": "color" }
+  }
+}
+```
+
+Click **Copy** to copy to clipboard, or **Download** to save as a `.json` file.
+
+### CSV (Raw OKLCH Data)
+
+Exports raw color data in CSV format for spreadsheets or data analysis.
+
+**Columns:**
+- Color name
+- Stop number
+- L (Lightness)
+- C (Chroma)
+- H (Hue)
+- Hex value
+
+Click **Copy** to copy to clipboard, or **Download** to save as a `.csv` file.
 
 ---
 
