@@ -24,10 +24,26 @@ Figma plugins have **two execution contexts** that communicate via messages:
 
 **Key files:** `lib/` (color algorithms), `components/` (React UI) - each has its own CLAUDE.md
 
+## UI Layout
+
+```
+┌─────────────────────────────────────────────────────┐
+│ TopBar: [undo][redo] Background color     [export]  │
+├──────────────┬─────────────────┬────────────────────┤
+│ LeftPanel    │ Middle Panel    │ RightSettingsPanel │
+│ Group strips │ Color rows      │ Per-color settings │
+│ Defaults tbl │ + Add Color     │ (when selected)    │
+│ + Add Group  │                 │                    │
+└──────────────┴─────────────────┴────────────────────┘
+```
+
+Key files: `ui.tsx` (layout), `components/panels/` (TopBar, LeftPanel), `components/color-settings/RightSettingsPanel.tsx`
+
 ## Guidelines
 
 - Do not mention Claude in GitHub comments, commit messages, or PR descriptions
-- When adding/removing features: update `docs/FEATURES.md`
+- When adding/removing features OR changing UI layout: update `docs/FEATURES.md`
+- When changing component structure: update `components/CLAUDE.md`
 - When removing features: document in `docs/removed-features.md`
 - Keep `PLAN.md` updated when completing roadmap items
 
