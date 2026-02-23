@@ -2859,6 +2859,21 @@ input[type="range"]::-moz-range-thumb {
   width: 180px;
 }
 
+/* Expanded curve popover with sliders */
+.curve-popover.curve-popover-expanded {
+  width: 260px;
+}
+
+.curve-popover-header {
+  margin-bottom: var(--space-2);
+}
+
+.curve-popover-title {
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--figma-color-text);
+}
+
 .curve-popover-section {
   margin-bottom: var(--space-2);
 }
@@ -2914,13 +2929,60 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .curve-axis-label-light,
+.curve-axis-label-mid,
 .curve-axis-label-dark {
   font-size: var(--text-xs);
+}
+
+.curve-axis-label-mid {
+  flex: 1;
+  text-align: center;
 }
 
 /* Curve graph SVG */
 .curve-graph {
   border-radius: var(--radius-sm);
+}
+
+.curve-graph-interactive {
+  cursor: default;
+}
+
+/* Control point sliders section */
+.curve-control-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--figma-color-border);
+}
+
+.curve-slider-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.curve-slider-label {
+  font-size: var(--text-sm);
+  color: var(--figma-color-text-secondary);
+  width: 32px;
+  flex-shrink: 0;
+}
+
+.curve-slider-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.curve-slider-value {
+  font-size: var(--text-sm);
+  font-family: var(--font-mono);
+  color: var(--figma-color-text);
+  width: 40px;
+  text-align: right;
+  flex-shrink: 0;
 }
 
 /* Defaults table override indicator */

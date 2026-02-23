@@ -69,7 +69,15 @@ export function getHueShiftValues(curve: HueShiftCurve | undefined): { light: nu
     }
   }
 
-  return HUE_SHIFT_CURVE_PRESETS[curve.preset]
+  // Get preset values with fallback for legacy/invalid presets
+  const presetValues = HUE_SHIFT_CURVE_PRESETS[curve.preset]
+  if (!presetValues) {
+    // Fallback for legacy presets (e.g., "vivid" which was migrated to "dramatic")
+    console.warn(`Unknown hue shift preset "${curve.preset}", falling back to "none"`)
+    return { light: 0, dark: 0 }
+  }
+
+  return presetValues
 }
 
 /**

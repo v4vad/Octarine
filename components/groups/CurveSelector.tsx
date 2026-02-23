@@ -19,7 +19,7 @@ const PRESET_LABELS: Record<StopValueCurvePreset, string> = {
 
 /**
  * Compact row with curve icon + preset name + dropdown arrow
- * Click opens CurvePopover
+ * Click opens CurvePopover for full curve editing
  */
 export function CurveSelector({
   curve,
@@ -30,10 +30,11 @@ export function CurveSelector({
   const [isOpen, setIsOpen] = useState(false);
   const selectorRef = useRef<HTMLButtonElement>(null);
 
-  const handlePresetChange = (preset: StopValueCurvePreset) => {
-    // When changing preset, clear overrides and custom values
-    onCurveChange({ preset });
-    setIsOpen(false);
+  // Handle curve changes from popover (preset selection or slider adjustment)
+  const handleCurveChange = (newCurve: StopValueCurve) => {
+    onCurveChange(newCurve);
+    // Don't close popover on slider changes - only on preset selection
+    // The popover will close when clicking outside or pressing Escape
   };
 
   return (
@@ -54,7 +55,7 @@ export function CurveSelector({
           curve={curve}
           type={type}
           stops={stops}
-          onPresetChange={handlePresetChange}
+          onCurveChange={handleCurveChange}
           onClose={() => setIsOpen(false)}
           anchorRef={selectorRef}
         />

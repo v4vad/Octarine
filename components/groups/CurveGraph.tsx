@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import type { StopValueCurve, StopValueCurvePreset } from '../../lib/types';
+import React, { useMemo, useState, useCallback, useRef } from 'react';
+import type { StopValueCurve } from '../../lib/types';
 import {
   getCurveControlPoints,
   LIGHTNESS_CURVE_PRESETS,
@@ -14,10 +14,11 @@ interface CurveGraphProps {
   width?: number;
   height?: number;
   stops?: number[];  // Optional: highlight actual stop positions
+  onControlPointChange?: (point: 'light' | 'mid' | 'dark', value: number) => void;
 }
 
 /**
- * SVG-based visual curve graph
+ * SVG-based visual curve graph with draggable control points
  * X-axis: stop position (light → dark)
  * Y-axis: value (lightness 0-1 or contrast 1-21)
  */
@@ -26,8 +27,12 @@ export function CurveGraph({
   type,
   width = 120,
   height = 60,
-  stops = []
+  stops = [],
+  onControlPointChange
 }: CurveGraphProps) {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [draggingPoint, setDraggingPoint] = useState<'light' | 'mid' | 'dark' | null>(null);
+
   const presets = type === 'lightness' ? LIGHTNESS_CURVE_PRESETS : CONTRAST_CURVE_PRESETS;
   const { light, mid, dark } = getCurveControlPoints(curve, presets);
 
@@ -41,6 +46,16 @@ export function CurveGraph({
     }
   };
 
+  // Denormalize from 0-1 back to actual value
+  const denormalizeValue = (normalized: number) => {
+    if (type === 'lightness') {
+      return Math.max(0, Math.min(1, normalized));
+    } else {
+      // 0-1 → 1-21
+      return Math.max(1, Math.min(21, normalized * 20 + 1));
+    }
+  };
+
   // For lightness: higher value = higher on graph (lighter)
   // For contrast: higher value = higher on graph (more contrast)
   const lightNorm = normalizeValue(light);
@@ -48,7 +63,7 @@ export function CurveGraph({
   const darkNorm = normalizeValue(dark);
 
   // Padding for the graph
-  const padding = { top: 6, right: 6, bottom: 6, left: 6 };
+  const padding = { top: 8, right: 8, bottom: 8, left: 8 };
   const graphWidth = width - padding.left - padding.right;
   const graphHeight = height - padding.top - padding.bottom;
 
@@ -72,10 +87,15 @@ export function CurveGraph({
   }, [lightNorm, midNorm, darkNorm, graphWidth, graphHeight, padding]);
 
   // Control points for display
-  const controlPoints = [
-    { position: 0, value: lightNorm, label: 'L' },
-    { position: 0.5, value: midNorm, label: 'M' },
-    { position: 1, value: darkNorm, label: 'D' }
+  const controlPoints: Array<{
+    key: 'light' | 'mid' | 'dark';
+    position: number;
+    value: number;
+    label: string;
+  }> = [
+    { key: 'light', position: 0, value: lightNorm, label: 'L' },
+    { key: 'mid', position: 0.5, value: midNorm, label: 'M' },
+    { key: 'dark', position: 1, value: darkNorm, label: 'D' }
   ];
 
   // Override points (if any)
@@ -94,12 +114,65 @@ export function CurveGraph({
     });
   }, [curve.overrides, stops, type]);
 
+  // Handle mouse down on control point
+  const handleMouseDown = useCallback((
+    e: React.MouseEvent,
+    point: 'light' | 'mid' | 'dark'
+  ) => {
+    if (!onControlPointChange) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setDraggingPoint(point);
+  }, [onControlPointChange]);
+
+  // Handle mouse move while dragging
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!draggingPoint || !onControlPointChange || !svgRef.current) return;
+
+    const svg = svgRef.current;
+    const rect = svg.getBoundingClientRect();
+
+    // Calculate Y position relative to graph area
+    const y = e.clientY - rect.top;
+    const graphY = y - padding.top;
+
+    // Convert to normalized value (0-1, inverted because SVG Y is flipped)
+    let normalizedValue = 1 - (graphY / graphHeight);
+    normalizedValue = Math.max(0, Math.min(1, normalizedValue));
+
+    // Convert to actual value for this type
+    const actualValue = denormalizeValue(normalizedValue);
+
+    // Round to appropriate precision
+    const roundedValue = type === 'lightness'
+      ? Math.round(actualValue * 100) / 100
+      : Math.round(actualValue * 10) / 10;
+
+    onControlPointChange(draggingPoint, roundedValue);
+  }, [draggingPoint, onControlPointChange, graphHeight, padding.top, denormalizeValue, type]);
+
+  // Handle mouse up
+  const handleMouseUp = useCallback(() => {
+    setDraggingPoint(null);
+  }, []);
+
+  // Handle mouse leave
+  const handleMouseLeave = useCallback(() => {
+    setDraggingPoint(null);
+  }, []);
+
+  const isInteractive = !!onControlPointChange;
+
   return (
     <svg
+      ref={svgRef}
       width={width}
       height={height}
-      className="curve-graph"
+      className={`curve-graph ${isInteractive ? 'curve-graph-interactive' : ''}`}
       style={{ display: 'block' }}
+      onMouseMove={isInteractive ? handleMouseMove : undefined}
+      onMouseUp={isInteractive ? handleMouseUp : undefined}
+      onMouseLeave={isInteractive ? handleMouseLeave : undefined}
     >
       {/* Background */}
       <rect
@@ -133,19 +206,39 @@ export function CurveGraph({
       />
 
       {/* Control points */}
-      {controlPoints.map((point, i) => {
+      {controlPoints.map((point) => {
         const x = padding.left + point.position * graphWidth;
         const y = padding.top + (1 - point.value) * graphHeight;
+        const isDragging = draggingPoint === point.key;
+        const radius = isDragging ? 6 : (isInteractive ? 5 : 4);
+
         return (
-          <circle
-            key={i}
-            cx={x}
-            cy={y}
-            r={4}
-            fill="var(--figma-color-bg)"
-            stroke="var(--figma-color-text-brand)"
-            strokeWidth={2}
-          />
+          <g key={point.key}>
+            {/* Larger invisible hit area for easier dragging */}
+            {isInteractive && (
+              <circle
+                cx={x}
+                cy={y}
+                r={12}
+                fill="transparent"
+                style={{ cursor: 'grab' }}
+                onMouseDown={(e) => handleMouseDown(e, point.key)}
+              />
+            )}
+            {/* Visible control point */}
+            <circle
+              cx={x}
+              cy={y}
+              r={radius}
+              fill={isDragging ? 'var(--figma-color-text-brand)' : 'var(--figma-color-bg)'}
+              stroke="var(--figma-color-text-brand)"
+              strokeWidth={2}
+              style={{
+                cursor: isInteractive ? (isDragging ? 'grabbing' : 'grab') : 'default',
+                pointerEvents: isInteractive ? 'none' : 'auto'
+              }}
+            />
+          </g>
         );
       })}
 

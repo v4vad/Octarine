@@ -289,9 +289,9 @@ export function createDefaultGroupSettings(): GroupSettings {
     method: "lightness",
     defaultLightness: { ...DEFAULT_LIGHTNESS },
     defaultContrast: { ...DEFAULT_CONTRAST },
-    // Default curves use "linear" preset
-    lightnessCurve: { preset: "linear" },
-    contrastCurve: { preset: "linear" },
+    // Default curves use "custom" preset with exact per-stop values
+    lightnessCurve: { preset: "custom", overrides: { ...DEFAULT_LIGHTNESS } },
+    contrastCurve: { preset: "custom", overrides: { ...DEFAULT_CONTRAST } },
   }
 }
 
@@ -446,10 +446,10 @@ export function migrateState(persisted: { version: number; state: unknown }): Ap
           // If custom values exist, migrate to "custom" curve with overrides
           lightnessCurve: hasCustomLightness
             ? { preset: "custom" as StopValueCurvePreset, overrides: { ...group.settings.defaultLightness } }
-            : { preset: "linear" as StopValueCurvePreset },
+            : { preset: "custom" as StopValueCurvePreset, overrides: { ...DEFAULT_LIGHTNESS } },
           contrastCurve: hasCustomContrast
             ? { preset: "custom" as StopValueCurvePreset, overrides: { ...group.settings.defaultContrast } }
-            : { preset: "linear" as StopValueCurvePreset },
+            : { preset: "custom" as StopValueCurvePreset, overrides: { ...DEFAULT_CONTRAST } },
         }
       }
     })

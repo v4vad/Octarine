@@ -32,7 +32,7 @@ export function HueShiftCurveSection({
       const current = yellowShifts
         ? yellowShifts
         : (hueShiftCurve?.preset && hueShiftCurve.preset !== 'custom'
-            ? HUE_SHIFT_CURVE_PRESETS[hueShiftCurve.preset]
+            ? (HUE_SHIFT_CURVE_PRESETS[hueShiftCurve.preset] ?? { light: 0, dark: 0 })
             : { light: 0, dark: 0 });
 
       onChange({
@@ -48,7 +48,7 @@ export function HueShiftCurveSection({
   // Get current values for preview
   const values = preset === 'custom'
     ? { light: lightShift, dark: darkShift }
-    : (preset === 'none' ? { light: 0, dark: 0 } : HUE_SHIFT_CURVE_PRESETS[preset]);
+    : (preset === 'none' ? { light: 0, dark: 0 } : (HUE_SHIFT_CURVE_PRESETS[preset] ?? { light: 0, dark: 0 }));
 
   // Calculate preview colors
   const baseOklch = hexToOklch(baseColor);
