@@ -12,7 +12,14 @@
 import type { OKLCH } from "./color-conversions"
 import type { HueShiftCurve, ChromaCurve } from "./types"
 import { HUE_SHIFT_CURVE_PRESETS, CHROMA_CURVE_PRESETS } from "./types"
-import { smoothStep } from "./stop-value-curves"
+/**
+ * Smooth step function for interpolation (Hermite: 3x² - 2x³)
+ * Creates natural-looking transitions between control points
+ */
+function smoothStep(x: number): number {
+  x = Math.max(0, Math.min(1, x))
+  return x * x * (3 - 2 * x)
+}
 
 // ============================================
 // HUE SHIFT (Artistic hue variation across stops)

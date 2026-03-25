@@ -295,3 +295,40 @@ Saved palettes using "Vivid" are automatically migrated to "Dramatic" when loade
 If you need to differentiate presets with the same shift values:
 - Consider whether the difference is meaningful enough to warrant a separate preset
 - Automatic intelligent handling (like yellow-awareness) is usually better than manual mode selection
+
+---
+
+## Curve-Based Stop Values
+
+**Removed:** March 2026
+
+### What It Did
+
+Curve-based stop values replaced the simple editable defaults table with a system of mathematical curves and presets for generating lightness/contrast values across stops.
+
+**UI components:**
+- **CurveSelector** button showing the active preset name (e.g., "Linear")
+- **CurvePopover** with preset dropdown, visual graph, and 3 sliders (light/mid/dark)
+- **CurveGraph** SVG visualization with draggable control points
+- **Override system** where editing a table value switched to "Custom" mode and tracked per-stop overrides with reset buttons
+
+**Preset curves:** Linear, Lifted Darks, Compressed Range, Expanded Ends
+
+**Data model:** `StopValueCurve` type with preset name, optional custom control points (lightValue/midValue/darkValue), and per-stop overrides map. Stored as `lightnessCurve` and `contrastCurve` on `GroupSettings`.
+
+### Why It Was Removed
+
+The curve system added too many overlapping controls with a confusing mental model:
+
+1. **Three ways to set the same value** — preset curves, popover sliders, and direct table editing all controlled the same stop values, making it unclear which to use
+2. **Confusing override system** — editing a value in the table switched to "Custom" mode and created an override, with reset buttons appearing. The mental model of "curve generates values, but you can override individual ones" was hard to follow
+3. **Awkward popover UI** — opening a popover to adjust sliders and see a graph felt clunky for what should be a simple operation
+4. **Dual storage maintenance risk** — `defaultLightness`/`defaultContrast` (flat tables) had to be kept in sync with `lightnessCurve`/`contrastCurve`, flagged as "the biggest ongoing maintenance risk" in code review
+
+### Current Behavior
+
+Stop values are now directly editable in the Defaults Table — click a value, type a new one, done. New custom stops get values via linear interpolation from their nearest neighbors.
+
+### If Revisiting
+
+If preset distributions are needed in the future, implement them as simple "fill table with these values" buttons rather than a live curve system. This gives the same one-click convenience without the complexity of a persistent curve editor, override tracking, or dual storage.
