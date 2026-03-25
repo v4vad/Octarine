@@ -144,13 +144,46 @@ The Defaults Table (in the left panel) shows all your stop numbers and their def
 
 The table shows only the active method's column for a cleaner, focused view. Values for both methods are preserved when you switch.
 
+### Curve-Based Stop Values
+
+Instead of fixed lookup tables, stop values are now generated from mathematical curves. This means:
+
+- Values are interpolated smoothly between control points
+- Custom stops (like 150 or 350) automatically get appropriate values
+- You can switch between preset curves for different palette styles
+
+**Curve Selector:** Click the curve button (showing preset name like "Linear") to open the curve popover where you can:
+- Choose a different preset curve
+- See a visual graph of how values change across stops
+- View control points (light, mid, dark)
+
+**Preset Curves:**
+
+| Preset | Description | Best For |
+|--------|-------------|----------|
+| **Linear** | Balanced, even distribution | Default choice, works for most palettes |
+| **Lifted Darks** | More visible colors at dark stops | When you want dark colors to retain more visibility |
+| **Compressed Range** | Tighter range, less extreme values | Subtle palettes, avoiding very light/dark extremes |
+| **Expanded Ends** | Maximum range from light to dark | High contrast palettes, dramatic effect |
+
+The curve selector changes based on the active method:
+- In **Lightness mode**: curves control lightness values (0-1)
+- In **Contrast mode**: curves control contrast targets (1-21)
+
 ### Editing Default Values
 
-Click on any value in the table to edit it. Changes apply to all colors immediately.
+Click on any value in the table to edit it. When you edit a value:
+
+1. The curve automatically switches to **"Custom"** mode
+2. Your edited value becomes an override for that specific stop
+3. Other stops continue using the curve's interpolated values
+4. An **×** button appears next to overridden stops to reset them
+
+**Resetting Overrides:** Click the × button next to any overridden stop number to reset it back to the curve-calculated value. If you reset all overrides and select a preset, the curve returns to that preset's standard values.
 
 ### Adding Custom Stops
 
-Click **"Add Stop"** to create a new stop number. The plugin automatically calculates appropriate default values based on surrounding stops.
+Click **"Add Stop"** to create a new stop number. The plugin automatically calculates appropriate default values based on the curve—no manual interpolation needed.
 
 ---
 

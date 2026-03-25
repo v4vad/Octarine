@@ -47,16 +47,6 @@ Key files: `ui.tsx` (layout), `components/panels/` (TopBar, LeftPanel), `compone
 - When removing features: document in `docs/removed-features.md`
 - Keep `PLAN.md` updated when completing roadmap items
 
-## Agent Delegation
-
-Use subagents for cost-effective model selection:
-
-| Task Type | Agent | Model | Examples |
-|-----------|-------|-------|----------|
-| Quick commands | `quick-executor` | Haiku | `git status`, `npm run build/watch/validate/typecheck` |
-| Coding work | `coder` | Sonnet | Writing TypeScript/React, color algorithm work, component changes |
-| Deep thinking | `architect` | Opus | Architecture decisions, complex color science, refactoring |
-
 ## Documentation
 
 | Document | Purpose |

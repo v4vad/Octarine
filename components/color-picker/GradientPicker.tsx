@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useCallback, useEffect } from 'react';
 import { oklchToHex, hexToRgb } from '../../lib/color-utils';
 
 interface GradientPickerProps {
@@ -11,7 +11,7 @@ interface GradientPickerProps {
 
 export function GradientPicker({ hue, saturation, brightness, mode, onChange }: GradientPickerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const isDraggingRef = useRef(false);
 
   // Draw the gradient
   useEffect(() => {
@@ -75,7 +75,7 @@ export function GradientPicker({ hue, saturation, brightness, mode, onChange }: 
     ctx.stroke();
   }, [hue, saturation, brightness, mode]);
 
-  const handleMouse = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleMouse = useCallback((e: MouseEvent | React.MouseEvent) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
@@ -87,6 +87,26 @@ export function GradientPicker({ hue, saturation, brightness, mode, onChange }: 
     } else {
       onChange(x * 0.4, 1 - y);
     }
+  }, [mode, onChange]);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDraggingRef.current) handleMouse(e);
+    };
+    const handleMouseUp = () => {
+      isDraggingRef.current = false;
+    };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [handleMouse]);
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    isDraggingRef.current = true;
+    handleMouse(e);
   };
 
   return (
@@ -95,10 +115,7 @@ export function GradientPicker({ hue, saturation, brightness, mode, onChange }: 
       width={200}
       height={200}
       className="gradient-canvas"
-      onMouseDown={(e) => { setIsDragging(true); handleMouse(e); }}
-      onMouseMove={(e) => { if (isDragging) handleMouse(e); }}
-      onMouseUp={() => setIsDragging(false)}
-      onMouseLeave={() => setIsDragging(false)}
+      onMouseDown={handleMouseDown}
     />
   );
 }

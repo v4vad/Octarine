@@ -51,12 +51,11 @@ async function getOrCreateColorVariable(
 }
 
 // Main function: Create Figma variables from color data
-// All colors go into a single "Octarine" collection
 export async function createFigmaVariables(
-  colorsWithSettings: Array<{ color: Color; settings: EffectiveSettings }>
+  colorsWithSettings: Array<{ color: Color; settings: EffectiveSettings }>,
+  collectionName: string = 'Octarine'
 ): Promise<{ created: number; updated: number }> {
-  // Always use "Octarine" as the single collection name
-  const collection = await getOrCreateCollection('Octarine');
+  const collection = await getOrCreateCollection(collectionName);
   const modeId = collection.modes[0].modeId;  // Use the default mode
 
   let created = 0;

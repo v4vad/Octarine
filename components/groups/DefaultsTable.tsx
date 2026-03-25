@@ -1,10 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { GlobalSettings } from '../../lib/types';
+import type { GroupSettings, StopValueCurve, StopValueCurvePreset } from '../../lib/types';
 import { MethodToggle, RefBasedNumericInput } from '../primitives';
+import { CurveSelector } from './CurveSelector';
+import { getLightnessFromCurve, getContrastFromCurve } from '../../lib/stop-value-curves';
 
 interface DefaultsTableProps {
-  settings: GlobalSettings;
-  onUpdate: (settings: GlobalSettings) => void;
+  settings: GroupSettings;
+  onUpdate: (settings: GroupSettings) => void;
 }
 
 export function DefaultsTable({ settings, onUpdate }: DefaultsTableProps) {
@@ -17,42 +19,106 @@ export function DefaultsTable({ settings, onUpdate }: DefaultsTableProps) {
     [settings.defaultLightness]
   );
 
+  const isLightnessActive = settings.method === 'lightness';
+
+  // Get the active curve based on method
+  const activeCurve: StopValueCurve = isLightnessActive
+    ? (settings.lightnessCurve ?? { preset: 'linear' })
+    : (settings.contrastCurve ?? { preset: 'linear' });
+
+  // Compute displayed values from curve
+  const displayedValues = useMemo(() => {
+    const values: Record<number, number> = {};
+    for (const stopNum of stopNumbers) {
+      if (isLightnessActive) {
+        values[stopNum] = getLightnessFromCurve(stopNum, stopNumbers, activeCurve);
+      } else {
+        values[stopNum] = getContrastFromCurve(stopNum, stopNumbers, activeCurve);
+      }
+    }
+    return values;
+  }, [stopNumbers, activeCurve, isLightnessActive]);
+
+  // Check if a stop has an override in the curve
+  const hasOverride = (stopNum: number): boolean => {
+    return activeCurve.overrides?.[stopNum] !== undefined;
+  };
+
+  const handleCurveChange = (newCurve: StopValueCurve) => {
+    if (isLightnessActive) {
+      onUpdate({
+        ...settings,
+        lightnessCurve: newCurve,
+        // Update legacy lookup table to stay in sync
+        defaultLightness: computeLegacyValues(stopNumbers, newCurve, 'lightness'),
+      });
+    } else {
+      onUpdate({
+        ...settings,
+        contrastCurve: newCurve,
+        // Update legacy lookup table to stay in sync
+        defaultContrast: computeLegacyValues(stopNumbers, newCurve, 'contrast'),
+      });
+    }
+  };
+
+  const handleValueEdit = (stopNum: number, newValue: number) => {
+    // When user edits a value, add it as an override and switch to "custom" preset
+    const newOverrides = { ...activeCurve.overrides, [stopNum]: newValue };
+
+    const newCurve: StopValueCurve = {
+      preset: 'custom' as StopValueCurvePreset,
+      // Preserve existing custom control points if any
+      lightValue: activeCurve.lightValue,
+      midValue: activeCurve.midValue,
+      darkValue: activeCurve.darkValue,
+      overrides: newOverrides,
+    };
+
+    handleCurveChange(newCurve);
+  };
+
+  const handleResetOverride = (stopNum: number) => {
+    if (!activeCurve.overrides?.[stopNum]) return;
+
+    const newOverrides = { ...activeCurve.overrides };
+    delete newOverrides[stopNum];
+
+    // If no more overrides and preset is custom, check if we can stay custom
+    const hasRemainingOverrides = Object.keys(newOverrides).length > 0;
+
+    const newCurve: StopValueCurve = {
+      ...activeCurve,
+      overrides: hasRemainingOverrides ? newOverrides : undefined,
+      // Keep custom preset if there are still overrides or custom values
+      preset: hasRemainingOverrides || activeCurve.lightValue !== undefined
+        ? 'custom'
+        : 'linear',
+    };
+
+    handleCurveChange(newCurve);
+  };
+
   const handleAddStop = () => {
     const num = parseInt(newStopNumber, 10);
     if (isNaN(num) || num <= 0) return;
     if (settings.defaultLightness[num] !== undefined) return;
 
-    // Calculate interpolated values based on neighbors
-    const sorted = [...stopNumbers, num].sort((a, b) => a - b);
-    const idx = sorted.indexOf(num);
+    // New stops just get added to the lookup tables
+    // The curve will automatically interpolate values for them
+    const newStops = [...stopNumbers, num].sort((a, b) => a - b);
 
-    let newL = 0.5;
-    let newC = 4.5;
-
-    if (idx > 0 && idx < sorted.length - 1) {
-      // Interpolate between neighbors
-      const prevStop = sorted[idx - 1];
-      const nextStop = sorted[idx + 1];
-      const ratio = (num - prevStop) / (nextStop - prevStop);
-      newL = settings.defaultLightness[prevStop] + ratio * (settings.defaultLightness[nextStop] - settings.defaultLightness[prevStop]);
-      newC = settings.defaultContrast[prevStop] + ratio * (settings.defaultContrast[nextStop] - settings.defaultContrast[prevStop]);
-    } else if (idx === 0 && sorted.length > 1) {
-      newL = settings.defaultLightness[sorted[1]] + 0.05;
-      newC = settings.defaultContrast[sorted[1]] - 0.5;
-    } else if (idx === sorted.length - 1 && sorted.length > 1) {
-      newL = settings.defaultLightness[sorted[sorted.length - 2]] - 0.05;
-      newC = settings.defaultContrast[sorted[sorted.length - 2]] + 1;
-    }
+    // Compute interpolated values from curve for the legacy tables
+    const newLightness = computeLegacyValues(newStops, settings.lightnessCurve ?? { preset: 'linear' }, 'lightness');
+    const newContrast = computeLegacyValues(newStops, settings.contrastCurve ?? { preset: 'linear' }, 'contrast');
 
     onUpdate({
       ...settings,
-      defaultLightness: { ...settings.defaultLightness, [num]: Math.max(0, Math.min(1, newL)) },
-      defaultContrast: { ...settings.defaultContrast, [num]: Math.max(1, Math.min(21, newC)) },
+      defaultLightness: newLightness,
+      defaultContrast: newContrast,
     });
     setNewStopNumber('');
   };
-
-  const isLightnessActive = settings.method === 'lightness';
 
   return (
     <div className="defaults-section">
@@ -60,6 +126,14 @@ export function DefaultsTable({ settings, onUpdate }: DefaultsTableProps) {
       <MethodToggle
         method={settings.method}
         onChange={(method) => onUpdate({ ...settings, method })}
+      />
+
+      {/* Curve selector */}
+      <CurveSelector
+        curve={activeCurve}
+        type={isLightnessActive ? 'lightness' : 'contrast'}
+        stops={stopNumbers}
+        onCurveChange={handleCurveChange}
       />
 
       {/* Table with single active column */}
@@ -74,31 +148,32 @@ export function DefaultsTable({ settings, onUpdate }: DefaultsTableProps) {
         </thead>
         <tbody>
           {stopNumbers.map((num) => (
-            <tr key={num}>
-              <td className="stop-col">{num}</td>
+            <tr key={num} className={hasOverride(num) ? 'has-override' : ''}>
+              <td className="stop-col">
+                {num}
+                {hasOverride(num) && (
+                  <button
+                    className="stop-override-reset"
+                    onClick={() => handleResetOverride(num)}
+                    title="Reset to curve value"
+                  >
+                    ×
+                  </button>
+                )}
+              </td>
               <td className="value-col">
                 {isLightnessActive ? (
                   <RefBasedNumericInput
-                    value={settings.defaultLightness[num] ?? 0.5}
-                    onChange={(val) => {
-                      onUpdate({
-                        ...settings,
-                        defaultLightness: { ...settings.defaultLightness, [num]: val },
-                      });
-                    }}
+                    value={displayedValues[num] ?? 0.5}
+                    onChange={(val) => handleValueEdit(num, val)}
                     min={0}
                     max={1}
                     decimals={2}
                   />
                 ) : (
                   <RefBasedNumericInput
-                    value={settings.defaultContrast[num] ?? 1}
-                    onChange={(val) => {
-                      onUpdate({
-                        ...settings,
-                        defaultContrast: { ...settings.defaultContrast, [num]: val },
-                      });
-                    }}
+                    value={displayedValues[num] ?? 4.5}
+                    onChange={(val) => handleValueEdit(num, val)}
                     min={1}
                     max={21}
                     decimals={2}
@@ -127,4 +202,24 @@ export function DefaultsTable({ settings, onUpdate }: DefaultsTableProps) {
       </div>
     </div>
   );
+}
+
+/**
+ * Compute legacy lookup table values from curve
+ * This keeps the old defaultLightness/defaultContrast in sync for backward compatibility
+ */
+function computeLegacyValues(
+  stops: number[],
+  curve: StopValueCurve,
+  type: 'lightness' | 'contrast'
+): Record<number, number> {
+  const values: Record<number, number> = {};
+  for (const stopNum of stops) {
+    if (type === 'lightness') {
+      values[stopNum] = getLightnessFromCurve(stopNum, stops, curve);
+    } else {
+      values[stopNum] = getContrastFromCurve(stopNum, stops, curve);
+    }
+  }
+  return values;
 }

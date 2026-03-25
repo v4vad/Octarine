@@ -2,7 +2,17 @@
 // This file runs in Figma's sandbox and can access the Figma API
 
 import { createFigmaVariables } from './lib/figma-utils';
-import { Color, EffectiveSettings, ColorGroup, GlobalConfig, STORAGE_KEY, STORAGE_VERSION } from './lib/types';
+import { Color, EffectiveSettings, ColorGroup, GlobalConfig, AppState, STORAGE_KEY, STORAGE_VERSION } from './lib/types';
+
+// Discriminated union for all messages the UI can send to the plugin
+type PluginMessage =
+  | { type: 'close' }
+  | { type: 'resize'; width: number; height: number }
+  | { type: 'notify'; message: string }
+  | { type: 'create-variables'; groups: ColorGroup[]; globalConfig?: GlobalConfig; collectionName?: string }
+  | { type: 'save-state'; state: AppState }
+  | { type: 'request-state' }
+  | { type: 'get-selection-color' }
 
 // Show the plugin UI
 // The size can be adjusted later based on UI needs
@@ -17,7 +27,7 @@ figma.showUI(__html__, {
 // when it's ready (after React mounts), avoiding race conditions.
 
 // Listen for messages from the UI
-figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
+figma.ui.onmessage = async (msg: PluginMessage) => {
   // Handle different message types
   switch (msg.type) {
     case 'close':
@@ -25,25 +35,19 @@ figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
       break;
 
     case 'resize':
-      // Resize the plugin window (UI can request this)
-      figma.ui.resize(msg.width as number, msg.height as number);
+      figma.ui.resize(msg.width, msg.height);
       break;
 
     case 'notify':
-      // Show a notification in Figma
-      figma.notify(msg.message as string);
+      figma.notify(msg.message);
       break;
 
     case 'create-variables':
       // Create Figma variables from the color data
       // All colors from all groups go into a single "Octarine" collection
       try {
-        const groups = msg.groups as ColorGroup[];
-        const globalConfig = msg.globalConfig as GlobalConfig | undefined;
+        const { groups, globalConfig, collectionName } = msg;
         const backgroundColor = globalConfig?.backgroundColor ?? '#ffffff';
-
-        // Debug: verify all groups are received
-        console.log('Exporting groups:', groups.length, groups.map(g => `${g.name} (${g.colors.length} colors)`));
 
         // Flatten all colors with their group's settings into a single array
         // Merge global backgroundColor into each group's settings
@@ -60,7 +64,7 @@ figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
         }
 
         // Create all variables in a single collection
-        const result = await createFigmaVariables(allColorsWithSettings);
+        const result = await createFigmaVariables(allColorsWithSettings, collectionName);
 
         // Show success notification
         const message = result.created > 0
@@ -134,8 +138,6 @@ figma.ui.onmessage = async (msg: { type: string; [key: string]: unknown }) => {
       }
       break;
 
-    default:
-      console.log('Unknown message type:', msg.type);
   }
 };
 
