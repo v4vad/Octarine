@@ -39,7 +39,6 @@
 - [ ] Hue rotation direction (short path vs long path around color wheel)
 - [ ] Multi-anchor palettes (define 2-4 anchor colors, interpolate between them)
 - [ ] Dark stop protection toggle (like `preserveColorIdentity` but for dark stops - automatically lift lightness when chroma would drop below perceptible threshold)
-- [ ] Lightness curve presets (linear, lifted darks, compressed range, custom)
 
 ---
 
