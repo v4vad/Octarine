@@ -4,6 +4,7 @@ import {
   ChromaCurvePreset,
   CHROMA_CURVE_PRESETS
 } from '../../lib/types';
+import { hexToOklch, oklchToHex } from '../../lib/color-utils';
 import { Slider } from '../primitives';
 
 interface ChromaCurveSectionProps {
@@ -60,23 +61,23 @@ export function ChromaCurveSection({
         <option value="custom">Custom</option>
       </select>
 
-      {/* Curve Preview - uses selected color */}
+      {/* Curve Preview - uses actual chroma-scaled colors */}
       <div className="chroma-curve-preview">
-        <div
-          className="chroma-bar"
-          style={{ background: baseColor, opacity: values.light / 100 }}
-          title={`Light: ${values.light}%`}
-        />
-        <div
-          className="chroma-bar"
-          style={{ background: baseColor, opacity: values.mid / 100 }}
-          title={`Mid: ${values.mid}%`}
-        />
-        <div
-          className="chroma-bar"
-          style={{ background: baseColor, opacity: values.dark / 100 }}
-          title={`Dark: ${values.dark}%`}
-        />
+        {(['light', 'mid', 'dark'] as const).map((level) => {
+          const oklch = hexToOklch(baseColor);
+          const scaledHex = oklchToHex({
+            ...oklch,
+            c: oklch.c * (values[level] / 100)
+          });
+          return (
+            <div
+              key={level}
+              className="chroma-bar"
+              style={{ background: scaledHex }}
+              title={`${level.charAt(0).toUpperCase() + level.slice(1)}: ${values[level]}%`}
+            />
+          );
+        })}
       </div>
 
       {/* Custom Sliders */}

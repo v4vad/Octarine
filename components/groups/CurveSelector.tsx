@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import type { StopValueCurve, StopValueCurvePreset } from '../../lib/types';
+import type { StopValueCurve } from '../../lib/types';
+import { STOP_VALUE_PRESET_LABELS } from '../../lib/types';
 import { CurvePopover } from './CurvePopover';
 
 interface CurveSelectorProps {
@@ -8,14 +9,6 @@ interface CurveSelectorProps {
   stops: number[];
   onCurveChange: (curve: StopValueCurve) => void;
 }
-
-const PRESET_LABELS: Record<StopValueCurvePreset, string> = {
-  'linear': 'Linear',
-  'lifted-darks': 'Lifted Darks',
-  'compressed-range': 'Compressed',
-  'expanded-ends': 'Expanded',
-  'custom': 'Custom'
-};
 
 /**
  * Compact row with curve icon + preset name + dropdown arrow
@@ -46,7 +39,7 @@ export function CurveSelector({
         type="button"
       >
         <span className="curve-selector-icon">📈</span>
-        <span className="curve-selector-label">{PRESET_LABELS[curve.preset]}</span>
+        <span className="curve-selector-label">{STOP_VALUE_PRESET_LABELS[curve.preset]}</span>
         <span className="curve-selector-arrow">▾</span>
       </button>
 

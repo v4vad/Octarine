@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import type { StopValueCurve, StopValueCurvePreset } from '../../lib/types';
-import { LIGHTNESS_CURVE_PRESETS, CONTRAST_CURVE_PRESETS } from '../../lib/types';
+import { LIGHTNESS_CURVE_PRESETS, CONTRAST_CURVE_PRESETS, STOP_VALUE_PRESET_LABELS } from '../../lib/types';
+import { getCurveControlPoints } from '../../lib/stop-value-curves';
 import { CurveGraph } from './CurveGraph';
 
 interface CurvePopoverProps {
@@ -12,42 +13,12 @@ interface CurvePopoverProps {
   anchorRef: React.RefObject<HTMLElement>;
 }
 
-const PRESET_LABELS: Record<StopValueCurvePreset, string> = {
-  'linear': 'Linear',
-  'lifted-darks': 'Lifted Darks',
-  'compressed-range': 'Compressed Range',
-  'expanded-ends': 'Expanded Ends',
-  'custom': 'Custom'
-};
-
 const PRESET_DESCRIPTIONS: Record<Exclude<StopValueCurvePreset, 'custom'>, string> = {
   'linear': 'Balanced distribution across all stops',
   'lifted-darks': 'More visible colors at dark stops',
   'compressed-range': 'Tighter range, less extreme values',
   'expanded-ends': 'Maximum range from light to dark'
 };
-
-/**
- * Get the current control point values from a curve
- * Returns the effective values whether from a preset or custom
- */
-function getControlPointValues(
-  curve: StopValueCurve,
-  type: 'lightness' | 'contrast'
-): { light: number; mid: number; dark: number } {
-  const presets = type === 'lightness' ? LIGHTNESS_CURVE_PRESETS : CONTRAST_CURVE_PRESETS;
-
-  if (curve.preset === 'custom') {
-    const defaults = presets['linear'];
-    return {
-      light: curve.lightValue ?? defaults.light,
-      mid: curve.midValue ?? defaults.mid,
-      dark: curve.darkValue ?? defaults.dark,
-    };
-  }
-
-  return presets[curve.preset];
-}
 
 /**
  * Popover containing curve preset dropdown, visual graph, and control point sliders
@@ -61,9 +32,12 @@ export function CurvePopover({
   anchorRef
 }: CurvePopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   // Get current control point values
-  const controlPoints = getControlPointValues(curve, type);
+  const presets = type === 'lightness' ? LIGHTNESS_CURVE_PRESETS : CONTRAST_CURVE_PRESETS;
+  const controlPoints = getCurveControlPoints(curve, presets);
 
   // Get min/max for sliders based on type
   const sliderConfig = type === 'lightness'
@@ -91,22 +65,22 @@ export function CurvePopover({
         anchorRef.current &&
         !anchorRef.current.contains(e.target as Node)
       ) {
-        onClose();
+        onCloseRef.current();
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [onClose, anchorRef]);
+  }, [anchorRef]);
 
   // Close on Escape
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') onCloseRef.current();
     };
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [onClose]);
+  }, []);
 
   const presetOptions: StopValueCurvePreset[] = [
     'linear',
@@ -158,7 +132,7 @@ export function CurvePopover({
         >
           {presetOptions.map(preset => (
             <option key={preset} value={preset}>
-              {PRESET_LABELS[preset]}
+              {STOP_VALUE_PRESET_LABELS[preset]}
             </option>
           ))}
           {curve.preset === 'custom' && (

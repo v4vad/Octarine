@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useRef } from 'react';
+import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import type { StopValueCurve } from '../../lib/types';
 import {
   getCurveControlPoints,
@@ -7,6 +7,9 @@ import {
   normalizeStopPosition,
   interpolateCurveValue
 } from '../../lib/stop-value-curves';
+
+// Constant padding (hoisted to module scope for stable useMemo deps)
+const PADDING = 8;
 
 interface CurveGraphProps {
   curve: StopValueCurve;
@@ -31,7 +34,15 @@ export function CurveGraph({
   onControlPointChange
 }: CurveGraphProps) {
   const svgRef = useRef<SVGSVGElement>(null);
+  const rafRef = useRef<number | null>(null);
   const [draggingPoint, setDraggingPoint] = useState<'light' | 'mid' | 'dark' | null>(null);
+
+  // Cancel any pending RAF on unmount to avoid calling setState on unmounted component
+  useEffect(() => {
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   const presets = type === 'lightness' ? LIGHTNESS_CURVE_PRESETS : CONTRAST_CURVE_PRESETS;
   const { light, mid, dark } = getCurveControlPoints(curve, presets);
@@ -47,14 +58,14 @@ export function CurveGraph({
   };
 
   // Denormalize from 0-1 back to actual value
-  const denormalizeValue = (normalized: number) => {
+  const denormalizeValue = useCallback((normalized: number) => {
     if (type === 'lightness') {
       return Math.max(0, Math.min(1, normalized));
     } else {
       // 0-1 → 1-21
       return Math.max(1, Math.min(21, normalized * 20 + 1));
     }
-  };
+  }, [type]);
 
   // For lightness: higher value = higher on graph (lighter)
   // For contrast: higher value = higher on graph (more contrast)
@@ -62,10 +73,9 @@ export function CurveGraph({
   const midNorm = normalizeValue(mid);
   const darkNorm = normalizeValue(dark);
 
-  // Padding for the graph
-  const padding = { top: 8, right: 8, bottom: 8, left: 8 };
-  const graphWidth = width - padding.left - padding.right;
-  const graphHeight = height - padding.top - padding.bottom;
+  // Padding for the graph (derived from stable props)
+  const graphWidth = width - PADDING * 2;
+  const graphHeight = height - PADDING * 2;
 
   // Generate path points for smooth curve
   const pathPoints = useMemo(() => {
@@ -76,15 +86,15 @@ export function CurveGraph({
       const position = i / steps;
       const value = interpolateCurveValue(position, lightNorm, midNorm, darkNorm);
 
-      const x = padding.left + position * graphWidth;
+      const x = PADDING + position * graphWidth;
       // Flip Y: SVG has 0 at top, but we want higher values at top
-      const y = padding.top + (1 - value) * graphHeight;
+      const y = PADDING + (1 - value) * graphHeight;
 
       points.push(`${x},${y}`);
     }
 
     return `M ${points.join(' L ')}`;
-  }, [lightNorm, midNorm, darkNorm, graphWidth, graphHeight, padding]);
+  }, [lightNorm, midNorm, darkNorm, graphWidth, graphHeight]);
 
   // Control points for display
   const controlPoints: Array<{
@@ -125,31 +135,34 @@ export function CurveGraph({
     setDraggingPoint(point);
   }, [onControlPointChange]);
 
-  // Handle mouse move while dragging
+  // Handle mouse move while dragging (throttled to one update per animation frame)
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!draggingPoint || !onControlPointChange || !svgRef.current) return;
 
-    const svg = svgRef.current;
-    const rect = svg.getBoundingClientRect();
+    // Throttle with requestAnimationFrame to avoid excessive re-renders
+    if (rafRef.current !== null) return;
 
-    // Calculate Y position relative to graph area
-    const y = e.clientY - rect.top;
-    const graphY = y - padding.top;
+    const clientY = e.clientY;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      const svg = svgRef.current;
+      if (!svg) return;
 
-    // Convert to normalized value (0-1, inverted because SVG Y is flipped)
-    let normalizedValue = 1 - (graphY / graphHeight);
-    normalizedValue = Math.max(0, Math.min(1, normalizedValue));
+      const rect = svg.getBoundingClientRect();
+      const y = clientY - rect.top;
+      const graphY = y - PADDING;
 
-    // Convert to actual value for this type
-    const actualValue = denormalizeValue(normalizedValue);
+      let normalizedValue = 1 - (graphY / graphHeight);
+      normalizedValue = Math.max(0, Math.min(1, normalizedValue));
 
-    // Round to appropriate precision
-    const roundedValue = type === 'lightness'
-      ? Math.round(actualValue * 100) / 100
-      : Math.round(actualValue * 10) / 10;
+      const actualValue = denormalizeValue(normalizedValue);
+      const roundedValue = type === 'lightness'
+        ? Math.round(actualValue * 100) / 100
+        : Math.round(actualValue * 10) / 10;
 
-    onControlPointChange(draggingPoint, roundedValue);
-  }, [draggingPoint, onControlPointChange, graphHeight, padding.top, denormalizeValue, type]);
+      onControlPointChange(draggingPoint, roundedValue);
+    });
+  }, [draggingPoint, onControlPointChange, graphHeight, denormalizeValue, type]);
 
   // Handle mouse up
   const handleMouseUp = useCallback(() => {
@@ -176,8 +189,8 @@ export function CurveGraph({
     >
       {/* Background */}
       <rect
-        x={padding.left}
-        y={padding.top}
+        x={PADDING}
+        y={PADDING}
         width={graphWidth}
         height={graphHeight}
         fill="var(--figma-color-bg-secondary)"
@@ -186,10 +199,10 @@ export function CurveGraph({
 
       {/* Grid lines (subtle) */}
       <line
-        x1={padding.left}
-        y1={padding.top + graphHeight / 2}
-        x2={padding.left + graphWidth}
-        y2={padding.top + graphHeight / 2}
+        x1={PADDING}
+        y1={PADDING + graphHeight / 2}
+        x2={PADDING + graphWidth}
+        y2={PADDING + graphHeight / 2}
         stroke="var(--figma-color-border)"
         strokeWidth={0.5}
         strokeDasharray="2,2"
@@ -207,8 +220,8 @@ export function CurveGraph({
 
       {/* Control points */}
       {controlPoints.map((point) => {
-        const x = padding.left + point.position * graphWidth;
-        const y = padding.top + (1 - point.value) * graphHeight;
+        const x = PADDING + point.position * graphWidth;
+        const y = PADDING + (1 - point.value) * graphHeight;
         const isDragging = draggingPoint === point.key;
         const radius = isDragging ? 6 : (isInteractive ? 5 : 4);
 
@@ -244,8 +257,8 @@ export function CurveGraph({
 
       {/* Override points (different color) */}
       {overridePoints.map((point, i) => {
-        const x = padding.left + point.position * graphWidth;
-        const y = padding.top + (1 - point.value) * graphHeight;
+        const x = PADDING + point.position * graphWidth;
+        const y = PADDING + (1 - point.value) * graphHeight;
         return (
           <circle
             key={`override-${i}`}

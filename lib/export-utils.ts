@@ -190,6 +190,22 @@ export function generateJSON(stops: ExportableStop[]): string {
 }
 
 /**
+ * Escape a CSV field to prevent formula injection in spreadsheets.
+ * Fields starting with =, +, -, @, \t, or \r are prefixed with a single quote
+ * and wrapped in double quotes. Fields containing commas/quotes/newlines are
+ * also properly quoted.
+ */
+function escapeCSVField(field: string): string {
+  if (/^[=+\-@\t\r]/.test(field)) {
+    return `"'${field.replace(/"/g, '""')}"`
+  }
+  if (field.includes(',') || field.includes('"') || field.includes('\n')) {
+    return `"${field.replace(/"/g, '""')}"`
+  }
+  return field
+}
+
+/**
  * Generate OKLCH Raw values as CSV
  * Format: Color,Stop,L,C,H
  */
@@ -198,7 +214,7 @@ export function generateOKLCH(stops: ExportableStop[]): string {
 
   for (const stop of stops) {
     const { l, c, h } = stop.oklch
-    lines.push(`${stop.colorLabel},${stop.stopNumber},${l.toFixed(4)},${c.toFixed(4)},${h.toFixed(1)}`)
+    lines.push(`${escapeCSVField(stop.colorLabel)},${stop.stopNumber},${l.toFixed(4)},${c.toFixed(4)},${h.toFixed(1)}`)
   }
 
   return lines.join("\n")

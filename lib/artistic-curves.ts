@@ -12,6 +12,7 @@
 import type { OKLCH } from "./color-conversions"
 import type { HueShiftCurve, ChromaCurve } from "./types"
 import { HUE_SHIFT_CURVE_PRESETS, CHROMA_CURVE_PRESETS } from "./types"
+import { smoothStep } from "./stop-value-curves"
 
 // ============================================
 // HUE SHIFT (Artistic hue variation across stops)
@@ -150,14 +151,6 @@ export function applyHueShift(
 // ============================================
 // CHROMA CURVES (Saturation distribution across lightness)
 // ============================================
-
-/**
- * Smooth step function for interpolation
- * Creates smooth transitions between control points
- */
-function smoothStep(t: number): number {
-  return t * t * (3 - 2 * t)
-}
 
 /**
  * Interpolate chroma curve based on lightness

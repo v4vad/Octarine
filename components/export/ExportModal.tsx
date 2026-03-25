@@ -82,23 +82,8 @@ export function ExportModal({
     return fullContent
   }, [exportFormat, cssColorFormat, exportData])
 
-  // Generate full content for copy/download
-  const generateFullContent = (): string => {
-    switch (exportFormat) {
-      case "css":
-        return generateCSS(exportData, cssColorFormat)
-      case "json":
-        return generateJSON(exportData)
-      case "oklch-raw":
-        return generateOKLCH(exportData)
-      default:
-        return ""
-    }
-  }
-
   const handleCopy = async () => {
-    const content = generateFullContent()
-    const success = await copyToClipboard(content)
+    const success = await copyToClipboard(previewContent)
     if (success) {
       setCopySuccess(true)
       setTimeout(() => setCopySuccess(false), 2000)
@@ -106,15 +91,18 @@ export function ExportModal({
   }
 
   const handleDownload = () => {
-    const content = generateFullContent()
-    const ext = getFileExtension(exportFormat as "css" | "json" | "oklch-raw")
-    const mime = getMimeType(exportFormat as "css" | "json" | "oklch-raw")
+    if (exportFormat === "figma") return
+    const ext = getFileExtension(exportFormat)
+    const mime = getMimeType(exportFormat)
     const filename = `${collectionName.toLowerCase().replace(/\s+/g, "-")}-colors.${ext}`
-    downloadFile(content, filename, mime)
+    downloadFile(previewContent, filename, mime)
   }
 
+  const isCollectionNameValid = collectionName.trim().length > 0
+
   const handleExportToFigma = () => {
-    onExportToFigma(collectionName)
+    if (!isCollectionNameValid) return
+    onExportToFigma(collectionName.trim())
     onClose()
   }
 
@@ -274,7 +262,11 @@ export function ExportModal({
         {/* Footer Actions */}
         <div className="export-modal-actions">
           {exportFormat === "figma" ? (
-            <button className="export-modal-btn primary" onClick={handleExportToFigma}>
+            <button
+              className="export-modal-btn primary"
+              onClick={handleExportToFigma}
+              disabled={!isCollectionNameValid}
+            >
               Export to Figma
             </button>
           ) : (

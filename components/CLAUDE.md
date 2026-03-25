@@ -12,7 +12,6 @@ UI components for Octarine's Figma plugin interface. Uses `react-figma-plugin-ds
 | `colors/` | Color row display |
 | `color-settings/` | Per-color configuration UI (curves, corrections, quality) |
 | `color-picker/` | Gradient picker and hue slider |
-| `popups/` | Modal dialogs (StopPopup) |
 | `export/` | Export modal and format options |
 
 ## Patterns

@@ -60,6 +60,15 @@ export const HUE_SHIFT_CURVE_PRESETS: Record<Exclude<HueShiftCurvePreset, "custo
 // Preset curve types for stop value distribution (lightness or contrast)
 export type StopValueCurvePreset = "linear" | "lifted-darks" | "compressed-range" | "expanded-ends" | "custom"
 
+// Human-readable labels for stop value curve presets
+export const STOP_VALUE_PRESET_LABELS: Record<StopValueCurvePreset, string> = {
+  "linear": "Linear",
+  "lifted-darks": "Lifted Darks",
+  "compressed-range": "Compressed Range",
+  "expanded-ends": "Expanded Ends",
+  "custom": "Custom"
+}
+
 // Stop value curve configuration
 // Works for both lightness (0-1) and contrast (1-21) methods
 export type StopValueCurve = {
@@ -363,6 +372,11 @@ type AppStateV3V4 = {
 
 // Migrate from older versions to current
 export function migrateState(persisted: { version: number; state: unknown }): AppState {
+  // Basic shape validation -- if data is corrupt, return fresh defaults
+  if (!persisted.state || typeof persisted.state !== 'object') {
+    return createInitialAppState()
+  }
+
   if (persisted.version === 1) {
     // Old format: { globalSettings, colors }
     const oldState = persisted.state as AppStateV1
@@ -461,7 +475,11 @@ export function migrateState(persisted: { version: number; state: unknown }): Ap
     }
   }
 
-  // v5 or newer - already has curve-based stop values
+  // v5 or newer - validate basic shape before casting
+  const candidate = persisted.state as Record<string, unknown>
+  if (!Array.isArray(candidate.groups) || !candidate.globalConfig) {
+    return createInitialAppState()
+  }
   return persisted.state as AppState
 }
 
