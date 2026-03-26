@@ -131,6 +131,7 @@ export type Color = {
   id: string
   label: string       // e.g., "Primary", "Blue"
   baseColor: string   // Hex color like "#0066CC"
+  autoLabel?: boolean  // true = name was auto-generated, can auto-update on base color change
 
   // Color generation method and default values (formerly on GroupSettings)
   method: ColorMethod                          // "lightness" or "contrast"
@@ -232,7 +233,7 @@ export function createDefaultGlobalConfig(): GlobalConfig {
 
 // Helper to create initial app state
 export function createInitialAppState(): AppState {
-  const defaultColor = createDefaultColor('color-1', 'Color 1', '#0066CC')
+  const defaultColor: Color = { ...createDefaultColor('color-1', 'RoyalBlue', '#0066CC'), autoLabel: true }
   return {
     globalConfig: createDefaultGlobalConfig(),
     colors: [defaultColor],
@@ -243,7 +244,7 @@ export function createInitialAppState(): AppState {
 // STATE PERSISTENCE & MIGRATION
 // ============================================
 export const STORAGE_KEY = 'octarine-state'
-export const STORAGE_VERSION = 7  // Bumped: removed groups, flattened to per-color model
+export const STORAGE_VERSION = 8  // Bumped: added autoLabel for CSS color naming
 
 export type PersistedState = {
   version: number

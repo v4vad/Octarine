@@ -20,21 +20,22 @@ export function RightSettingsPanel({
     <div className="right-settings-panel">
       <div className="right-settings-header">
         <span className="right-settings-title">{color.label} Settings</span>
-        <div className="right-settings-actions">
-          <button
-            className="right-settings-delete"
-            onClick={() => setShowDeleteConfirm(true)}
-            title="Delete this color"
-          >
-            Delete
-          </button>
-        </div>
       </div>
 
       <ColorSettingsContent
         color={color}
         onUpdate={onUpdate}
       />
+
+      <div className="right-settings-footer">
+        <button
+          className="right-settings-delete"
+          onClick={() => setShowDeleteConfirm(true)}
+          title="Delete this color"
+        >
+          Delete
+        </button>
+      </div>
 
       {showDeleteConfirm && (
         <ConfirmModal

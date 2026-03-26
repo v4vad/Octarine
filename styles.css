@@ -1108,6 +1108,26 @@ input[type="range"]::-moz-range-thumb {
   background: var(--figma-color-bg-hover);
 }
 
+.stop-delete-btn {
+  opacity: 0;
+  border: none;
+  background: none;
+  color: var(--figma-color-text-secondary);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  padding: 0 var(--space-1);
+  margin-left: var(--space-1);
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.defaults-row:hover .stop-delete-btn {
+  opacity: 1;
+}
+
+.stop-delete-btn:hover {
+  color: var(--figma-color-text-danger, #e53935);
+}
+
 /* Tab bar for Lightness/Contrast switching */
 .defaults-tabs {
   display: flex;
@@ -2078,10 +2098,10 @@ input[type="range"]::-moz-range-thumb {
   background: var(--figma-color-bg-hover);
 }
 
-.right-settings-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+.right-settings-footer {
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--figma-color-border);
 }
 
 .right-settings-delete {
@@ -2305,6 +2325,26 @@ input[type="range"]::-moz-range-thumb {
   white-space: nowrap;
   font-size: var(--text-sm);
   color: var(--figma-color-text-secondary, #999);
+}
+
+.duplicate-btn {
+  opacity: 0;
+  border: none;
+  background: none;
+  color: var(--figma-color-text-secondary);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  padding: 0 var(--space-1);
+  flex-shrink: 0;
+  transition: opacity var(--transition-fast), color var(--transition-fast);
+}
+
+.group-strip-container:hover .duplicate-btn {
+  opacity: 1;
+}
+
+.duplicate-btn:hover {
+  color: var(--figma-color-text);
 }
 
 .color-header-swatch {

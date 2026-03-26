@@ -63,6 +63,9 @@ export {
 } from "./color-distinctness"
 
 
+// Re-export CSS color name utilities
+export { findClosestCSSColorName } from "./css-color-names"
+
 // Import for internal use
 import { OKLCH, hexToOklch, oklchToHex } from "./color-conversions"
 import { applyPerceptualCorrections, PerceptualCorrectionOptions } from "./perceptual-corrections"

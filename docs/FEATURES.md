@@ -40,23 +40,37 @@ You can resize the plugin window by dragging the bottom-right corner.
 ### Adding a New Color
 
 Click the **"+ Add Color"** button to add a color to the flat color list. Each color starts with:
-- A default name (Color 1, Color 2, etc.)
+- An auto-generated name based on the closest CSS named color (e.g., "RoyalBlue", "Coral")
 - A default blue base color (#0066CC)
 - All the standard stops (50, 100, 200, 300, 400, 500, 600, 700, 800, 900)
 - Its own independent method, defaults, and settings
 
-### Naming Your Colors
+### Smart Color Naming
 
-Click on the color label (like "Color 1") and type a new name. Common names include:
+New colors are automatically named after the closest CSS named color (from the 148 standard CSS colors). The name updates automatically when you change the base color, as long as you haven't manually edited it.
+
+Once you type a custom name, the auto-naming stops and your name is preserved.
+
+If the auto-generated name is already used by another color, a number is appended (e.g., "DodgerBlue 2").
+
+### Renaming Colors
+
+Click on the color label and type a new name. Common names include:
 - Primary, Secondary, Accent
 - Blue, Red, Green, etc.
 - Brand, Neutral, Error, Success
 
 This name will be used when exporting to Figma (e.g., "Primary/500").
 
+### Duplicating a Color
+
+Hover over a color in the left panel to reveal the **duplicate icon**. Clicking it creates a copy of the color with all settings preserved (lightness/contrast values, corrections, curves). The duplicate gets an auto-generated name based on its base color.
+
+**Use case:** Set up lightness values for one color, duplicate it, then change the base color to quickly create a consistent palette.
+
 ### Deleting a Color
 
-Click the **"delete"** button on any color row. A confirmation dialog will appear to prevent accidental deletions.
+Click the **"Delete"** button at the bottom of the right settings panel. A confirmation dialog will appear to prevent accidental deletions.
 
 ---
 
@@ -152,6 +166,10 @@ Click on any value in the table to edit it directly. The value updates immediate
 ### Adding Custom Stops
 
 Click **"Add Stop"** to create a new stop number. The plugin automatically calculates an appropriate value by interpolating between the nearest existing stops.
+
+### Deleting Stops
+
+Hover over any stop row in the Defaults Table to reveal a small **x** button. Click it to remove that stop. You can delete any stop (including defaults like 50, 100, 500, etc.), but a minimum of 2 stops must remain per color.
 
 ---
 

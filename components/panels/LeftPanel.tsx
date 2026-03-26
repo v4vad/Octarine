@@ -10,6 +10,7 @@ interface LeftPanelProps {
   onSelectColor: (colorId: string) => void;
   onUpdateColor: (colorId: string, color: Color) => void;
   onAddColor: () => void;
+  onDuplicateColor: (colorId: string) => void;
 }
 
 export function LeftPanel({
@@ -18,6 +19,7 @@ export function LeftPanel({
   onSelectColor,
   onUpdateColor,
   onAddColor,
+  onDuplicateColor,
 }: LeftPanelProps) {
   const [pickerColorId, setPickerColorId] = useState<string | null>(null);
   const [pickerOpenUpward, setPickerOpenUpward] = useState(false);
@@ -64,6 +66,11 @@ export function LeftPanel({
                   /* Expanded: name + interactive swatch/hex */
                   <div className="color-header-row">
                     <span className="color-header-name" title={color.label}>{color.label}</span>
+                    <button
+                      className="duplicate-btn"
+                      onClick={(e) => { e.stopPropagation(); onDuplicateColor(color.id); }}
+                      title="Duplicate color"
+                    >&#x29C9;</button>
                     <SwatchHexInput
                       color={color.baseColor}
                       onChange={(hex) => onUpdateColor(color.id, { ...color, baseColor: hex })}
@@ -74,6 +81,11 @@ export function LeftPanel({
                   /* Collapsed: name + static swatch + hex */
                   <div className="color-header-row">
                     <span className="color-header-name" title={color.label}>{color.label}</span>
+                    <button
+                      className="duplicate-btn"
+                      onClick={(e) => { e.stopPropagation(); onDuplicateColor(color.id); }}
+                      title="Duplicate color"
+                    >&#x29C9;</button>
                     <div
                       className="color-header-swatch"
                       style={{ backgroundColor: color.baseColor }}
