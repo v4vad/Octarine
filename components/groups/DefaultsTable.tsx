@@ -31,6 +31,14 @@ export function DefaultsTable({ color, onUpdate }: DefaultsTableProps) {
     }
   };
 
+  const handleDeleteStop = (stopNum: number) => {
+    if (stopNumbers.length <= 2) return;
+    const { [stopNum]: _l, ...newLightness } = color.defaultLightness;
+    const { [stopNum]: _c, ...newContrast } = color.defaultContrast;
+    const newStops = color.stops.filter(s => s.number !== stopNum);
+    onUpdate({ defaultLightness: newLightness, defaultContrast: newContrast, stops: newStops });
+  };
+
   const handleAddStop = () => {
     const num = parseInt(newStopNumber, 10);
     if (isNaN(num) || num <= 0) return;
@@ -77,8 +85,17 @@ export function DefaultsTable({ color, onUpdate }: DefaultsTableProps) {
         </thead>
         <tbody>
           {stopNumbers.map((num) => (
-            <tr key={num}>
-              <td className="stop-col">{num}</td>
+            <tr key={num} className="defaults-row">
+              <td className="stop-col">
+                {num}
+                {stopNumbers.length > 2 && (
+                  <button
+                    className="stop-delete-btn"
+                    onClick={() => handleDeleteStop(num)}
+                    title="Remove stop"
+                  >&times;</button>
+                )}
+              </td>
               <td className="value-col">
                 {isLightnessActive ? (
                   <RefBasedNumericInput

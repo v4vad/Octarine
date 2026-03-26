@@ -17,6 +17,7 @@ import { TopBar, LeftPanel, ResizeHandle } from './components/panels';
 import { RightSettingsPanel } from './components/color-settings';
 import { ColorRow } from './components/colors';
 import { ExportModal } from './components/export';
+import { findClosestCSSColorName } from './lib/color-utils';
 
 import { useHistory } from './lib/useHistory';
 
@@ -128,21 +129,46 @@ function App() {
   // ============================================
   // COLOR OPERATIONS
   // ============================================
+
+  // Generate a unique color name, appending a number if the name is already taken
+  const uniqueColorName = useCallback((baseName: string, excludeId?: string) => {
+    const otherNames = colors
+      .filter(c => c.id !== excludeId)
+      .map(c => c.label);
+    if (!otherNames.includes(baseName)) return baseName;
+    let i = 2;
+    while (otherNames.includes(`${baseName} ${i}`)) i++;
+    return `${baseName} ${i}`;
+  }, [colors]);
+
   const addColor = useCallback(() => {
     const id = `color-${Date.now()}`;
-    const label = `Color ${colors.length + 1}`;
     const baseColor = '#0066CC';
-    const newColor = createDefaultColor(id, label, baseColor);
+    const cssName = findClosestCSSColorName(baseColor);
+    const label = uniqueColorName(cssName);
+    const newColor: Color = { ...createDefaultColor(id, label, baseColor), autoLabel: true };
     setState({ ...state, colors: [...colors, newColor] });
     setActiveColorId(id);
-  }, [setState, state, colors]);
+  }, [setState, state, colors, uniqueColorName]);
 
   const updateColor = useCallback((colorId: string, updatedColor: Color) => {
+    const original = colors.find(c => c.id === colorId);
+    if (original) {
+      // If user manually edited the label, mark autoLabel as false
+      if (updatedColor.label !== original.label && original.autoLabel) {
+        updatedColor = { ...updatedColor, autoLabel: false };
+      }
+      // If base color changed and autoLabel is still true, auto-rename
+      if (updatedColor.baseColor !== original.baseColor && updatedColor.autoLabel) {
+        const cssName = findClosestCSSColorName(updatedColor.baseColor);
+        updatedColor = { ...updatedColor, label: uniqueColorName(cssName, colorId) };
+      }
+    }
     setState({
       ...state,
       colors: colors.map(c => c.id === colorId ? updatedColor : c)
     });
-  }, [setState, state, colors]);
+  }, [setState, state, colors, uniqueColorName]);
 
   const removeColor = useCallback((colorId: string) => {
     const newColors = colors.filter(c => c.id !== colorId);
@@ -159,10 +185,13 @@ function App() {
     const original = colors.find(c => c.id === colorId);
     if (!original) return;
     const newId = `color-${Date.now()}`;
+    const cssName = findClosestCSSColorName(original.baseColor);
+    const label = uniqueColorName(cssName, colorId);
     const duplicate: Color = {
       ...JSON.parse(JSON.stringify(original)),
       id: newId,
-      label: `${original.label} copy`,
+      label,
+      autoLabel: true,
     };
     // Insert after original
     const index = colors.findIndex(c => c.id === colorId);
@@ -170,7 +199,7 @@ function App() {
     newColors.splice(index + 1, 0, duplicate);
     setState({ ...state, colors: newColors });
     setActiveColorId(newId);
-  }, [setState, state, colors]);
+  }, [setState, state, colors, uniqueColorName]);
 
   // ============================================
   // EXPORT
@@ -211,6 +240,7 @@ function App() {
           onSelectColor={setActiveColorId}
           onUpdateColor={updateColor}
           onAddColor={addColor}
+          onDuplicateColor={duplicateColor}
         />
 
         {/* Middle Panel: Swatches for selected color */}
