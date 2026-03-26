@@ -1,6 +1,5 @@
 import React from 'react';
-import { Color, EffectiveSettings } from '../../lib/types';
-import { BaseColorField } from './BaseColorField';
+import { Color } from '../../lib/types';
 import { ColorQualitySection } from './ColorQualitySection';
 import { CorrectionsSection } from './CorrectionsSection';
 import { HueShiftCurveSection } from './HueShiftCurveSection';
@@ -8,22 +7,15 @@ import { ChromaCurveSection } from './ChromaCurveSection';
 
 interface ColorSettingsContentProps {
   color: Color;
-  globalSettings: EffectiveSettings;
   onUpdate: (color: Color) => void;
 }
 
 export function ColorSettingsContent({
   color,
-  globalSettings,
   onUpdate
 }: ColorSettingsContentProps) {
   return (
     <>
-      <BaseColorField
-        color={color.baseColor}
-        onChange={(hex) => onUpdate({ ...color, baseColor: hex })}
-      />
-
       <ColorQualitySection
         preserveColorIdentity={color.preserveColorIdentity !== false}
         onChange={(val) => onUpdate({ ...color, preserveColorIdentity: val })}

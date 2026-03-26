@@ -132,8 +132,10 @@ export type Color = {
   label: string       // e.g., "Primary", "Blue"
   baseColor: string   // Hex color like "#0066CC"
 
-  // Override global settings for this color
-  methodOverride?: ColorMethod
+  // Color generation method and default values (formerly on GroupSettings)
+  method: ColorMethod                          // "lightness" or "contrast"
+  defaultLightness: Record<number, number>     // Default lightness per stop number
+  defaultContrast: Record<number, number>      // Default contrast per stop number
 
   // Perceptual corrections (per-color settings)
   hkCorrection?: boolean   // Helmholtz-Kohlrausch: compensates for saturated colors appearing brighter
@@ -156,20 +158,6 @@ export type Color = {
 }
 
 // ============================================
-// GROUP SETTINGS (Per-group settings)
-// ============================================
-export type GroupSettings = {
-  method: ColorMethod      // "lightness" or "contrast"
-
-  // Default lightness/contrast values per stop number
-  defaultLightness: Record<number, number>
-  defaultContrast: Record<number, number>
-}
-
-// Alias for backward compatibility
-export type GlobalSettings = GroupSettings
-
-// ============================================
 // GLOBAL CONFIG (App-wide settings)
 // ============================================
 export type GlobalConfig = {
@@ -177,22 +165,14 @@ export type GlobalConfig = {
 }
 
 // ============================================
-// EFFECTIVE SETTINGS (Combined for color generation)
+// COLOR SETTINGS (For color generation functions)
 // ============================================
-// This type combines GroupSettings with backgroundColor for use in
-// color generation functions that need both
-export type EffectiveSettings = GroupSettings & {
+// Combines per-color settings with backgroundColor for palette generation
+export type ColorSettings = {
+  method: ColorMethod
+  defaultLightness: Record<number, number>
+  defaultContrast: Record<number, number>
   backgroundColor: string
-}
-
-// ============================================
-// COLOR GROUP
-// ============================================
-export type ColorGroup = {
-  id: string
-  name: string              // e.g., "Brand", "Semantic", "Neutrals"
-  settings: GroupSettings   // Per-group settings (bg color, method, defaults)
-  colors: Color[]           // Colors in this group
 }
 
 // ============================================
@@ -200,9 +180,7 @@ export type ColorGroup = {
 // ============================================
 export type AppState = {
   globalConfig: GlobalConfig
-  groups: ColorGroup[]
-  activeGroupId: string | null     // Which group is selected (affects middle/right panels)
-  expandedGroupId: string | null   // Which group's accordion is expanded (can differ from active)
+  colors: Color[]
 }
 
 // ============================================
@@ -232,27 +210,18 @@ export type PaletteResult = {
   hadDuplicates: boolean    // Were any duplicates found and fixed?
 }
 
-// Helper to create a new color with default stops
+// Helper to create a new color with default stops and settings
 export function createDefaultColor(id: string, label: string, baseColor: string): Color {
   return {
     id,
     label,
     baseColor,
-    stops: DEFAULT_STOPS.map(num => ({ number: num }))
-  }
-}
-
-// Helper to create default group settings
-export function createDefaultGroupSettings(): GroupSettings {
-  return {
     method: "lightness",
     defaultLightness: { ...DEFAULT_LIGHTNESS },
     defaultContrast: { ...DEFAULT_CONTRAST },
+    stops: DEFAULT_STOPS.map(num => ({ number: num }))
   }
 }
-
-// Alias for backward compatibility
-export const createDefaultGlobalSettings = createDefaultGroupSettings
 
 // Helper to create default global config
 export function createDefaultGlobalConfig(): GlobalConfig {
@@ -261,24 +230,12 @@ export function createDefaultGlobalConfig(): GlobalConfig {
   }
 }
 
-// Helper to create a new color group
-export function createDefaultGroup(id: string, name: string): ColorGroup {
-  return {
-    id,
-    name,
-    settings: createDefaultGroupSettings(),
-    colors: []
-  }
-}
-
 // Helper to create initial app state
 export function createInitialAppState(): AppState {
-  const defaultGroup = createDefaultGroup('group-1', '')
+  const defaultColor = createDefaultColor('color-1', 'Color 1', '#0066CC')
   return {
     globalConfig: createDefaultGlobalConfig(),
-    groups: [defaultGroup],
-    activeGroupId: defaultGroup.id,
-    expandedGroupId: defaultGroup.id
+    colors: [defaultColor],
   }
 }
 
@@ -286,35 +243,78 @@ export function createInitialAppState(): AppState {
 // STATE PERSISTENCE & MIGRATION
 // ============================================
 export const STORAGE_KEY = 'octarine-state'
-export const STORAGE_VERSION = 6  // Bumped: removed curve-based stop values
+export const STORAGE_VERSION = 7  // Bumped: removed groups, flattened to per-color model
 
 export type PersistedState = {
   version: number
   state: AppState
 }
 
-// Type for old v1 state format (for migration)
-type AppStateV1 = {
-  globalSettings: GlobalSettings & { backgroundColor?: string }
-  colors: Color[]
+// ============================================
+// OLD STATE TYPES (for migration only)
+// ============================================
+
+// Old GroupSettings type (used in v2-v6)
+type OldGroupSettings = {
+  method: ColorMethod
+  defaultLightness: Record<number, number>
+  defaultContrast: Record<number, number>
 }
 
-// Type for old v2 state format (for migration)
+// Old Color type with methodOverride (used in v2-v6)
+type OldColor = Omit<Color, 'method' | 'defaultLightness' | 'defaultContrast'> & {
+  methodOverride?: ColorMethod
+}
+
+// Type for old v1 state format
+type AppStateV1 = {
+  globalSettings: OldGroupSettings & { backgroundColor?: string }
+  colors: OldColor[]
+}
+
+// Type for old v2 state format
 type AppStateV2 = {
   groups: Array<{
     id: string
     name: string
-    settings: GroupSettings & { backgroundColor?: string }
-    colors: Color[]
+    settings: OldGroupSettings & { backgroundColor?: string }
+    colors: OldColor[]
   }>
   activeGroupId: string | null
 }
 
-// Type for old v3/v4 state format (before expandedGroupId)
-type AppStateV3V4 = {
+// Type for old v3-v6 state format (groups-based)
+type AppStateV3V6 = {
   globalConfig: GlobalConfig
-  groups: ColorGroup[]
+  groups: Array<{
+    id: string
+    name: string
+    settings: OldGroupSettings & { lightnessCurve?: unknown; contrastCurve?: unknown }
+    colors: OldColor[]
+  }>
   activeGroupId: string | null
+  expandedGroupId?: string | null
+}
+
+// Helper: flatten groups into colors for v6→v7 migration
+function flattenGroupsToColors(groups: AppStateV3V6['groups']): Color[] {
+  const colors: Color[] = []
+  for (const group of groups) {
+    // Strip curve fields from settings if present
+    const { lightnessCurve: _lc, contrastCurve: _cc, ...cleanSettings } = group.settings
+    for (const oldColor of group.colors) {
+      // Resolve methodOverride: color override wins, else group method
+      const { methodOverride, ...colorWithoutOverride } = oldColor as OldColor & { methodOverride?: ColorMethod }
+      const color: Color = {
+        ...colorWithoutOverride,
+        method: methodOverride ?? cleanSettings.method,
+        defaultLightness: { ...cleanSettings.defaultLightness },
+        defaultContrast: { ...cleanSettings.defaultContrast },
+      }
+      colors.push(color)
+    }
+  }
+  return colors
 }
 
 // Migrate from older versions to current
@@ -324,105 +324,94 @@ export function migrateState(persisted: { version: number; state: unknown }): Ap
     return createInitialAppState()
   }
 
+  // v1: Old flat format { globalSettings, colors }
+  // Convert to v3-v6 group format, then fall through to v6→v7
   if (persisted.version === 1) {
-    // Old format: { globalSettings, colors }
     const oldState = persisted.state as AppStateV1
-    // Extract backgroundColor from old globalSettings for the new globalConfig
     const backgroundColor = oldState.globalSettings.backgroundColor ?? "#ffffff"
-    // Remove backgroundColor from settings for the group
-    const { backgroundColor: _, ...groupSettings } = oldState.globalSettings as (GroupSettings & { backgroundColor?: string })
-    const defaultGroup: ColorGroup = {
-      id: 'group-default',
-      name: 'Colors',
-      settings: groupSettings,
-      colors: oldState.colors ?? []
+    const { backgroundColor: _, ...groupSettings } = oldState.globalSettings as (OldGroupSettings & { backgroundColor?: string })
+    const asV6: AppStateV3V6 = {
+      globalConfig: { backgroundColor },
+      groups: [{
+        id: 'group-default',
+        name: 'Colors',
+        settings: groupSettings,
+        colors: oldState.colors ?? []
+      }],
+      activeGroupId: 'group-default',
     }
     return {
-      globalConfig: { backgroundColor },
-      groups: [defaultGroup],
-      activeGroupId: defaultGroup.id,
-      expandedGroupId: defaultGroup.id
+      globalConfig: asV6.globalConfig,
+      colors: flattenGroupsToColors(asV6.groups),
     }
   }
 
+  // v2: Groups with per-group backgroundColor
+  // Convert to v3-v6 format, then flatten
   if (persisted.version === 2) {
-    // v2 format: groups with per-group backgroundColor
     const oldState = persisted.state as AppStateV2
-    // Extract backgroundColor from first group (or default to white)
     const backgroundColor = oldState.groups[0]?.settings?.backgroundColor ?? "#ffffff"
-    // Migrate all groups, removing backgroundColor from their settings
-    const migratedGroups: ColorGroup[] = oldState.groups.map(g => {
-      const { backgroundColor: _, ...groupSettings } = g.settings as (GroupSettings & { backgroundColor?: string })
-      return {
-        ...g,
-        settings: groupSettings
-      }
+    const groups = oldState.groups.map(g => {
+      const { backgroundColor: _, ...groupSettings } = g.settings as (OldGroupSettings & { backgroundColor?: string })
+      return { ...g, settings: groupSettings }
     })
     return {
       globalConfig: { backgroundColor },
-      groups: migratedGroups,
-      activeGroupId: oldState.activeGroupId,
-      expandedGroupId: oldState.activeGroupId
+      colors: flattenGroupsToColors(groups),
     }
   }
 
-  // v3: Need to migrate "vivid" hue shift preset to "dramatic"
+  // v3: Migrate "vivid" hue shift → "dramatic", then flatten
   if (persisted.version === 3) {
-    const oldState = persisted.state as AppStateV3V4
-    const migratedGroups = oldState.groups.map(group => ({
+    const oldState = persisted.state as AppStateV3V6
+    const groups = oldState.groups.map(group => ({
       ...group,
       colors: group.colors.map(color => {
-        // If color has vivid hue shift, change to dramatic
-        // Cast to string since "vivid" is no longer in the type
         if ((color.hueShiftCurve?.preset as string) === "vivid") {
-          return {
-            ...color,
-            hueShiftCurve: { ...color.hueShiftCurve, preset: "dramatic" as HueShiftCurvePreset }
-          }
+          return { ...color, hueShiftCurve: { ...color.hueShiftCurve, preset: "dramatic" as HueShiftCurvePreset } }
         }
         return color
       })
     }))
     return {
       globalConfig: oldState.globalConfig,
-      groups: migratedGroups,
-      activeGroupId: oldState.activeGroupId,
-      expandedGroupId: oldState.activeGroupId
+      colors: flattenGroupsToColors(groups),
     }
   }
 
-  // v4: Add expandedGroupId if missing
+  // v4: Same as v3-v6 format, just flatten
   if (persisted.version === 4) {
-    const oldState = persisted.state as AppStateV3V4
+    const oldState = persisted.state as AppStateV3V6
     return {
       globalConfig: oldState.globalConfig,
-      groups: oldState.groups,
-      activeGroupId: oldState.activeGroupId,
-      expandedGroupId: (oldState as AppState).expandedGroupId ?? oldState.activeGroupId
+      colors: flattenGroupsToColors(oldState.groups),
     }
   }
 
-  // v5: Strip curve-based stop value fields (lightnessCurve, contrastCurve)
+  // v5: Strip curve-based stop value fields, then flatten
   if (persisted.version === 5) {
-    const oldState = persisted.state as AppState
-    const migratedGroups = oldState.groups.map(group => {
-      const { lightnessCurve, contrastCurve, ...cleanSettings } = group.settings as GroupSettings & {
-        lightnessCurve?: unknown
-        contrastCurve?: unknown
-      }
-      return { ...group, settings: cleanSettings as GroupSettings }
-    })
+    const oldState = persisted.state as AppStateV3V6
     return {
       globalConfig: oldState.globalConfig,
-      groups: migratedGroups,
-      activeGroupId: oldState.activeGroupId,
-      expandedGroupId: oldState.expandedGroupId
+      colors: flattenGroupsToColors(oldState.groups),
     }
   }
 
-  // v6 or newer - validate basic shape before casting
+  // v6: Groups-based format — flatten to per-color model
+  if (persisted.version === 6) {
+    const oldState = persisted.state as AppStateV3V6
+    if (!Array.isArray(oldState.groups) || !oldState.globalConfig) {
+      return createInitialAppState()
+    }
+    return {
+      globalConfig: oldState.globalConfig,
+      colors: flattenGroupsToColors(oldState.groups),
+    }
+  }
+
+  // v7 or newer - validate basic shape before casting
   const candidate = persisted.state as Record<string, unknown>
-  if (!Array.isArray(candidate.groups) || !candidate.globalConfig) {
+  if (!Array.isArray(candidate.colors) || !candidate.globalConfig) {
     return createInitialAppState()
   }
   return persisted.state as AppState

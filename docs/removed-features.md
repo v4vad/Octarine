@@ -332,3 +332,41 @@ Stop values are now directly editable in the Defaults Table — click a value, t
 ### If Revisiting
 
 If preset distributions are needed in the future, implement them as simple "fill table with these values" buttons rather than a live curve system. This gives the same one-click convenience without the complexity of a persistent curve editor, override tracking, or dual storage.
+
+---
+
+## Color Groups
+
+**Removed:** March 2026
+
+### What It Did
+
+Color Groups let multiple colors share a common set of lightness/contrast defaults, generation method, and stop configuration. Colors were organized into collapsible group accordion strips in the left panel.
+
+**UI components:**
+- **GroupAccordionItem** - Collapsible strip in the left panel, one per group
+- **"+ Add Group" button** - Created a new empty group
+- **DefaultsTable** - Rendered inside the selected group's accordion, showing shared defaults for all colors in that group
+- **Method toggle** - Per-group, applied to all colors in the group
+
+**Data model:** A `Group` type containing a list of color IDs, shared `defaultLightness`/`defaultContrast` maps, and a `method` field. Colors referenced their group by ID.
+
+### Why It Was Removed
+
+The shared-lightness assumption is fundamentally flawed for palettes that include colors with different hue gamut shapes in OKLCH:
+
+1. **Different hues have different gamut shapes** - A lightness of 0.95 is achievable with visible chroma for yellows, but produces near-grey output for blues. A single defaults table applied to both will look correct for one and wrong for the other.
+
+2. **Groups added UI complexity without delivering value** - Users had to manage two levels of organization (groups and colors within groups) for no practical benefit, since the shared defaults still needed per-color overrides in most real palettes.
+
+3. **Accordion UI was awkward** - The collapsible group strips in the left panel created extra clicks and visual clutter. Selecting a color required first opening its group.
+
+4. **Flat model is simpler and more honest** - Each color having its own settings makes the data model straightforward and eliminates hidden dependencies between colors.
+
+### Current Behavior
+
+Each color in the flat color list owns its own `method`, `defaultLightness`, `defaultContrast`, and all other settings independently. Selecting a color in the left panel immediately shows its own defaults table and settings — no group step in between.
+
+### If Revisiting
+
+If shared defaults become desirable again, consider a **per-color template** approach rather than a group hierarchy: let a user copy settings from one color to another (a one-time "apply to this color" action), rather than maintaining a live shared parent. This gives the convenience of defaults without the ongoing coupling between colors.

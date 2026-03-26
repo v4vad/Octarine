@@ -2,14 +2,14 @@
 // This file runs in Figma's sandbox and can access the Figma API
 
 import { createFigmaVariables } from './lib/figma-utils';
-import { Color, EffectiveSettings, ColorGroup, GlobalConfig, AppState, STORAGE_KEY, STORAGE_VERSION } from './lib/types';
+import { Color, GlobalConfig, AppState, STORAGE_KEY, STORAGE_VERSION } from './lib/types';
 
 // Discriminated union for all messages the UI can send to the plugin
 type PluginMessage =
   | { type: 'close' }
   | { type: 'resize'; width: number; height: number }
   | { type: 'notify'; message: string }
-  | { type: 'create-variables'; groups: ColorGroup[]; globalConfig?: GlobalConfig; collectionName?: string }
+  | { type: 'create-variables'; colors: Color[]; globalConfig?: GlobalConfig; collectionName?: string }
   | { type: 'save-state'; state: AppState }
   | { type: 'request-state' }
   | { type: 'get-selection-color' }
@@ -46,25 +46,11 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
       // Create Figma variables from the color data
       // All colors from all groups go into a single "Octarine" collection
       try {
-        const { groups, globalConfig, collectionName } = msg;
+        const { colors, globalConfig, collectionName } = msg;
         const backgroundColor = globalConfig?.backgroundColor ?? '#ffffff';
 
-        // Flatten all colors with their group's settings into a single array
-        // Merge global backgroundColor into each group's settings
-        const allColorsWithSettings: Array<{ color: Color; settings: EffectiveSettings }> = [];
-        for (const group of groups) {
-          // Merge group settings with global background color
-          const mergedSettings: EffectiveSettings = {
-            ...group.settings,
-            backgroundColor
-          };
-          for (const color of group.colors) {
-            allColorsWithSettings.push({ color, settings: mergedSettings });
-          }
-        }
-
         // Create all variables in a single collection
-        const result = await createFigmaVariables(allColorsWithSettings, collectionName);
+        const result = await createFigmaVariables(colors, backgroundColor, collectionName);
 
         // Show success notification
         const message = result.created > 0

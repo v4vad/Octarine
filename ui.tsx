@@ -6,12 +6,9 @@ import './styles.css';
 import {
   Color,
   GlobalConfig,
-  EffectiveSettings,
-  ColorGroup,
+  ColorSettings,
   AppState,
   createDefaultColor,
-  createDefaultGroupSettings,
-  createDefaultGroup,
   createInitialAppState,
   migrateState,
 } from './lib/types';
@@ -30,52 +27,38 @@ function App() {
   // Use history hook for undo/redo support
   const initialState: AppState = createInitialAppState();
   const { state, setState, replaceState, undo, redo, canUndo, canRedo } = useHistory(initialState);
-  const { globalConfig, groups, activeGroupId, expandedGroupId } = state;
+  const { globalConfig, colors } = state;
 
-  // Get the active group
-  const activeGroup = activeGroupId
-    ? groups.find(g => g.id === activeGroupId)
-    : groups[0];
-
-  // Get colors from active group
-  const activeGroupColors = activeGroup?.colors ?? [];
-
-  // Track which color's settings panel is open (null = none)
-  const [activeSettingsColorId, setActiveSettingsColorId] = useState<string | null>(null);
+  // Track which color is selected (local state, not part of undo history)
+  const [activeColorId, setActiveColorId] = useState<string | null>(null);
 
   // Track export modal visibility
   const [showExportModal, setShowExportModal] = useState(false);
 
-  // Get the color object for the active settings panel
-  const activeSettingsColor = activeSettingsColorId
-    ? activeGroupColors.find(c => c.id === activeSettingsColorId)
+  // Get the active color object
+  const activeColor = activeColorId
+    ? colors.find(c => c.id === activeColorId) ?? null
     : null;
 
-  // Create merged settings that combines group settings with global backgroundColor
-  // This allows existing components to use globalSettings.backgroundColor
-  const mergedSettings: EffectiveSettings = useMemo(() => {
-    if (!activeGroup) return { ...createDefaultGroupSettings(), backgroundColor: globalConfig.backgroundColor };
+  // Build ColorSettings for the active color (for palette generation)
+  const activeColorSettings: ColorSettings | null = useMemo(() => {
+    if (!activeColor) return null;
     return {
-      ...activeGroup.settings,
-      backgroundColor: globalConfig.backgroundColor
+      method: activeColor.method,
+      defaultLightness: activeColor.defaultLightness,
+      defaultContrast: activeColor.defaultContrast,
+      backgroundColor: globalConfig.backgroundColor,
     };
-  }, [activeGroup, globalConfig.backgroundColor]);
+  }, [activeColor, globalConfig.backgroundColor]);
 
-  // Auto-select first group if none selected
+  // Auto-select first color if none selected or selection is invalid
   useEffect(() => {
-    if (groups.length > 0 && !activeGroupId) {
-      setState({ globalConfig, groups, activeGroupId: groups[0].id, expandedGroupId: groups[0].id });
+    if (colors.length > 0 && (!activeColorId || !colors.find(c => c.id === activeColorId))) {
+      setActiveColorId(colors[0].id);
+    } else if (colors.length === 0) {
+      setActiveColorId(null);
     }
-  }, [groups, activeGroupId, globalConfig, setState]);
-
-  // Auto-select first color in active group when group changes
-  useEffect(() => {
-    if (activeGroupColors.length > 0 && !activeSettingsColor) {
-      setActiveSettingsColorId(activeGroupColors[0].id);
-    } else if (activeGroupColors.length === 0) {
-      setActiveSettingsColorId(null);
-    }
-  }, [activeGroup?.id, activeGroupColors.length, activeSettingsColor]);
+  }, [colors, activeColorId]);
 
   // Track whether we've received the initial load response
   const hasLoadedRef = useRef(false);
@@ -143,95 +126,51 @@ function App() {
   }, [setState, state]);
 
   // ============================================
-  // GROUP OPERATIONS
-  // ============================================
-  const selectGroup = useCallback((groupId: string) => {
-    setState({ ...state, activeGroupId: groupId, expandedGroupId: groupId });
-    // Clear color selection when switching groups
-    setActiveSettingsColorId(null);
-  }, [setState, state]);
-
-  // Toggle accordion expansion without changing selection
-  const toggleGroupExpansion = useCallback((groupId: string) => {
-    if (groupId === activeGroupId) {
-      // Clicking the active group toggles its expansion
-      setState({ ...state, expandedGroupId: expandedGroupId === groupId ? null : groupId });
-    } else {
-      // Clicking a different group selects and expands it
-      setState({ ...state, activeGroupId: groupId, expandedGroupId: groupId });
-      setActiveSettingsColorId(null);
-    }
-  }, [setState, state, activeGroupId, expandedGroupId]);
-
-  const addGroup = useCallback(() => {
-    const id = `group-${Date.now()}`;
-    const newGroup = createDefaultGroup(id, '');
-    setState({
-      globalConfig,
-      groups: [...groups, newGroup],
-      activeGroupId: id,      // Switch to the new group
-      expandedGroupId: id     // Expand the new group
-    });
-    setActiveSettingsColorId(null);
-  }, [setState, groups, globalConfig]);
-
-  const updateGroup = useCallback((updatedGroup: ColorGroup) => {
-    setState({
-      ...state,
-      groups: groups.map(g => g.id === updatedGroup.id ? updatedGroup : g)
-    });
-  }, [setState, state, groups]);
-
-  const deleteGroup = useCallback((groupId: string) => {
-    if (groups.length <= 1) return;  // Don't delete last group
-    const newGroups = groups.filter(g => g.id !== groupId);
-    const newActiveId = activeGroupId === groupId ? newGroups[0]?.id ?? null : activeGroupId;
-    const newExpandedId = expandedGroupId === groupId ? newGroups[0]?.id ?? null : expandedGroupId;
-    setState({
-      globalConfig,
-      groups: newGroups,
-      activeGroupId: newActiveId,
-      expandedGroupId: newExpandedId
-    });
-    setActiveSettingsColorId(null);
-  }, [setState, groups, activeGroupId, expandedGroupId, globalConfig]);
-
-  // ============================================
-  // COLOR OPERATIONS (within active group)
+  // COLOR OPERATIONS
   // ============================================
   const addColor = useCallback(() => {
-    if (!activeGroup) return;
     const id = `color-${Date.now()}`;
-    // Count total colors across ALL groups for globally unique naming
-    const totalColors = groups.reduce((sum, g) => sum + g.colors.length, 0);
-    const label = `Color ${totalColors + 1}`;
+    const label = `Color ${colors.length + 1}`;
     const baseColor = '#0066CC';
     const newColor = createDefaultColor(id, label, baseColor);
-    updateGroup({
-      ...activeGroup,
-      colors: [...activeGroup.colors, newColor]
-    });
-    setActiveSettingsColorId(id);
-  }, [activeGroup, updateGroup, groups]);
+    setState({ ...state, colors: [...colors, newColor] });
+    setActiveColorId(id);
+  }, [setState, state, colors]);
 
   const updateColor = useCallback((colorId: string, updatedColor: Color) => {
-    if (!activeGroup) return;
-    updateGroup({
-      ...activeGroup,
-      colors: activeGroup.colors.map(c => c.id === colorId ? updatedColor : c)
+    setState({
+      ...state,
+      colors: colors.map(c => c.id === colorId ? updatedColor : c)
     });
-  }, [activeGroup, updateGroup]);
+  }, [setState, state, colors]);
 
   const removeColor = useCallback((colorId: string) => {
-    if (!activeGroup) return;
-    if (colorId === activeSettingsColorId) {
-      setActiveSettingsColorId(null);
+    const newColors = colors.filter(c => c.id !== colorId);
+    setState({ ...state, colors: newColors });
+    // Auto-select adjacent color
+    if (colorId === activeColorId) {
+      const oldIndex = colors.findIndex(c => c.id === colorId);
+      const newActiveId = newColors[Math.min(oldIndex, newColors.length - 1)]?.id ?? null;
+      setActiveColorId(newActiveId);
     }
-    updateGroup({
-      ...activeGroup,
-      colors: activeGroup.colors.filter(c => c.id !== colorId)
-    });
-  }, [activeGroup, updateGroup, activeSettingsColorId]);
+  }, [setState, state, colors, activeColorId]);
+
+  const duplicateColor = useCallback((colorId: string) => {
+    const original = colors.find(c => c.id === colorId);
+    if (!original) return;
+    const newId = `color-${Date.now()}`;
+    const duplicate: Color = {
+      ...JSON.parse(JSON.stringify(original)),
+      id: newId,
+      label: `${original.label} copy`,
+    };
+    // Insert after original
+    const index = colors.findIndex(c => c.id === colorId);
+    const newColors = [...colors];
+    newColors.splice(index + 1, 0, duplicate);
+    setState({ ...state, colors: newColors });
+    setActiveColorId(newId);
+  }, [setState, state, colors]);
 
   // ============================================
   // EXPORT
@@ -241,9 +180,9 @@ function App() {
       {
         pluginMessage: {
           type: 'create-variables',
-          groups,  // Send all groups for export
-          globalConfig,  // Send global config for background color
-          collectionName,  // Custom collection name
+          colors,
+          globalConfig,
+          collectionName,
         },
       },
       '*'
@@ -265,58 +204,36 @@ function App() {
 
       {/* Main Three-Panel Layout */}
       <div className="app-layout">
-        {/* Left Panel: Groups only */}
+        {/* Left Panel: Color list + settings for selected color */}
         <LeftPanel
-          globalConfig={globalConfig}
-          groups={groups}
-          activeGroupId={activeGroupId}
-          expandedGroupId={expandedGroupId}
-          onToggleExpansion={toggleGroupExpansion}
-          onUpdateGroup={updateGroup}
-          onAddGroup={addGroup}
-          onDeleteGroup={deleteGroup}
+          colors={colors}
+          activeColorId={activeColorId}
+          onSelectColor={setActiveColorId}
+          onUpdateColor={updateColor}
+          onAddColor={addColor}
         />
 
-        {/* Middle Panel: Colors for active group */}
+        {/* Middle Panel: Swatches for selected color */}
         <div className="middle-panel">
-          {!activeGroup ? (
-            <p className="empty-state p-4">Select a group to see its colors.</p>
-          ) : activeGroupColors.length === 0 ? (
-            <p className="empty-state p-4">No colors in this group. Add one to get started.</p>
+          {!activeColor || !activeColorSettings ? (
+            <p className="empty-state p-4">Add a color to get started.</p>
           ) : (
-            activeGroupColors.map((color) => (
-              <ColorRow
-                key={color.id}
-                color={color}
-                globalSettings={mergedSettings}
-                onUpdate={(c) => updateColor(color.id, c)}
-                onRemove={() => removeColor(color.id)}
-                onOpenSettings={() => {
-                  setActiveSettingsColorId(
-                    activeSettingsColorId === color.id ? null : color.id
-                  );
-                }}
-                isSettingsOpen={activeSettingsColorId === color.id}
-              />
-            ))
-          )}
-
-          {/* Add Color Button (only if a group is selected) */}
-          {activeGroup && (
-            <button onClick={addColor} className="add-color-btn">
-              + Add Color
-            </button>
+            <ColorRow
+              color={activeColor}
+              colorSettings={activeColorSettings}
+              onUpdate={(updatedColor) => updateColor(activeColor.id, updatedColor)}
+              onRemove={() => removeColor(activeColor.id)}
+              onDuplicate={() => duplicateColor(activeColor.id)}
+            />
           )}
         </div>
 
-        {/* Right Settings Panel (per-color settings) */}
-        {activeSettingsColor ? (
+        {/* Right Settings Panel (per-color advanced settings) */}
+        {activeColor ? (
           <RightSettingsPanel
-            color={activeSettingsColor}
-            globalSettings={mergedSettings}
+            color={activeColor}
             onUpdate={(updatedColor) => updateColor(updatedColor.id, updatedColor)}
-            onDelete={() => removeColor(activeSettingsColorId!)}
-            onClose={() => setActiveSettingsColorId(null)}
+            onDelete={() => removeColor(activeColor.id)}
           />
         ) : (
           <div className="right-panel-empty">
@@ -331,7 +248,7 @@ function App() {
       {/* Export Modal */}
       {showExportModal && (
         <ExportModal
-          groups={groups}
+          colors={colors}
           globalConfig={globalConfig}
           onExportToFigma={createVariables}
           onClose={() => setShowExportModal(false)}

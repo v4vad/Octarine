@@ -7,12 +7,13 @@ UI components for Octarine's Figma plugin interface. Uses `react-figma-plugin-ds
 | Folder | Purpose |
 |--------|---------|
 | `primitives/` | Reusable building blocks (Slider, Toggle, ConfirmModal, SwatchHexInput) |
-| `panels/` | Layout containers (LeftPanel, TopBar, ResizeHandle) |
-| `groups/` | Color group management (GroupAccordionItem, DefaultsTable) |
+| `panels/` | Layout containers (LeftPanel, TopBar, ResizeHandle) — LeftPanel includes DefaultsTable |
 | `colors/` | Color row display |
 | `color-settings/` | Per-color configuration UI (curves, corrections, quality) |
 | `color-picker/` | Gradient picker and hue slider |
 | `export/` | Export modal and format options |
+
+Note: the `groups/` folder and `GroupAccordionItem` component have been removed. `DefaultsTable` is now rendered directly inside `LeftPanel`.
 
 ## Patterns
 
@@ -40,13 +41,13 @@ The app uses a 3-panel layout defined in `ui.tsx`:
 | Component | Location | Contents |
 |-----------|----------|----------|
 | `TopBar` | Top | Undo/redo, background color picker, export button |
-| `LeftPanel` | Left column | Group strips (accordion items), Lightness/Contrast toggle, DefaultsTable |
-| Middle (inline) | Center column | ColorRow components, Add Color button |
-| `RightSettingsPanel` | Right column | Per-color settings (base color, corrections, curves) |
+| `LeftPanel` | Left column | Flat color list, base color picker, Lightness/Contrast method toggle, DefaultsTable for selected color, Add Color button |
+| Middle (inline) | Center column | Swatches for the selected color only |
+| `RightSettingsPanel` | Right column | Advanced per-color settings (HK/BB corrections, hue shift curve, chroma curve) |
 
 ## Key Components
 
-- `LeftPanel` - Group accordion, manages color groups
-- `RightSettingsPanel` - Per-color settings when a color is selected
-- `ColorSettingsContent` - The actual settings UI (shared between panel and popup)
+- `LeftPanel` - Flat color list, base color picker, method toggle, DefaultsTable
+- `RightSettingsPanel` - Advanced per-color settings when a color is selected
+- `ColorSettingsContent` - The actual settings UI rendered inside RightSettingsPanel
 - `TopBar` - Global actions (undo/redo, export, generate)

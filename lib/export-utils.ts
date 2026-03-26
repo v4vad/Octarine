@@ -9,7 +9,7 @@
  * Also provides clipboard and download functionality.
  */
 
-import type { ColorGroup, GlobalConfig, ExportableStop, CSSColorFormat } from "./types"
+import type { Color, GlobalConfig, ExportableStop, CSSColorFormat } from "./types"
 import { generateColorPalette } from "./color-utils"
 import { hexToOklch, hexToRgb } from "./color-conversions"
 
@@ -22,36 +22,35 @@ import { hexToOklch, hexToRgb } from "./color-conversions"
  * Generates all color palettes and structures them for export
  */
 export function prepareExportData(
-  groups: ColorGroup[],
+  colors: Color[],
   globalConfig: GlobalConfig
 ): ExportableStop[] {
   const exportableStops: ExportableStop[] = []
 
-  for (const group of groups) {
-    // Merge group settings with global background color
-    const effectiveSettings = {
-      ...group.settings,
+  for (const color of colors) {
+    const colorSettings = {
+      method: color.method,
+      defaultLightness: color.defaultLightness,
+      defaultContrast: color.defaultContrast,
       backgroundColor: globalConfig.backgroundColor
     }
 
-    for (const color of group.colors) {
-      // Generate the full palette for this color
-      const paletteResult = generateColorPalette(color, effectiveSettings)
+    // Generate the full palette for this color
+    const paletteResult = generateColorPalette(color, colorSettings)
 
-      // Convert each generated stop to exportable format
-      for (const generatedStop of paletteResult.stops) {
-        const oklch = hexToOklch(generatedStop.hex)
-        exportableStops.push({
-          colorLabel: color.label,
-          stopNumber: generatedStop.stopNumber,
-          hex: generatedStop.hex,
-          oklch: {
-            l: oklch.l,
-            c: oklch.c,
-            h: oklch.h
-          }
-        })
-      }
+    // Convert each generated stop to exportable format
+    for (const generatedStop of paletteResult.stops) {
+      const oklch = hexToOklch(generatedStop.hex)
+      exportableStops.push({
+        colorLabel: color.label,
+        stopNumber: generatedStop.stopNumber,
+        hex: generatedStop.hex,
+        oklch: {
+          l: oklch.l,
+          c: oklch.c,
+          h: oklch.h
+        }
+      })
     }
   }
 

@@ -7,7 +7,7 @@
  */
 
 import { generateColorPalette } from "../lib/color-utils"
-import type { Color, EffectiveSettings } from "../lib/types"
+import type { Color, ColorSettings } from "../lib/types"
 import { DEFAULT_STOPS, DEFAULT_LIGHTNESS, DEFAULT_CONTRAST } from "../lib/types"
 
 // Tailwind CSS v3 color palette (official values)
@@ -60,11 +60,19 @@ const TEST_CASES = [
   { name: 'pink', base: TAILWIND.pink[500] },
 ]
 
-function createStops() {
-  return DEFAULT_STOPS.map(num => ({ number: num }))
+function createTestColor(baseColor: string): Color {
+  return {
+    id: "test",
+    label: "Test",
+    baseColor,
+    method: "lightness",
+    defaultLightness: { ...DEFAULT_LIGHTNESS },
+    defaultContrast: { ...DEFAULT_CONTRAST },
+    stops: DEFAULT_STOPS.map(num => ({ number: num }))
+  }
 }
 
-function createSettings(): EffectiveSettings {
+function createSettings(): ColorSettings {
   return {
     method: "lightness",
     defaultLightness: { ...DEFAULT_LIGHTNESS },
@@ -97,12 +105,7 @@ console.log("")
 let excellent = 0, good = 0, fair = 0, different = 0
 
 for (const tc of TEST_CASES) {
-  const color: Color = {
-    id: tc.name,
-    label: tc.name,
-    baseColor: tc.base,
-    stops: createStops()
-  }
+  const color = createTestColor(tc.base)
 
   const palette = generateColorPalette(color, createSettings())
   const tailwindPalette = TAILWIND[tc.name]

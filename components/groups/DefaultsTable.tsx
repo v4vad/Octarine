@@ -1,34 +1,32 @@
 import React, { useState, useMemo } from 'react';
-import type { GroupSettings } from '../../lib/types';
+import type { Color, ColorMethod, Stop } from '../../lib/types';
 import { MethodToggle, RefBasedNumericInput } from '../primitives';
 
 interface DefaultsTableProps {
-  settings: GroupSettings;
-  onUpdate: (settings: GroupSettings) => void;
+  color: Color;
+  onUpdate: (updates: Partial<Color>) => void;
 }
 
-export function DefaultsTable({ settings, onUpdate }: DefaultsTableProps) {
+export function DefaultsTable({ color, onUpdate }: DefaultsTableProps) {
   const [newStopNumber, setNewStopNumber] = useState('');
 
   const stopNumbers = useMemo(
-    () => Object.keys(settings.defaultLightness)
+    () => Object.keys(color.defaultLightness)
       .map(Number)
       .sort((a, b) => a - b),
-    [settings.defaultLightness]
+    [color.defaultLightness]
   );
 
-  const isLightnessActive = settings.method === 'lightness';
+  const isLightnessActive = color.method === 'lightness';
 
   const handleValueEdit = (stopNum: number, newValue: number) => {
     if (isLightnessActive) {
       onUpdate({
-        ...settings,
-        defaultLightness: { ...settings.defaultLightness, [stopNum]: newValue },
+        defaultLightness: { ...color.defaultLightness, [stopNum]: newValue },
       });
     } else {
       onUpdate({
-        ...settings,
-        defaultContrast: { ...settings.defaultContrast, [stopNum]: newValue },
+        defaultContrast: { ...color.defaultContrast, [stopNum]: newValue },
       });
     }
   };
@@ -36,21 +34,25 @@ export function DefaultsTable({ settings, onUpdate }: DefaultsTableProps) {
   const handleAddStop = () => {
     const num = parseInt(newStopNumber, 10);
     if (isNaN(num) || num <= 0) return;
-    if (settings.defaultLightness[num] !== undefined) return;
+    if (color.defaultLightness[num] !== undefined) return;
 
     const newLightness = {
-      ...settings.defaultLightness,
-      [num]: interpolateValue(num, settings.defaultLightness, 0.5),
+      ...color.defaultLightness,
+      [num]: interpolateValue(num, color.defaultLightness, 0.5),
     };
     const newContrast = {
-      ...settings.defaultContrast,
-      [num]: interpolateValue(num, settings.defaultContrast, 4.5),
+      ...color.defaultContrast,
+      [num]: interpolateValue(num, color.defaultContrast, 4.5),
     };
 
+    // Add stop to both defaults and stops array
+    const newStop: Stop = { number: num };
+    const newStops = [...color.stops, newStop].sort((a, b) => a.number - b.number);
+
     onUpdate({
-      ...settings,
       defaultLightness: newLightness,
       defaultContrast: newContrast,
+      stops: newStops,
     });
     setNewStopNumber('');
   };
@@ -59,8 +61,8 @@ export function DefaultsTable({ settings, onUpdate }: DefaultsTableProps) {
     <div className="defaults-section">
       {/* Method toggle above table */}
       <MethodToggle
-        method={settings.method}
-        onChange={(method) => onUpdate({ ...settings, method })}
+        method={color.method}
+        onChange={(method: ColorMethod) => onUpdate({ method })}
       />
 
       {/* Table with single active column */}
@@ -80,7 +82,7 @@ export function DefaultsTable({ settings, onUpdate }: DefaultsTableProps) {
               <td className="value-col">
                 {isLightnessActive ? (
                   <RefBasedNumericInput
-                    value={settings.defaultLightness[num] ?? 0.5}
+                    value={color.defaultLightness[num] ?? 0.5}
                     onChange={(val) => handleValueEdit(num, val)}
                     min={0}
                     max={1}
@@ -88,7 +90,7 @@ export function DefaultsTable({ settings, onUpdate }: DefaultsTableProps) {
                   />
                 ) : (
                   <RefBasedNumericInput
-                    value={settings.defaultContrast[num] ?? 4.5}
+                    value={color.defaultContrast[num] ?? 4.5}
                     onChange={(val) => handleValueEdit(num, val)}
                     min={1}
                     max={21}

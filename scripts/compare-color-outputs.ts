@@ -11,7 +11,7 @@
  */
 
 import { generateColorPalette } from "../lib/color-utils"
-import type { Color, EffectiveSettings, HueShiftCurve, ChromaCurve } from "../lib/types"
+import type { Color, ColorSettings, HueShiftCurve, ChromaCurve } from "../lib/types"
 import { DEFAULT_STOPS, DEFAULT_LIGHTNESS, DEFAULT_CONTRAST } from "../lib/types"
 
 // Create default stops array for test colors
@@ -28,12 +28,16 @@ function createTestColor(
     hueShiftCurve?: HueShiftCurve
     chromaCurve?: ChromaCurve
     preserveColorIdentity?: boolean
+    method?: "lightness" | "contrast"
   }
 ): Color {
   return {
     id: "test-color",
     label: "Test",
     baseColor,
+    method: options?.method ?? "lightness",
+    defaultLightness: { ...DEFAULT_LIGHTNESS },
+    defaultContrast: { ...DEFAULT_CONTRAST },
     hkCorrection: options?.hkCorrection,
     bbCorrection: options?.bbCorrection,
     hueShiftCurve: options?.hueShiftCurve,
@@ -43,8 +47,8 @@ function createTestColor(
   }
 }
 
-// Create effective settings for testing
-function createSettings(method: "lightness" | "contrast" = "lightness"): EffectiveSettings {
+// Create color settings for testing
+function createSettings(method: "lightness" | "contrast" = "lightness"): ColorSettings {
   return {
     method,
     defaultLightness: { ...DEFAULT_LIGHTNESS },
@@ -57,7 +61,7 @@ function createSettings(method: "lightness" | "contrast" = "lightness"): Effecti
 interface TestCase {
   label: string
   color: Color
-  settings: EffectiveSettings
+  settings: ColorSettings
 }
 
 const testCases: TestCase[] = [

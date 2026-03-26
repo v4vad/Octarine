@@ -51,14 +51,14 @@
 **The Challenge:** Octarine's model (seed color → algorithmic generation) differs from Figma's model (independent color values). Bridging these requires careful design.
 
 **Unresolved Edge Cases:**
-- Standalone colors with similar hues (e.g., `ButtonBlue`, `LinkBlue`) - should they be grouped?
-- Standalone colors with different hues - how to set meaningful base color with one stop?
-- Split palettes across Figma groups - need to merge across organizational structure
-- Hue grouping threshold - how similar is "similar enough"?
-- Stop number assignment for ungrouped colors
+- Standalone colors with similar hues (e.g., `ButtonBlue`, `LinkBlue`) - should they be merged into one Octarine color, or kept as separate colors?
+- Standalone colors with different hues - how to set a meaningful base color from a single stop?
+- Palettes split across Figma organizational groups - need to identify which belong to the same logical palette
+- Hue similarity threshold - how similar is "similar enough" to treat as one palette?
+- Stop number assignment for colors without a numeric suffix
 
 **Future Considerations:**
 - Start with simpler scope (only support clean `Label/StopNumber` format)
-- Let user manually assign imported colors to groups/stops
-- Preview before import with user adjustment
+- Let user manually assign imported colors to palette slots and stops
+- Preview before import with user adjustment — each imported palette becomes one Octarine color in the flat list
 - Consider implementing after Figma Variable modes support

@@ -1,22 +1,18 @@
 import React, { useState } from 'react';
-import { Color, EffectiveSettings } from '../../lib/types';
+import { Color } from '../../lib/types';
 import { ConfirmModal } from '../primitives';
 import { ColorSettingsContent } from './ColorSettingsContent';
 
 interface RightSettingsPanelProps {
   color: Color;
-  globalSettings: EffectiveSettings;
   onUpdate: (color: Color) => void;
   onDelete: () => void;
-  onClose: () => void;
 }
 
 export function RightSettingsPanel({
   color,
-  globalSettings,
   onUpdate,
   onDelete,
-  onClose
 }: RightSettingsPanelProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -37,7 +33,6 @@ export function RightSettingsPanel({
 
       <ColorSettingsContent
         color={color}
-        globalSettings={globalSettings}
         onUpdate={onUpdate}
       />
 
