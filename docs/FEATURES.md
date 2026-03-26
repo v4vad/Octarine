@@ -27,9 +27,9 @@ Octarine is a Figma plugin for creating professional color palettes. This guide 
 The plugin window has four main areas:
 
 - **Top Bar** - Undo/redo buttons, background color picker with hex input, and export button
-- **Left Panel** - Color group strips (click to select), Lightness/Contrast method toggle, Defaults table with stop values, Add Stop input, and Add Group button
-- **Middle Panel** - Color palette rows showing each color's swatches (50-900) with hex codes and contrast ratios, plus Add Color button
-- **Right Panel** - Per-color settings for the selected color: base color, preserve identity toggle, HK/BB corrections, hue shift curve, and chroma curve
+- **Left Panel** - Flat color list (click a color to select it), base color picker, Lightness/Contrast method toggle, and Defaults table showing stop values for the selected color
+- **Middle Panel** - Swatches for the selected color (50-900) with hex codes and contrast ratios
+- **Right Panel** - Advanced per-color settings for the selected color: HK/BB corrections, hue shift curve, and chroma curve
 
 You can resize the plugin window by dragging the bottom-right corner.
 
@@ -39,10 +39,11 @@ You can resize the plugin window by dragging the bottom-right corner.
 
 ### Adding a New Color
 
-Click the **"+ Add Color"** button to create a new color palette. Each palette starts with:
+Click the **"+ Add Color"** button to add a color to the flat color list. Each color starts with:
 - A default name (Color 1, Color 2, etc.)
 - A default blue base color (#0066CC)
 - All the standard stops (50, 100, 200, 300, 400, 500, 600, 700, 800, 900)
+- Its own independent method, defaults, and settings
 
 ### Naming Your Colors
 
@@ -116,13 +117,13 @@ Creates stops based on accessibility contrast ratios (WCAG standards).
 
 ### Switching Between Methods
 
-Use the **Lightness / Contrast toggle** above the Defaults Table to switch between methods.
+Use the **Lightness / Contrast toggle** above the Defaults Table to switch methods for the selected color. Each color stores its own method choice independently.
 
 ---
 
 ## The Defaults Table
 
-The Defaults Table (in the left panel) shows all your stop numbers and their default values for the currently selected method.
+The Defaults Table (in the left panel) shows all your stop numbers and their default values for the currently selected color and method. Each color owns its own defaults independently.
 
 ### Understanding the Table
 
@@ -184,7 +185,7 @@ Click **"Reset to Auto"** to clear all overrides and let the plugin generate the
 
 ## Color-Level Settings
 
-Click the **"settings"** button on any color row to open color-level options that affect the entire palette.
+Click a color in the left panel to select it. Its settings are shown in the left panel (base color, method, defaults) and the right panel (advanced settings). All settings are per-color and independent.
 
 ### Base Color
 
@@ -542,12 +543,14 @@ Click **Copy** to copy to clipboard, or **Download** to save as a `.csv` file.
 
 ### Recommended Workflow
 
-1. **Start** - Add a color and set your base color
-2. **Choose method** - Lightness for visual control, Contrast for accessibility
-3. **Adjust defaults** - Set up your stop values in the Defaults Table
-4. **Fine-tune** - Use artistic controls for visual harmony
-5. **Customize** - Override individual stops as needed
-6. **Export** - Create Figma Variables when ready
+1. **Start** - Add a color and select it to see its settings
+2. **Set base color** - Pick your starting color in the left panel
+3. **Choose method** - Lightness for visual control, Contrast for accessibility
+4. **Adjust defaults** - Set up your stop values in the Defaults Table for this color
+5. **Fine-tune** - Use artistic controls in the right panel for visual harmony
+6. **Customize** - Override individual stops as needed
+7. **Repeat** - Add more colors, each with its own independent settings
+8. **Export** - Create Figma Variables when ready
 
 ---
 

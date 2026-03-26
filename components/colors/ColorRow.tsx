@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Color, EffectiveSettings, Stop } from '../../lib/types';
+import { Color, ColorSettings, Stop } from '../../lib/types';
 import {
   hexToOklch,
   oklchToHex,
@@ -10,20 +10,18 @@ import { ColorPickerPopup } from '../color-picker';
 
 interface ColorRowProps {
   color: Color;
-  globalSettings: EffectiveSettings;
+  colorSettings: ColorSettings;
   onUpdate: (color: Color) => void;
   onRemove: () => void;
-  onOpenSettings: () => void;
-  isSettingsOpen: boolean;
+  onDuplicate: () => void;
 }
 
 export function ColorRow({
   color,
-  globalSettings,
+  colorSettings,
   onUpdate,
   onRemove,
-  onOpenSettings,
-  isSettingsOpen
+  onDuplicate,
 }: ColorRowProps) {
   const [selectedStop, setSelectedStop] = useState<{
     index: number;
@@ -32,8 +30,8 @@ export function ColorRow({
 
   // Generate palette
   const paletteResult = useMemo(() => {
-    return generateColorPalette(color, globalSettings);
-  }, [color, globalSettings]);
+    return generateColorPalette(color, colorSettings);
+  }, [color, colorSettings]);
 
   const handleStopClick = (index: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -46,7 +44,6 @@ export function ColorRow({
 
   const handleRowClick = () => {
     setSelectedStop(null);
-    onOpenSettings();
   };
 
   const handleUpdateStop = (stopIndex: number, updates: Partial<Stop>) => {
@@ -57,7 +54,7 @@ export function ColorRow({
 
   return (
     <div
-      className={`color-row ${isSettingsOpen ? 'active' : ''}`}
+      className="color-row"
       onClick={handleRowClick}
     >
       {/* Header: Just the name input */}
@@ -85,7 +82,7 @@ export function ColorRow({
           const displayColor = stop.manualOverride
             ? oklchToHex(stop.manualOverride)
             : generatedStop?.hex ?? '#808080';
-          const contrastRatio = getContrastRatio(displayColor, globalSettings.backgroundColor);
+          const contrastRatio = getContrastRatio(displayColor, colorSettings.backgroundColor);
           const hasOverride = !!stop.manualOverride ||
             stop.lightnessOverride !== undefined ||
             stop.contrastOverride !== undefined;

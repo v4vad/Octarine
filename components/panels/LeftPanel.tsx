@@ -1,49 +1,127 @@
-import React from 'react';
-import { GlobalConfig, ColorGroup } from '../../lib/types';
-import { GroupAccordionItem } from '../groups';
+import React, { useState, useRef } from 'react';
+import { Color } from '../../lib/types';
+import { DefaultsTable } from '../groups';
+import { SwatchHexInput } from '../primitives';
+import { ColorPickerPopup } from '../color-picker';
 
 interface LeftPanelProps {
-  globalConfig: GlobalConfig;
-  groups: ColorGroup[];
-  activeGroupId: string | null;
-  expandedGroupId: string | null;
-  onToggleExpansion: (groupId: string) => void;
-  onUpdateGroup: (group: ColorGroup) => void;
-  onAddGroup: () => void;
-  onDeleteGroup: (groupId: string) => void;
+  colors: Color[];
+  activeColorId: string | null;
+  onSelectColor: (colorId: string) => void;
+  onUpdateColor: (colorId: string, color: Color) => void;
+  onAddColor: () => void;
 }
 
 export function LeftPanel({
-  globalConfig,
-  groups,
-  activeGroupId,
-  expandedGroupId,
-  onToggleExpansion,
-  onUpdateGroup,
-  onAddGroup,
-  onDeleteGroup
+  colors,
+  activeColorId,
+  onSelectColor,
+  onUpdateColor,
+  onAddColor,
 }: LeftPanelProps) {
+  const [pickerColorId, setPickerColorId] = useState<string | null>(null);
+  const [pickerOpenUpward, setPickerOpenUpward] = useState(false);
+  const headerRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const handleSwatchClick = (colorId: string) => {
+    if (pickerColorId === colorId) {
+      setPickerColorId(null);
+      return;
+    }
+    // Calculate if picker should open upward
+    const el = headerRefs.current[colorId];
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      setPickerOpenUpward(spaceBelow < 380);
+    }
+    setPickerColorId(colorId);
+  };
+
   return (
     <div className="left-panel">
-      {/* Group Accordion */}
       <div className="group-accordion">
-        {groups.map(group => (
-          <GroupAccordionItem
-            key={group.id}
-            group={group}
-            backgroundColor={globalConfig.backgroundColor}
-            isExpanded={group.id === expandedGroupId}
-            isSelected={group.id === activeGroupId}
-            onToggle={() => onToggleExpansion(group.id)}
-            onUpdate={onUpdateGroup}
-            onDelete={() => onDeleteGroup(group.id)}
-            canDelete={groups.length > 1}
-          />
-        ))}
+        {colors.map(color => {
+          const isExpanded = color.id === activeColorId;
+          const showPicker = pickerColorId === color.id;
+          return (
+            <div
+              key={color.id}
+              className={`group-accordion-item ${isExpanded ? 'expanded' : 'collapsed'}`}
+            >
+              {/* Header — click to select/expand */}
+              <div
+                className="group-strip-container"
+                ref={(el) => { headerRefs.current[color.id] = el; }}
+                style={{ position: 'relative' }}
+                onClick={() => {
+                  if (!isExpanded) {
+                    onSelectColor(color.id);
+                  }
+                }}
+              >
+                {isExpanded ? (
+                  /* Expanded: name + interactive swatch/hex */
+                  <div className="color-header-row">
+                    <span className="color-header-name" title={color.label}>{color.label}</span>
+                    <SwatchHexInput
+                      color={color.baseColor}
+                      onChange={(hex) => onUpdateColor(color.id, { ...color, baseColor: hex })}
+                      onSwatchClick={() => handleSwatchClick(color.id)}
+                    />
+                  </div>
+                ) : (
+                  /* Collapsed: name + static swatch + hex */
+                  <div className="color-header-row">
+                    <span className="color-header-name" title={color.label}>{color.label}</span>
+                    <div
+                      className="color-header-swatch"
+                      style={{ backgroundColor: color.baseColor }}
+                    />
+                    <span className="color-header-hex">{color.baseColor.toUpperCase()}</span>
+                  </div>
+                )}
 
-        {/* Add Group Button */}
-        <button className="add-group-btn" onClick={onAddGroup}>
-          + Add Group
+                {/* Color picker — positioned relative to header */}
+                {isExpanded && showPicker && (
+                  <div
+                    className={pickerOpenUpward ? 'picker-upward' : 'mt-2'}
+                    style={pickerOpenUpward ? {
+                      position: 'absolute',
+                      bottom: '100%',
+                      left: 0,
+                      marginBottom: '8px',
+                      zIndex: 10
+                    } : undefined}
+                  >
+                    <ColorPickerPopup
+                      color={color.baseColor}
+                      onChange={(hex) => onUpdateColor(color.id, { ...color, baseColor: hex })}
+                      onClose={() => setPickerColorId(null)}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Expanded: defaults table */}
+              {isExpanded && (
+                <>
+                  <div className="group-accordion-separator" />
+                  <div className="group-accordion-content">
+                    <DefaultsTable
+                      color={color}
+                      onUpdate={(updates) => onUpdateColor(color.id, { ...color, ...updates })}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Add Color Button */}
+        <button className="add-group-btn" onClick={onAddColor}>
+          + Add Color
         </button>
       </div>
     </div>

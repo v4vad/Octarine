@@ -31,9 +31,11 @@ Figma plugins have **two execution contexts** that communicate via messages:
 │ TopBar: [undo][redo] Background color     [export]  │
 ├──────────────┬─────────────────┬────────────────────┤
 │ LeftPanel    │ Middle Panel    │ RightSettingsPanel │
-│ Group strips │ Color rows      │ Per-color settings │
-│ Defaults tbl │ + Add Color     │ (when selected)    │
-│ + Add Group  │                 │                    │
+│ Color list   │ Selected color  │ Advanced settings  │
+│ Base color   │ swatches        │ (HK/BB, hue shift, │
+│ Method toggle│                 │  chroma curves)    │
+│ Defaults tbl │                 │                    │
+│ + Add Color  │                 │                    │
 └──────────────┴─────────────────┴────────────────────┘
 ```
 

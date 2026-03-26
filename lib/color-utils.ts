@@ -1,4 +1,4 @@
-import type { GeneratedStop, PaletteResult, Color, EffectiveSettings } from "./types"
+import type { GeneratedStop, PaletteResult, Color, ColorSettings } from "./types"
 
 // Re-export all color conversions for backward compatibility
 export {
@@ -86,16 +86,16 @@ import { calculateDeltaE, DELTA_E_THRESHOLD, ensureUniqueHexColors } from "./col
  */
 export function generateColorPalette(
   color: Color,
-  globalSettings: EffectiveSettings
+  colorSettings: ColorSettings
 ): PaletteResult {
   const baseOklch = hexToOklch(color.baseColor)
 
-  // Determine effective settings (color-level overrides global)
-  const effectiveMethod = color.methodOverride ?? globalSettings.method
+  // Method and defaults are now directly on color
+  const effectiveMethod = color.method
   // HK/BB corrections are per-color settings (default: off)
   const effectiveHK = color.hkCorrection ?? false
   const effectiveBB = color.bbCorrection ?? false
-  const bgOklch = hexToOklch(globalSettings.backgroundColor)
+  const bgOklch = hexToOklch(colorSettings.backgroundColor)
 
   // First pass: generate all colors with expansion
   const intermediateStops = color.stops.map(stop => {
@@ -130,11 +130,11 @@ export function generateColorPalette(
 
     if (effectiveMethod === "contrast") {
       stopTargetContrast = stop.contrastOverride ??
-        globalSettings.defaultContrast[stopNum] ?? 4.5
-      targetL = findLightnessForContrast(baseOklch, globalSettings.backgroundColor, stopTargetContrast)
+        color.defaultContrast[stopNum] ?? 4.5
+      targetL = findLightnessForContrast(baseOklch, colorSettings.backgroundColor, stopTargetContrast)
     } else {
       targetL = stop.lightnessOverride ??
-        globalSettings.defaultLightness[stopNum] ?? 0.5
+        color.defaultLightness[stopNum] ?? 0.5
     }
 
     const originalL = targetL
@@ -177,7 +177,7 @@ export function generateColorPalette(
       result = refineContrastToTarget(
         result,
         stopTargetContrast,
-        globalSettings.backgroundColor
+        colorSettings.backgroundColor
       )
     }
 
@@ -198,7 +198,7 @@ export function generateColorPalette(
           // Calculate what contrast we'd get at the capped lightness
           const cappedC = clampChromaToGamut(baseOklch.c, maxL, result.h)
           const cappedHex = oklchToHex({ l: maxL, c: cappedC, h: result.h })
-          const cappedContrast = getContrastRatio(cappedHex, globalSettings.backgroundColor)
+          const cappedContrast = getContrastRatio(cappedHex, colorSettings.backgroundColor)
           const deviation = Math.abs(cappedContrast - stopTargetContrast)
 
           // Only apply cap if deviation is acceptable
@@ -232,7 +232,7 @@ export function generateColorPalette(
   })
 
   // Second pass: ensure unique hex colors (now with background for contrast-aware nudging)
-  const uniqueStops = ensureUniqueHexColors(intermediateStops, baseOklch.c, globalSettings.backgroundColor)
+  const uniqueStops = ensureUniqueHexColors(intermediateStops, baseOklch.c, colorSettings.backgroundColor)
 
   // Check if any duplicates were found and fixed
   const hadDuplicates = uniqueStops.some(s => s.wasNudged)

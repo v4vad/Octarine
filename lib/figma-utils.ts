@@ -3,7 +3,7 @@
 // Functions for creating Figma variables from color data
 // ============================================
 
-import { Color, EffectiveSettings } from './types';
+import { Color, ColorSettings } from './types';
 import { hexToRgb, generateColorPalette } from './color-utils';
 
 // Convert hex color to Figma's RGBA format (values from 0-1)
@@ -52,7 +52,8 @@ async function getOrCreateColorVariable(
 
 // Main function: Create Figma variables from color data
 export async function createFigmaVariables(
-  colorsWithSettings: Array<{ color: Color; settings: EffectiveSettings }>,
+  colors: Color[],
+  backgroundColor: string,
   collectionName: string = 'Octarine'
 ): Promise<{ created: number; updated: number }> {
   const collection = await getOrCreateCollection(collectionName);
@@ -61,10 +62,16 @@ export async function createFigmaVariables(
   let created = 0;
   let updated = 0;
 
-  // Process each color using its group's settings for palette generation
-  for (const { color, settings } of colorsWithSettings) {
+  // Process each color using its own settings for palette generation
+  for (const color of colors) {
+    const colorSettings: ColorSettings = {
+      method: color.method,
+      defaultLightness: color.defaultLightness,
+      defaultContrast: color.defaultContrast,
+      backgroundColor,
+    };
     // Generate all stops at once with expansion and uniqueness
-    const paletteResult = generateColorPalette(color, settings);
+    const paletteResult = generateColorPalette(color, colorSettings);
 
     // Create variables for each generated stop
     for (const generatedStop of paletteResult.stops) {

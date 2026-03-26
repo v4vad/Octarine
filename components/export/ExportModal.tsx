@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react"
-import type { ColorGroup, GlobalConfig, ExportFormat, CSSColorFormat } from "../../lib/types"
+import type { Color, GlobalConfig, ExportFormat, CSSColorFormat } from "../../lib/types"
 import {
   prepareExportData,
   generateCSS,
@@ -12,7 +12,7 @@ import {
 } from "../../lib/export-utils"
 
 interface ExportModalProps {
-  groups: ColorGroup[]
+  colors: Color[]
   globalConfig: GlobalConfig
   onExportToFigma: (collectionName: string) => void
   onClose: () => void
@@ -43,7 +43,7 @@ const CSS_FORMAT_OPTIONS: {
 ]
 
 export function ExportModal({
-  groups,
+  colors,
   globalConfig,
   onExportToFigma,
   onClose
@@ -55,12 +55,12 @@ export function ExportModal({
 
   // Prepare export data once
   const exportData = useMemo(
-    () => prepareExportData(groups, globalConfig),
-    [groups, globalConfig]
+    () => prepareExportData(colors, globalConfig),
+    [colors, globalConfig]
   )
 
   // Count colors and variables for summary
-  const colorCount = groups.reduce((sum, g) => sum + g.colors.length, 0)
+  const colorCount = colors.length
   const variableCount = exportData.length
 
   // Generate preview content based on selected format
