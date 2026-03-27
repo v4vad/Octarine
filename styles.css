@@ -34,7 +34,7 @@
   --text-xl: 14px;
 
   /* Font stacks */
-  --font-display: 'Fraunces', Georgia, serif;
+  --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
 
@@ -1054,7 +1054,7 @@ input[type="range"]::-moz-range-thumb {
   grid-template-columns: 180px 1fr 240px;
   flex: 1;
   min-height: 0; /* Important for flex child to allow shrinking */
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* Left panel - settings and defaults */
