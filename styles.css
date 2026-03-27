@@ -1096,7 +1096,8 @@ input[type="range"]::-moz-range-thumb {
   width: var(--toggle-width);
   height: var(--toggle-height);
   border-radius: calc(var(--toggle-height) / 2);
-  background: var(--oct-bg-tertiary);
+  background: var(--oct-bg-active);
+  border: 1px solid var(--oct-border-strong);
   cursor: pointer;
   position: relative;
   transition: background var(--transition-fast);
@@ -1104,6 +1105,7 @@ input[type="range"]::-moz-range-thumb {
 
 .toggle-switch.on {
   background: var(--oct-bg-brand);
+  border-color: var(--oct-bg-brand);
 }
 
 .toggle-thumb {
@@ -1390,10 +1392,10 @@ input[type="range"]::-moz-range-thumb {
 .color-row {
   padding: var(--space-3);
   margin-bottom: var(--space-3);
-  border: 1px solid var(--oct-border);
+  border: 1px solid var(--oct-border-strong);
   border-radius: var(--radius-lg);
   background: var(--oct-bg-secondary);
-  box-shadow: var(--oct-shadow-sm);
+  box-shadow: var(--oct-shadow-md);
   cursor: pointer;
   transition: border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
 }
@@ -1677,7 +1679,10 @@ input[type="range"]::-moz-range-thumb {
 
 .stop-popup-label {
   font-size: var(--text-sm);
-  color: var(--oct-text-secondary);
+  font-weight: 600;
+  color: var(--oct-text);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   margin-bottom: var(--space-1);
 }
 
@@ -1740,23 +1745,22 @@ input[type="range"]::-moz-range-thumb {
    -------------------------------------------- */
 .export-btn {
   height: var(--control-height-md);
-  padding: 0 var(--space-2);
+  padding: 0 var(--space-3);
   display: inline-flex;
   align-items: center;
-  border: 1px solid var(--oct-border);
+  border: 1px solid var(--oct-border-brand);
   border-radius: var(--radius-md);
-  background: var(--oct-bg);
-  color: var(--oct-text);
+  background: var(--oct-bg-brand);
+  color: var(--oct-text-inverse);
   font-size: var(--text-md);
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .export-btn:hover {
-  background: var(--oct-bg-brand-subtle);
-  border-color: var(--oct-border-brand);
-  color: var(--oct-text-brand);
+  background: var(--oct-bg-brand-hover);
+  border-color: var(--oct-bg-brand-hover);
 }
 
 /* --------------------------------------------
