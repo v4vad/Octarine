@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
-import 'react-figma-plugin-ds/figma-plugin-ds.css';
 import './styles.css';
 
 import {
@@ -60,6 +59,20 @@ function App() {
       setActiveColorId(null);
     }
   }, [colors, activeColorId]);
+
+  // Theme state
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    try {
+      return (localStorage.getItem('octarine-theme') as 'light' | 'dark') || 'dark';
+    } catch { return 'dark'; }
+  });
+  const toggleTheme = useCallback(() => {
+    setTheme(prev => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      try { localStorage.setItem('octarine-theme', next); } catch {}
+      return next;
+    });
+  }, []);
 
   // Track whether we've received the initial load response
   const hasLoadedRef = useRef(false);
@@ -219,7 +232,7 @@ function App() {
   };
 
   return (
-    <div className="app-container">
+    <div className="app-container" data-theme={theme}>
       {/* Top Bar: Undo/Redo, Background Color, Export */}
       <TopBar
         globalConfig={globalConfig}
@@ -229,6 +242,8 @@ function App() {
         onRedo={redo}
         canUndo={canUndo}
         canRedo={canRedo}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
 
       {/* Main Three-Panel Layout */}
