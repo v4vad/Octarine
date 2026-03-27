@@ -256,7 +256,6 @@ function App() {
           onUpdateColor={updateColor}
           onAddColor={addColor}
           onDuplicateColor={duplicateColor}
-          onDeleteColor={removeColor}
         />
 
         {/* Middle Panel: Swatches for selected color */}

@@ -2222,15 +2222,13 @@ input[type="range"]::-moz-range-thumb {
   margin-top: auto;
   padding-top: var(--space-3);
   border-top: 1px solid var(--oct-border);
-  display: flex;
-  gap: var(--space-2);
 }
 
 .right-settings-action {
   padding: var(--space-1) var(--space-2);
   border: 1px solid var(--oct-border);
   border-radius: var(--radius-sm);
-  background: var(--oct-bg);
+  background: transparent;
   color: var(--oct-text-secondary);
   font-size: var(--text-sm);
   cursor: pointer;
@@ -2241,6 +2239,23 @@ input[type="range"]::-moz-range-thumb {
   background: var(--oct-bg-hover);
   color: var(--oct-text);
   border-color: var(--oct-border-strong);
+}
+
+/* Red outline button — used for Delete in right panel and confirm modal */
+.btn-danger-outline {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--oct-danger);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--oct-danger);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-danger-outline:hover {
+  background: rgba(229, 77, 77, 0.1);
 }
 
 .right-settings-delete {
