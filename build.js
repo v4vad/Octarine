@@ -3,7 +3,6 @@
 
 const esbuild = require('esbuild');
 const fs = require('fs');
-const path = require('path');
 
 async function build() {
   // Build code.ts (plugin code)
@@ -32,11 +31,7 @@ async function build() {
   // Read the compiled JavaScript
   const uiJs = fs.readFileSync('ui.js.tmp', 'utf8');
 
-  // Read CSS files - always use fresh copy from node_modules
-  const figmaPluginCSS = fs.readFileSync(
-    path.join(__dirname, 'node_modules/react-figma-plugin-ds/figma-plugin-ds.css'),
-    'utf8'
-  );
+  // Read CSS
   const customCSS = fs.readFileSync('styles.css', 'utf8');
   console.log('Read CSS files');
 
@@ -46,19 +41,8 @@ async function build() {
 <head>
   <meta charset="UTF-8">
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    body {
-      font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 12px;
-      color: var(--figma-color-text, #333);
-      background: var(--figma-color-bg, #fff);
-    }
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
   </style>
-  <style>${figmaPluginCSS}</style>
   <style>${customCSS}</style>
 </head>
 <body>
