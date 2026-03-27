@@ -256,6 +256,7 @@ function App() {
           onUpdateColor={updateColor}
           onAddColor={addColor}
           onDuplicateColor={duplicateColor}
+          onDeleteColor={removeColor}
         />
 
         {/* Middle Panel: Swatches for selected color */}
@@ -279,6 +280,7 @@ function App() {
             color={activeColor}
             onUpdate={(updatedColor) => updateColor(updatedColor.id, updatedColor)}
             onDelete={() => removeColor(activeColor.id)}
+            onDuplicate={() => duplicateColor(activeColor.id)}
           />
         ) : (
           <div className="right-panel-empty">

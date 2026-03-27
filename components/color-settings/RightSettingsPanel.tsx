@@ -7,12 +7,14 @@ interface RightSettingsPanelProps {
   color: Color;
   onUpdate: (color: Color) => void;
   onDelete: () => void;
+  onDuplicate: () => void;
 }
 
 export function RightSettingsPanel({
   color,
   onUpdate,
   onDelete,
+  onDuplicate,
 }: RightSettingsPanelProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -28,6 +30,13 @@ export function RightSettingsPanel({
       />
 
       <div className="right-settings-footer">
+        <button
+          className="right-settings-action"
+          onClick={onDuplicate}
+          title="Duplicate this color"
+        >
+          Duplicate
+        </button>
         <button
           className="right-settings-delete"
           onClick={() => setShowDeleteConfirm(true)}

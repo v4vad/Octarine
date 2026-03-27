@@ -2222,6 +2222,25 @@ input[type="range"]::-moz-range-thumb {
   margin-top: auto;
   padding-top: var(--space-3);
   border-top: 1px solid var(--oct-border);
+  display: flex;
+  gap: var(--space-2);
+}
+
+.right-settings-action {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--oct-border);
+  border-radius: var(--radius-sm);
+  background: var(--oct-bg);
+  color: var(--oct-text-secondary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.right-settings-action:hover {
+  background: var(--oct-bg-hover);
+  color: var(--oct-text);
+  border-color: var(--oct-border-strong);
 }
 
 .right-settings-delete {
@@ -2449,24 +2468,60 @@ input[type="range"]::-moz-range-thumb {
   color: var(--oct-text-secondary);
 }
 
-.duplicate-btn {
-  opacity: 0;
+/* Overflow menu (three-dot) button */
+.overflow-menu-btn {
   border: none;
   background: none;
   color: var(--oct-text-secondary);
   cursor: pointer;
-  font-size: var(--text-sm);
+  font-size: var(--text-xl);
   padding: 0 var(--space-1);
   flex-shrink: 0;
-  transition: opacity var(--transition-fast), color var(--transition-fast);
+  line-height: 1;
+  transition: color var(--transition-fast);
 }
 
-.group-strip-container:hover .duplicate-btn {
-  opacity: 1;
-}
-
-.duplicate-btn:hover {
+.overflow-menu-btn:hover {
   color: var(--oct-text);
+}
+
+/* Overflow menu dropdown */
+.overflow-menu-dropdown {
+  position: absolute;
+  right: var(--space-2);
+  top: 100%;
+  z-index: 100;
+  background: var(--oct-bg-secondary);
+  border: 1px solid var(--oct-border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--oct-shadow-popup);
+  min-width: 120px;
+  padding: var(--space-1) 0;
+}
+
+.overflow-menu-item {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: none;
+  color: var(--oct-text);
+  font-size: var(--text-md);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.overflow-menu-item:hover {
+  background: var(--oct-bg-hover);
+}
+
+.overflow-menu-item-danger {
+  color: var(--oct-text-danger);
+}
+
+.overflow-menu-item-danger:hover {
+  background: rgba(229, 77, 77, 0.1);
 }
 
 .color-header-swatch {
