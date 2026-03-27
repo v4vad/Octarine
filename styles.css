@@ -1862,6 +1862,14 @@ input[type="range"]::-moz-range-thumb {
   z-index: 1000;
 }
 
+/* Left panel color picker popup - fixed to escape overflow clipping */
+.left-panel-color-picker-popup {
+  position: fixed;
+  left: 8px;
+  top: 60px;
+  z-index: 1000;
+}
+
 /* Base color swatch clickable */
 .base-color-swatch.clickable {
   cursor: pointer;
