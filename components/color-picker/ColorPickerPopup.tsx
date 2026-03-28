@@ -1,6 +1,7 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { useColorPicker } from '../../hooks/useColorPicker';
 import { useClickOutside } from '../../hooks/useClickOutside';
+import { usePlatform } from '../../platform/context';
 import { GradientPicker } from './GradientPicker';
 import { HueSlider } from './HueSlider';
 
@@ -14,6 +15,7 @@ interface ColorPickerPopupProps {
 export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopupProps) {
   const popupRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<'oklch' | 'hsb'>('hsb');
+  const platform = usePlatform();
 
   const { state, handlers } = useColorPicker(color, onChange);
   const {
@@ -23,18 +25,6 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
   } = state;
 
   useClickOutside(popupRef, onClose);
-
-  // Listen for "Pick from selection" messages
-  useEffect(() => {
-    const handleMessage = (e: MessageEvent) => {
-      if (e.data.pluginMessage?.type === 'selection-color') {
-        const colorHex = e.data.pluginMessage.color as string;
-        handlers.syncFromExternal(colorHex);
-      }
-    };
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [handlers]);
 
   return (
     <div ref={popupRef} className="popup">
@@ -75,8 +65,11 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
       )}
 
       <div className="picker-action-row">
-        <button
-          onClick={() => parent.postMessage({ pluginMessage: { type: 'get-selection-color' } }, '*')}
+        {platform.capabilities.canPickColor && <button
+          onClick={async () => {
+            const hex = await platform.pickColor();
+            if (hex) handlers.syncFromExternal(hex);
+          }}
           className="btn btn-full"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -87,7 +80,7 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
             <line x1="18" y1="12" x2="22" y2="12"/>
           </svg>
           Pick from selection
-        </button>
+        </button>}
         {onReset && (
           <button
             onClick={() => {

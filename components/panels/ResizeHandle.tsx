@@ -1,7 +1,9 @@
 import React, { useRef } from 'react';
+import { usePlatform } from '../../platform/context';
 
 export function ResizeHandle() {
   const handleRef = useRef<SVGSVGElement>(null);
+  const platform = usePlatform();
 
   const handlePointerDown = (e: React.PointerEvent) => {
     const handle = handleRef.current;
@@ -12,10 +14,7 @@ export function ResizeHandle() {
     const onPointerMove = (moveEvent: PointerEvent) => {
       const width = Math.max(300, Math.floor(moveEvent.clientX + 5));
       const height = Math.max(200, Math.floor(moveEvent.clientY + 5));
-      parent.postMessage(
-        { pluginMessage: { type: 'resize', width, height } },
-        '*'
-      );
+      platform.resize(width, height);
     };
 
     const onPointerUp = () => {
