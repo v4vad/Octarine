@@ -1,6 +1,6 @@
 # components/ - React UI Components
 
-UI components for Octarine's Figma plugin interface. Uses `react-figma-plugin-ds` for Figma-native styling.
+UI components for Octarine. Platform-agnostic — components access platform features via `usePlatform()` hook from `platform/context.tsx`, not `parent.postMessage` directly.
 
 ## Folder Structure
 

@@ -2,6 +2,8 @@
 
 Core color generation logic for Octarine. Uses OKLCH color space via the `culori` library.
 
+**Note:** `figma-utils.ts` was moved to `platform/figma/figma-utils.ts` — this directory contains only platform-agnostic code.
+
 ## Module Overview
 
 | Module | Purpose |

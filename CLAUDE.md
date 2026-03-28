@@ -19,10 +19,26 @@ Figma plugins have **two execution contexts** that communicate via messages:
 
 | Context | File | Role |
 |---------|------|------|
-| Plugin Code | `code.ts` → `code.js` | Figma API access (read/modify document, create variables) |
+| Plugin Code | `platform/figma/code.ts` → `code.js` | Figma API access (read/modify document, create variables) |
 | UI Code | `ui.tsx` → `ui.html` | React interface (runs in iframe) |
 
-**Key files:** `lib/` (color algorithms), `components/` (React UI) - each has its own CLAUDE.md
+### Platform Abstraction
+
+The React app is decoupled from Figma via a platform adapter pattern:
+
+| File | Purpose |
+|------|---------|
+| `platform/types.ts` | `PlatformAdapter` interface — contract for all platforms |
+| `platform/context.tsx` | React Context + `usePlatform()` hook |
+| `platform/figma/adapter.ts` | Figma adapter (postMessage ↔ promises) |
+| `platform/figma/code.ts` | Figma sandbox entry point |
+| `platform/figma/figma-utils.ts` | Figma variable creation |
+| `platform/web/adapter.ts` | Web stub (localStorage, no-ops for Figma features) |
+| `platform/web/entry.tsx` | Web entry point |
+| `App.tsx` | Main React app (shared between Figma and web) |
+| `ui.tsx` | Figma-specific entry point (creates FigmaAdapter) |
+
+**Key folders:** `lib/` (color algorithms), `components/` (React UI), `platform/` (adapter layer) - lib and components each have their own CLAUDE.md
 
 ## UI Layout
 
@@ -39,7 +55,7 @@ Figma plugins have **two execution contexts** that communicate via messages:
 └──────────────┴─────────────────┴────────────────────┘
 ```
 
-Key files: `ui.tsx` (layout), `components/panels/` (TopBar, LeftPanel), `components/color-settings/RightSettingsPanel.tsx`
+Key files: `App.tsx` (layout), `components/panels/` (TopBar, LeftPanel), `components/color-settings/RightSettingsPanel.tsx`
 
 ## Guidelines
 

@@ -1,7 +1,7 @@
 ---
 title: "refactor: Decouple platform layer for cross-platform reuse"
 type: refactor
-status: active
+status: completed
 date: 2026-03-27
 origin: docs/brainstorms/2026-03-27-decouple-platform-layer-requirements.md
 ---
