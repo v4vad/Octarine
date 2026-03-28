@@ -58,6 +58,29 @@ async function build() {
   // Clean up temporary file
   fs.unlinkSync('ui.js.tmp');
 
+  console.log('Built Figma plugin');
+
+  // ---- Web stub build ----
+  // Build web entry point
+  await esbuild.build({
+    entryPoints: ['platform/web/entry.tsx'],
+    bundle: true,
+    outfile: 'web/web.js.tmp',
+    target: 'es2020',
+  });
+
+  const webJs = fs.readFileSync('web/web.js.tmp', 'utf8');
+
+  // Read the web HTML template and inline JS + CSS
+  const webTemplate = fs.readFileSync('platform/web/index.html', 'utf8');
+  const webHtml = webTemplate
+    .replace('<!-- CSS_PLACEHOLDER -->', `<style>${customCSS}</style>`)
+    .replace('<!-- JS_PLACEHOLDER -->', `<script>${webJs}</script>`);
+
+  fs.writeFileSync('web/index.html', webHtml);
+  fs.unlinkSync('web/web.js.tmp');
+
+  console.log('Built web/index.html');
   console.log('Build complete!');
 }
 
