@@ -17,7 +17,7 @@ export function ConfirmModal({ title, message, confirmLabel = 'Delete', onConfir
         <div className="confirm-modal-message">{message}</div>
         <div className="confirm-modal-actions">
           <button className="btn-secondary" onClick={onCancel}>Cancel</button>
-          <button className="btn-danger" onClick={onConfirm}>{confirmLabel}</button>
+          <button className="btn-danger-outline" onClick={onConfirm}>{confirmLabel}</button>
         </div>
       </div>
     </>

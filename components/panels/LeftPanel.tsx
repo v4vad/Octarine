@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Color } from '../../lib/types';
 import { DefaultsTable } from '../groups';
 import { SwatchHexInput } from '../primitives';
@@ -22,20 +22,11 @@ export function LeftPanel({
   onDuplicateColor,
 }: LeftPanelProps) {
   const [pickerColorId, setPickerColorId] = useState<string | null>(null);
-  const [pickerOpenUpward, setPickerOpenUpward] = useState(false);
-  const headerRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const handleSwatchClick = (colorId: string) => {
     if (pickerColorId === colorId) {
       setPickerColorId(null);
       return;
-    }
-    // Calculate if picker should open upward
-    const el = headerRefs.current[colorId];
-    if (el) {
-      const rect = el.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      setPickerOpenUpward(spaceBelow < 380);
     }
     setPickerColorId(colorId);
   };
@@ -54,7 +45,6 @@ export function LeftPanel({
               {/* Header — click to select/expand */}
               <div
                 className="group-strip-container"
-                ref={(el) => { headerRefs.current[color.id] = el; }}
                 style={{ position: 'relative' }}
                 onClick={() => {
                   if (!isExpanded) {
@@ -66,11 +56,6 @@ export function LeftPanel({
                   /* Expanded: name + interactive swatch/hex */
                   <div className="color-header-row">
                     <span className="color-header-name" title={color.label}>{color.label}</span>
-                    <button
-                      className="duplicate-btn"
-                      onClick={(e) => { e.stopPropagation(); onDuplicateColor(color.id); }}
-                      title="Duplicate color"
-                    >&#x29C9;</button>
                     <SwatchHexInput
                       color={color.baseColor}
                       onChange={(hex) => onUpdateColor(color.id, { ...color, baseColor: hex })}
@@ -81,11 +66,6 @@ export function LeftPanel({
                   /* Collapsed: name + static swatch + hex */
                   <div className="color-header-row">
                     <span className="color-header-name" title={color.label}>{color.label}</span>
-                    <button
-                      className="duplicate-btn"
-                      onClick={(e) => { e.stopPropagation(); onDuplicateColor(color.id); }}
-                      title="Duplicate color"
-                    >&#x29C9;</button>
                     <div
                       className="color-header-swatch"
                       style={{ backgroundColor: color.baseColor }}
@@ -94,24 +74,18 @@ export function LeftPanel({
                   </div>
                 )}
 
-                {/* Color picker — positioned relative to header */}
+                {/* Color picker — fixed position to avoid clipping */}
                 {isExpanded && showPicker && (
-                  <div
-                    className={pickerOpenUpward ? 'picker-upward' : 'mt-2'}
-                    style={pickerOpenUpward ? {
-                      position: 'absolute',
-                      bottom: '100%',
-                      left: 0,
-                      marginBottom: '8px',
-                      zIndex: 10
-                    } : undefined}
-                  >
-                    <ColorPickerPopup
-                      color={color.baseColor}
-                      onChange={(hex) => onUpdateColor(color.id, { ...color, baseColor: hex })}
-                      onClose={() => setPickerColorId(null)}
-                    />
-                  </div>
+                  <>
+                    <div className="popup-backdrop" onClick={() => setPickerColorId(null)} />
+                    <div className="left-panel-color-picker-popup">
+                      <ColorPickerPopup
+                        color={color.baseColor}
+                        onChange={(hex) => onUpdateColor(color.id, { ...color, baseColor: hex })}
+                        onClose={() => setPickerColorId(null)}
+                      />
+                    </div>
+                  </>
                 )}
               </div>
 
