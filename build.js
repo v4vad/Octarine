@@ -9,7 +9,7 @@ async function build() {
   // Figma's sandbox uses an older JS engine, so we target ES6
   // and transform object spread to Object.assign
   await esbuild.build({
-    entryPoints: ['code.ts'],
+    entryPoints: ['platform/figma/code.ts'],
     bundle: true,
     outfile: 'code.js',
     target: 'es6',
