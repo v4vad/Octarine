@@ -259,21 +259,21 @@ The web build must also inline `styles.css` into `web/index.html` (same approach
 ## Acceptance Criteria
 
 ### Functional Requirements
-- [ ] Figma plugin works identically before and after (manual test in Figma Desktop)
-- [ ] `ui.tsx` has zero direct `parent.postMessage` calls
-- [ ] `ColorPickerPopup.tsx` and `ResizeHandle.tsx` use `usePlatform()` instead of `parent.postMessage`
-- [ ] `lib/` directory contains zero Figma API imports (including `figma-utils.ts` moved out)
-- [ ] Web stub loads in a browser, renders the React app, and persists state to localStorage
-- [ ] ExportModal hides "Figma Variables" tab when running on web adapter
-- [ ] Eyedropper button is hidden when running on web adapter
-- [ ] TypeScript compiles cleanly (`npm run typecheck`)
-- [ ] Build produces both Figma plugin output and web stub output
+- [x] Figma plugin works identically before and after (manual test in Figma Desktop)
+- [x] `ui.tsx` has zero direct `parent.postMessage` calls
+- [x] `ColorPickerPopup.tsx` and `ResizeHandle.tsx` use `usePlatform()` instead of `parent.postMessage`
+- [x] `lib/` directory contains zero Figma API imports (including `figma-utils.ts` moved out)
+- [x] Web stub loads in a browser, renders the React app, and persists state to localStorage
+- [x] ExportModal hides "Figma Variables" tab when running on web adapter
+- [x] Eyedropper button is hidden when running on web adapter
+- [x] TypeScript compiles cleanly (`npm run typecheck`)
+- [x] Build produces both Figma plugin output and web stub output
 
 ### Non-Functional Requirements
-- [ ] No regression in Figma plugin performance
-- [ ] Adapter interface is simple and documented with JSDoc comments
-- [ ] Web stub renders correctly with full CSS (no unstyled content)
-- [ ] Figma types boundary check passes (no `figma.*` references outside `platform/figma/`)
+- [x] No regression in Figma plugin performance
+- [x] Adapter interface is simple and documented with JSDoc comments
+- [x] Web stub renders correctly with full CSS (no unstyled content)
+- [x] Figma types boundary check passes (no `figma.*` references outside `platform/figma/`)
 
 ## Implementation Phases
 
@@ -354,12 +354,12 @@ The web build must also inline `styles.css` into `web/index.html` (same approach
 
 ### Phase 5: Cleanup and Documentation
 
-- [ ] Update `CLAUDE.md` architecture section to reflect new `platform/` folder
-- [ ] Update `components/CLAUDE.md` if component imports changed
-- [ ] Update `lib/CLAUDE.md` to note `figma-utils.ts` moved to `platform/figma/`
-- [ ] Run `npm run validate` one final time
-- [ ] Manual test in Figma Desktop (full feature walkthrough)
-- [ ] Manual test web stub in browser
+- [x] Update `CLAUDE.md` architecture section to reflect new `platform/` folder
+- [x] Update `components/CLAUDE.md` if component imports changed
+- [x] Update `lib/CLAUDE.md` to note `figma-utils.ts` moved to `platform/figma/`
+- [x] Run `npm run validate` one final time
+- [x] Manual test in Figma Desktop (full feature walkthrough)
+- [x] Manual test web stub in browser
 
 ## Dependencies & Prerequisites
 

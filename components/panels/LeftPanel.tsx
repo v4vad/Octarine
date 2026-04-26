@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Color } from '../../lib/types';
-import { DefaultsTable } from '../groups';
+import { DefaultsTable } from './DefaultsTable';
 import { SwatchHexInput } from '../primitives';
 import { ColorPickerPopup } from '../color-picker';
 
