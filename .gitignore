@@ -6,6 +6,7 @@ code.js
 ui.html
 ui.js
 ui.js.css
+/web/
 
 # Claude Code internal files
 .claude/

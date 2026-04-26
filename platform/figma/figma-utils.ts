@@ -3,8 +3,8 @@
 // Functions for creating Figma variables from color data
 // ============================================
 
-import { Color, ColorSettings } from './types';
-import { hexToRgb, generateColorPalette } from './color-utils';
+import { Color, ColorSettings } from '../../lib/types';
+import { hexToRgb, generateColorPalette } from '../../lib/color-utils';
 
 // Convert hex color to Figma's RGBA format (values from 0-1)
 function hexToFigmaRgba(hex: string): RGBA {
@@ -76,7 +76,7 @@ export async function createFigmaVariables(
     // Create variables for each generated stop
     for (const generatedStop of paletteResult.stops) {
       // Find the original stop to get the stop number
-      const stop = color.stops.find(s => s.number === generatedStop.stopNumber);
+      const stop = color.stops.find((s: { number: number }) => s.number === generatedStop.stopNumber);
       if (!stop) continue;
 
       // Variable name: "ColorLabel/StopNumber" format (no group prefix)

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react"
+import { usePlatform } from "../../platform/context"
 import type { Color, GlobalConfig, ExportFormat, CSSColorFormat } from "../../lib/types"
 import {
   prepareExportData,
@@ -14,17 +15,18 @@ import {
 interface ExportModalProps {
   colors: Color[]
   globalConfig: GlobalConfig
-  onExportToFigma: (collectionName: string) => void
+  onExportToFigma: (collectionName: string) => void | Promise<void>
   onClose: () => void
 }
 
-// Format configuration for the sidebar
-const FORMAT_CONFIG: {
+// All possible export formats
+const ALL_FORMATS: {
   id: ExportFormat
   icon: string
   name: string
+  requiresFigma?: boolean
 }[] = [
-  { id: "figma", icon: "◇", name: "Figma Variables" },
+  { id: "figma", icon: "◇", name: "Figma Variables", requiresFigma: true },
   { id: "css", icon: "{ }", name: "CSS" },
   { id: "json", icon: "{ }", name: "Design Tokens" },
   { id: "oklch-raw", icon: "☰", name: "CSV" }
@@ -48,8 +50,14 @@ export function ExportModal({
   onExportToFigma,
   onClose
 }: ExportModalProps) {
+  const platform = usePlatform()
+  const formats = useMemo(() =>
+    ALL_FORMATS.filter(f => !f.requiresFigma || platform.capabilities.canExportVariables),
+    [platform.capabilities.canExportVariables]
+  )
   const [collectionName, setCollectionName] = useState("Octarine")
-  const [exportFormat, setExportFormat] = useState<ExportFormat>("figma")
+  const defaultFormat = platform.capabilities.canExportVariables ? "figma" : "css"
+  const [exportFormat, setExportFormat] = useState<ExportFormat>(defaultFormat)
   const [cssColorFormat, setCssColorFormat] = useState<CSSColorFormat>("hex")
   const [copySuccess, setCopySuccess] = useState(false)
 
@@ -100,9 +108,9 @@ export function ExportModal({
 
   const isCollectionNameValid = collectionName.trim().length > 0
 
-  const handleExportToFigma = () => {
+  const handleExportToFigma = async () => {
     if (!isCollectionNameValid) return
-    onExportToFigma(collectionName.trim())
+    await onExportToFigma(collectionName.trim())
     onClose()
   }
 
@@ -235,7 +243,7 @@ export function ExportModal({
         <div className="export-layout">
           {/* Left Column - Format Sidebar */}
           <div className="export-format-sidebar">
-            {FORMAT_CONFIG.map((format) => (
+            {formats.map((format) => (
               <button
                 key={format.id}
                 className={`export-format-btn ${exportFormat === format.id ? "selected" : ""}`}

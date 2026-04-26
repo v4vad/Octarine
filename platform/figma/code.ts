@@ -1,8 +1,8 @@
 // Octarine - Figma Color System Plugin
 // This file runs in Figma's sandbox and can access the Figma API
 
-import { createFigmaVariables } from './lib/figma-utils';
-import { Color, GlobalConfig, AppState, STORAGE_KEY, STORAGE_VERSION } from './lib/types';
+import { createFigmaVariables } from './figma-utils';
+import { Color, GlobalConfig, AppState, STORAGE_KEY, STORAGE_VERSION } from '../../lib/types';
 
 // Discriminated union for all messages the UI can send to the plugin
 type PluginMessage =

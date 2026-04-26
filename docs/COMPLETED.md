@@ -258,7 +258,7 @@ docs/archived/
 - Created `useColorPicker` hook to consolidate ~160 lines of duplicated hex/OKLCH/HSB sync logic → `hooks/`
 - Created `useClickOutside` hook for popup dismissal → `hooks/`
 - Extracted color picker: GradientPicker, HueSlider, ColorPickerPopup → `components/color-picker/`
-- Extracted group components: GroupAccordionItem, DefaultsTable → `components/groups/`
+- Extracted group components: GroupAccordionItem, DefaultsTable → `components/groups/` (GroupAccordionItem later removed; DefaultsTable later moved to `components/panels/`)
 - Extracted popups: StopPopup → `components/popups/`
 - Extracted panels: TopBar, LeftPanel, ResizeHandle → `components/panels/`
 - Extracted color settings: BaseColorField, ColorQualitySection, CorrectionsSection, HueShiftCurveSection, ChromaCurveSection, ColorSettingsContent, ColorSettingsPopup, RightSettingsPanel → `components/color-settings/`
@@ -271,4 +271,45 @@ docs/archived/
 - React Context (Phase 3): Code review revealed prop drilling was only 2-3 levels deep, not the 4-5 levels originally estimated. Adding context would add complexity without meaningful benefit.
 - Add tests (Phase 6): Requires Vitest setup and configuration. Deferred to future work.
 
-**Remaining in ui.tsx:** App component only (~200 lines) - serves as the main entry point
+**Remaining in ui.tsx after this refactor:** App component only (~200 lines) — later extracted to `App.tsx` in the Platform Layer Decoupling refactor.
+
+---
+
+## Platform Layer Decoupling (March 2026)
+
+**Goal:** Decouple the React UI from Figma's messaging APIs so the app can run in a browser or other platforms, not just inside the Figma plugin sandbox.
+
+**Problem:** `ui.tsx`, `ColorPickerPopup.tsx`, and `ResizeHandle.tsx` called `parent.postMessage()` directly — hardwiring the UI to Figma. The color engine (`lib/`) was already fully standalone; this refactor extended that independence to the UI layer.
+
+### What Moved
+
+| From | To | Reason |
+|------|----|--------|
+| `code.ts` (root) | `platform/figma/code.ts` | Grouped with other Figma-specific files |
+| `lib/figma-utils.ts` | `platform/figma/figma-utils.ts` | Figma variable creation belongs in platform layer, not lib/ |
+| `App` component (inside `ui.tsx`) | `App.tsx` (root) | Both the Figma entry and web entry need to import it |
+
+### What Was Created
+
+| File | Purpose |
+|------|---------|
+| `platform/types.ts` | `PlatformAdapter` interface + `PlatformCapabilities` type |
+| `platform/context.tsx` | `PlatformContext` and `usePlatform()` hook |
+| `platform/figma/adapter.ts` | Figma adapter — wraps postMessage request/response pairs in promises |
+| `platform/web/adapter.ts` | Web stub adapter — localStorage persistence, no-ops for Figma features |
+| `platform/web/entry.tsx` | Web entry point — bootstraps React with WebAdapter |
+| `platform/web/index.html` | Minimal HTML shell for running the app in a browser |
+
+### Key Design Decisions
+
+- **Promise-based adapter methods** — `pickColor(): Promise<string | null>`, `exportVariables(): Promise<ExportResult>`. Clean, typed, works with async/await. The Figma adapter wraps each postMessage request/response pair in a promise with a timeout.
+- **Capabilities object** — `{ canExportVariables, canPickColor, canResize }`. The UI checks capabilities to hide features unavailable on the current platform (e.g., the eyedropper and Variables export tab are hidden on web).
+- **Debounce stays in App** — The 500ms save debounce lives in the App component, not inside either adapter. Both adapters benefit from the same throttling without duplicating logic.
+- **Web stub is runnable** — The web adapter isn't just compilable; `web/index.html` actually runs the full React app in a browser, validating that the abstraction is complete.
+
+### Result
+
+- Zero `parent.postMessage` calls outside `platform/figma/`
+- Zero `figma.*` API calls outside `platform/figma/`
+- Figma plugin behavior unchanged
+- Web stub renders full app with CSS, state persists to localStorage across page reloads

@@ -1,19 +1,18 @@
 # components/ - React UI Components
 
-UI components for Octarine's Figma plugin interface. Uses `react-figma-plugin-ds` for Figma-native styling.
+UI components for Octarine. Platform-agnostic — components access platform features via `usePlatform()` hook from `platform/context.tsx`, not `parent.postMessage` directly.
 
 ## Folder Structure
 
 | Folder | Purpose |
 |--------|---------|
 | `primitives/` | Reusable building blocks (Slider, Toggle, ConfirmModal, SwatchHexInput) |
-| `panels/` | Layout containers (LeftPanel, TopBar, ResizeHandle) — LeftPanel includes DefaultsTable |
+| `panels/` | Layout containers (LeftPanel, TopBar, ResizeHandle, DefaultsTable) |
 | `colors/` | Color row display |
 | `color-settings/` | Per-color configuration UI (curves, corrections, quality) |
 | `color-picker/` | Gradient picker and hue slider |
 | `export/` | Export modal and format options |
 
-Note: the `groups/` folder and `GroupAccordionItem` component have been removed. `DefaultsTable` is now rendered directly inside `LeftPanel`.
 
 ## Patterns
 
@@ -36,7 +35,7 @@ export function Slider({ label, value }: SliderProps) { ... }
 
 ## Layout Structure
 
-The app uses a 3-panel layout defined in `ui.tsx`:
+The app uses a 3-panel layout defined in `App.tsx`:
 
 | Component | Location | Contents |
 |-----------|----------|----------|
