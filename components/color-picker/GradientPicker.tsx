@@ -12,8 +12,10 @@ interface GradientPickerProps {
 export function GradientPicker({ hue, saturation, brightness, mode, onChange }: GradientPickerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDraggingRef = useRef(false);
+  // Cached grid pixels — only invalidated when hue or mode changes, not on cursor drag
+  const cachedImageDataRef = useRef<ImageData | null>(null);
 
-  // Draw the gradient
+  // Effect 1: draw the pixel grid (expensive). Re-runs only when hue or mode changes.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -53,6 +55,25 @@ export function GradientPicker({ hue, saturation, brightness, mode, onChange }: 
       }
       ctx.putImageData(imageData, 0, 0);
     }
+
+    // Save the clean grid so the cursor effect can restore it without recomputing
+    cachedImageDataRef.current = ctx.getImageData(0, 0, width, height);
+  }, [hue, mode]);
+
+  // Effect 2: draw the cursor. Restores the cached grid then paints two arc circles.
+  // Runs on every saturation/brightness change (cheap — no per-pixel loop).
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    if (!cachedImageDataRef.current) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+
+    // Restore clean grid
+    ctx.putImageData(cachedImageDataRef.current, 0, 0);
 
     let posX: number, posY: number;
     if (mode === 'hsb') {
