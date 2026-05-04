@@ -19,14 +19,14 @@
 - [x] Batch Figma variable export (hoist `getLocalVariablesAsync` out of per-stop loop) — `platform/figma/figma-utils.ts`
 
 **Tier 2 — Medium-impact**
-- [ ] Faster duplicate detection (Set-based lookup instead of array scanning)
+- [x] Faster duplicate detection (Set-based lookup instead of array scanning) — PR #16
+- [x] Cache parsed `bgOklch` across one palette gen (`hexToOklch` memoization) — `lib/color-conversions.ts` — PR #16
+- [x] Memoize `getMaxLightnessForMinChroma` (pure function of `hue`, `minChroma`) — `lib/gamut-utils.ts` — PR #16
+- [x] Throttle `Slider.tsx` `onChange` to `requestAnimationFrame` — `components/primitives/Slider.tsx` — PR #16
 - [ ] Smarter contrast refinement (adaptive step sizing, early exit)
 - [ ] Skip unnecessary color conversions (direct OKLCH contrast calculation)
-- [ ] Cache parsed `bgOklch` across one palette gen — `lib/contrast-utils.ts`, `lib/color-distinctness.ts`
-- [ ] Memoize `getMaxLightnessForMinChroma` (pure function of `hue`, `minChroma`) — `lib/gamut-utils.ts`
 - [ ] Hoist hue-only invariants (HK `hueFactor`, BB `maxShift`) out of the per-stop loop — `lib/perceptual-corrections.ts`
 - [ ] Eliminate `{ ...color }` allocations in tight loops — `lib/contrast-utils.ts`, `lib/perceptual-corrections.ts`, `lib/artistic-curves.ts`
-- [ ] Throttle `Slider.tsx` `onChange` to `requestAnimationFrame` — `components/primitives/Slider.tsx`
 - [ ] Stabilize `GradientPicker` mousemove handler so the listener isn't re-bound every render — `components/color-picker/GradientPicker.tsx`
 
 **Tier 3 — Polish & scale**
