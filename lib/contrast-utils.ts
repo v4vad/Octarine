@@ -130,8 +130,8 @@ export function refineContrastToTarget(
   backgroundColor: string,
   tolerance: number = 0.005
 ): OKLCH {
-  const bgL = hexToOklch(backgroundColor).l
-  const isLightBg = bgL > 0.5
+  const bgOklch = hexToOklch(backgroundColor)
+  const isLightBg = bgOklch.l > 0.5
 
   // Store original chroma - we'll use this as the base for recalculating
   // chroma at each new lightness level
@@ -140,7 +140,7 @@ export function refineContrastToTarget(
   let currentColor = { ...color }
 
   for (let i = 0; i < 20; i++) {
-    const currentContrast = wcagContrast({ mode: 'oklch' as const, ...currentColor }, backgroundColor)
+    const currentContrast = wcagContrast({ mode: 'oklch' as const, ...currentColor }, { mode: 'oklch' as const, ...bgOklch })
     const error = currentContrast - targetContrast
 
     // Within tolerance? Done!
