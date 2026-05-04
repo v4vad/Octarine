@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 
 interface SliderProps {
   label: string;
@@ -17,12 +17,19 @@ export function Slider({
   unit = '',
   onChange
 }: SliderProps) {
+  const rafRef = useRef<number | null>(null);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const parsed = parseInt(e.target.value, 10);
-    // Guard against NaN
-    if (!isNaN(parsed)) {
-      onChange(Math.max(min, Math.min(max, parsed)));
-    }
+    if (isNaN(parsed)) return;
+    const clamped = Math.max(min, Math.min(max, parsed));
+    // Throttle to one update per animation frame — prevents >60 onChange
+    // calls/second on high-refresh displays from flooding React's queue
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      onChange(clamped);
+      rafRef.current = null;
+    });
   };
 
   return (
