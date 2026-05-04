@@ -10,13 +10,13 @@
 
 ### Performance Improvements
 
-**Tier 1 — High-impact, user-visible**
-- [ ] Cache OKLCH gradient picker output; redraw only when hue changes (avoids ~40k culori conversions per drag tick) — `components/color-picker/GradientPicker.tsx`
-- [ ] Restore gamut lookup table — replaces ~25 culori binary searches per stop with O(1) lookup — `lib/gamut-utils.ts`, new `lib/gamut-table.ts`
-- [ ] `React.memo` heavy panels and stabilize callbacks via `useReducer` so a slider tick doesn't re-render the whole tree — `App.tsx`, `components/`
-- [ ] Wrap palette regeneration in `useTransition` so slider drags stay at 60fps — `App.tsx`, `components/colors/ColorRow.tsx`
-- [ ] Minify build output and audit culori tree-shaking; replace blocked Google Fonts `@import` with embedded `@font-face` — `build.js`
-- [ ] Batch Figma variable export (hoist `getLocalVariablesAsync` out of per-stop loop) — `platform/figma/figma-utils.ts`
+**Tier 1 — High-impact, user-visible** ✅ Complete (PRs #11–#15)
+- [x] Cache OKLCH gradient picker output; redraw only when hue changes (avoids ~40k culori conversions per drag tick) — `components/color-picker/GradientPicker.tsx`
+- [x] Restore gamut lookup table — replaces ~25 culori binary searches per stop with O(1) lookup — `lib/gamut-utils.ts`, new `lib/gamut-table.ts`
+- [x] `React.memo` heavy panels and stabilize callbacks via `useReducer` so a slider tick doesn't re-render the whole tree — `App.tsx`, `components/`
+- [x] Wrap palette regeneration in `useTransition` so slider drags stay at 60fps — `App.tsx`, `components/colors/ColorRow.tsx`
+- [x] Minify build output and audit culori tree-shaking; replace blocked Google Fonts `@import` with embedded `@font-face` — `build.js`
+- [x] Batch Figma variable export (hoist `getLocalVariablesAsync` out of per-stop loop) — `platform/figma/figma-utils.ts`
 
 **Tier 2 — Medium-impact**
 - [ ] Faster duplicate detection (Set-based lookup instead of array scanning)
