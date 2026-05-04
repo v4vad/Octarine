@@ -7,7 +7,7 @@
 
 import { wcagContrast, wcagLuminance } from "culori"
 import type { OKLCH } from "./color-conversions"
-import { hexToOklch, oklchToHex } from "./color-conversions"
+import { hexToOklch } from "./color-conversions"
 import { clampChromaToGamut } from "./gamut-utils"
 
 /**
@@ -75,8 +75,7 @@ export function findLightnessForContrast(
 
   for (let i = 0; i < 20; i++) {
     const mid = (low + high) / 2
-    const testColor = oklchToHex({ l: mid, c: baseColor.c, h: baseColor.h })
-    const contrast = getContrastRatio(testColor, background)
+    const contrast = wcagContrast({ mode: 'oklch' as const, l: mid, c: baseColor.c, h: baseColor.h }, { mode: 'oklch' as const, ...bgOklch })
     const diff = Math.abs(contrast - targetContrast)
 
     if (diff < bestDiff) {
@@ -131,8 +130,8 @@ export function refineContrastToTarget(
   backgroundColor: string,
   tolerance: number = 0.005
 ): OKLCH {
-  const bgL = hexToOklch(backgroundColor).l
-  const isLightBg = bgL > 0.5
+  const bgOklch = hexToOklch(backgroundColor)
+  const isLightBg = bgOklch.l > 0.5
 
   // Store original chroma - we'll use this as the base for recalculating
   // chroma at each new lightness level
@@ -141,8 +140,7 @@ export function refineContrastToTarget(
   let currentColor = { ...color }
 
   for (let i = 0; i < 20; i++) {
-    const currentHex = oklchToHex(currentColor)
-    const currentContrast = getContrastRatio(currentHex, backgroundColor)
+    const currentContrast = wcagContrast({ mode: 'oklch' as const, ...currentColor }, { mode: 'oklch' as const, ...bgOklch })
     const error = currentContrast - targetContrast
 
     // Within tolerance? Done!
