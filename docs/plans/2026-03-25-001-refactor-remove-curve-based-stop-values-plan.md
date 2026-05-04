@@ -124,20 +124,20 @@ Per project conventions (`CLAUDE.md`: "When adding/removing features: update `do
 
 ### Phase 8: Validate
 
-- [ ] Run `npm run typecheck` — no TypeScript errors
-- [ ] Run `npm run build` — builds successfully
-- [ ] Verify no remaining references to removed types/components: search for `StopValueCurve`, `CurveSelector`, `CurvePopover`, `CurveGraph`, `lightnessCurve`, `contrastCurve`, `stop-value-curves`
-- [ ] Verify `artistic-curves.ts` still works (imports `smoothStep` locally)
+- [x] Run `npm run typecheck` — no TypeScript errors
+- [x] Run `npm run build` — builds successfully
+- [x] Verify no remaining references to removed types/components: search for `StopValueCurve`, `CurveSelector`, `CurvePopover`, `CurveGraph`, `lightnessCurve`, `contrastCurve`, `stop-value-curves`
+- [x] Verify `artistic-curves.ts` still works (imports `smoothStep` locally)
 
 ## Acceptance Criteria
 
-- [ ] Defaults Table shows only: method toggle, stop/value table, and Add Stop input
-- [ ] Editing a value writes directly — no mode switching, no override indicators
-- [ ] Adding a custom stop produces a linearly interpolated value
-- [ ] No curve-related UI, types, or state remain in the codebase
-- [ ] Artistic curves (hue shift, chroma) in the right panel work unchanged
-- [ ] Plugin loads correctly with saved v5 state (migration strips curve fields)
-- [ ] `npm run validate` passes clean
+- [x] Defaults Table shows only: method toggle, stop/value table, and Add Stop input
+- [x] Editing a value writes directly — no mode switching, no override indicators
+- [x] Adding a custom stop produces a linearly interpolated value
+- [x] No curve-related UI, types, or state remain in the codebase
+- [x] Artistic curves (hue shift, chroma) in the right panel work unchanged
+- [x] Plugin loads correctly with saved v5 state (migration strips curve fields)
+- [x] `npm run validate` passes clean
 
 ## Dependencies & Risks
 

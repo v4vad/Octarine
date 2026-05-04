@@ -74,19 +74,19 @@ erDiagram
 
 **Tasks:**
 
-- [ ] Add `method: ColorMethod`, `defaultLightness: Record<number, number>`, `defaultContrast: Record<number, number>` to `Color` type (`lib/types.ts:130`)
-- [ ] Remove `methodOverride` from `Color` type (`lib/types.ts:137`)
-- [ ] Remove `ColorGroup` type (`lib/types.ts:191`), `GroupSettings` type (`lib/types.ts:161`), `GlobalSettings` alias (`lib/types.ts:170`), `EffectiveSettings` type (`lib/types.ts:184`)
-- [ ] Add `ColorSettings` type: `{ method: ColorMethod; defaultLightness: Record<number, number>; defaultContrast: Record<number, number>; backgroundColor: string }`
-- [ ] Change `AppState` (`lib/types.ts:201`): remove `groups`, `activeGroupId`, `expandedGroupId`; add `colors: Color[]`, `activeColorId: string | null`
-- [ ] Remove `createDefaultGroupSettings()` (`lib/types.ts:246`), `createDefaultGroup()` (`lib/types.ts:265`)
-- [ ] Add `createDefaultColor(id: string, name: string): Color` — creates a color with `DEFAULT_LIGHTNESS`, `DEFAULT_CONTRAST`, default stops, `method: 'lightness'`
-- [ ] Rewrite `createInitialAppState()` (`lib/types.ts:275`) — creates one default color, sets `activeColorId` to that color's id
-- [ ] Bump `STORAGE_VERSION` to 7 (`lib/types.ts:289`)
-- [ ] Add v6→v7 migration handler in `migrateState()` (`lib/types.ts:321`): when `persisted.version === 6`, iterate `state.groups`, flatten each group's `colors` into a single array, for each color: set `color.method = color.methodOverride ?? group.settings.method`, set `color.defaultLightness = group.settings.defaultLightness`, set `color.defaultContrast = group.settings.defaultContrast`, delete `color.methodOverride` using rest destructuring pattern (see learnings: `docs/solutions/code-quality/removing-curve-based-stop-values.md`)
-- [ ] Set `activeColorId = flattenedColors[0]?.id ?? null` in the migration
-- [ ] Update the shape validator at end of `migrateState()` (`lib/types.ts:424`): check `Array.isArray(candidate.colors)` instead of `Array.isArray(candidate.groups)`
-- [ ] Validate at entry of v6→v7 handler: confirm `state.groups` is an array before iterating
+- [x] Add `method: ColorMethod`, `defaultLightness: Record<number, number>`, `defaultContrast: Record<number, number>` to `Color` type (`lib/types.ts:130`)
+- [x] Remove `methodOverride` from `Color` type (`lib/types.ts:137`)
+- [x] Remove `ColorGroup` type (`lib/types.ts:191`), `GroupSettings` type (`lib/types.ts:161`), `GlobalSettings` alias (`lib/types.ts:170`), `EffectiveSettings` type (`lib/types.ts:184`)
+- [x] Add `ColorSettings` type: `{ method: ColorMethod; defaultLightness: Record<number, number>; defaultContrast: Record<number, number>; backgroundColor: string }`
+- [x] Change `AppState` (`lib/types.ts:201`): remove `groups`, `activeGroupId`, `expandedGroupId`; add `colors: Color[]`, `activeColorId: string | null`
+- [x] Remove `createDefaultGroupSettings()` (`lib/types.ts:246`), `createDefaultGroup()` (`lib/types.ts:265`)
+- [x] Add `createDefaultColor(id: string, name: string): Color` — creates a color with `DEFAULT_LIGHTNESS`, `DEFAULT_CONTRAST`, default stops, `method: 'lightness'`
+- [x] Rewrite `createInitialAppState()` (`lib/types.ts:275`) — creates one default color, sets `activeColorId` to that color's id
+- [x] Bump `STORAGE_VERSION` to 7 (`lib/types.ts:289`)
+- [x] Add v6→v7 migration handler in `migrateState()` (`lib/types.ts:321`): when `persisted.version === 6`, iterate `state.groups`, flatten each group's `colors` into a single array, for each color: set `color.method = color.methodOverride ?? group.settings.method`, set `color.defaultLightness = group.settings.defaultLightness`, set `color.defaultContrast = group.settings.defaultContrast`, delete `color.methodOverride` using rest destructuring pattern (see learnings: `docs/solutions/code-quality/removing-curve-based-stop-values.md`)
+- [x] Set `activeColorId = flattenedColors[0]?.id ?? null` in the migration
+- [x] Update the shape validator at end of `migrateState()` (`lib/types.ts:424`): check `Array.isArray(candidate.colors)` instead of `Array.isArray(candidate.groups)`
+- [x] Validate at entry of v6→v7 handler: confirm `state.groups` is an array before iterating
 
 **Success criteria:** `npm run typecheck` passes. Migration unit-testable in isolation.
 
@@ -96,10 +96,10 @@ erDiagram
 
 **Tasks:**
 
-- [ ] Update `generateColorPalette()` signature (`lib/color-utils.ts:87`): change from `(color: Color, globalSettings: EffectiveSettings)` to `(color: Color, colorSettings: ColorSettings)`. Internal changes: `globalSettings.method` → `color.method`, `globalSettings.defaultLightness` → `color.defaultLightness`, `globalSettings.defaultContrast` → `color.defaultContrast`, `globalSettings.backgroundColor` → `colorSettings.backgroundColor`. Remove the `color.methodOverride ?? globalSettings.method` fallback at line 94 — just use `color.method` directly.
-- [ ] Update `prepareExportData()` signature (`lib/export-utils.ts:24`): change from `(groups: ColorGroup[], globalConfig: GlobalConfig)` to `(colors: Color[], globalConfig: GlobalConfig)`. Body: remove group iteration, iterate `colors` directly, build `ColorSettings` per color as `{ ...pick(color, 'method', 'defaultLightness', 'defaultContrast'), backgroundColor: globalConfig.backgroundColor }`
-- [ ] Update `createFigmaVariables()` (`lib/figma-utils.ts`): change parameter from `Array<{ color: Color; settings: EffectiveSettings }>` to `(colors: Color[], backgroundColor: string)`. Build `ColorSettings` per color internally.
-- [ ] Update imports in all three files: remove `ColorGroup`, `GroupSettings`, `EffectiveSettings`; add `ColorSettings`
+- [x] Update `generateColorPalette()` signature (`lib/color-utils.ts:87`): change from `(color: Color, globalSettings: EffectiveSettings)` to `(color: Color, colorSettings: ColorSettings)`. Internal changes: `globalSettings.method` → `color.method`, `globalSettings.defaultLightness` → `color.defaultLightness`, `globalSettings.defaultContrast` → `color.defaultContrast`, `globalSettings.backgroundColor` → `colorSettings.backgroundColor`. Remove the `color.methodOverride ?? globalSettings.method` fallback at line 94 — just use `color.method` directly.
+- [x] Update `prepareExportData()` signature (`lib/export-utils.ts:24`): change from `(groups: ColorGroup[], globalConfig: GlobalConfig)` to `(colors: Color[], globalConfig: GlobalConfig)`. Body: remove group iteration, iterate `colors` directly, build `ColorSettings` per color as `{ ...pick(color, 'method', 'defaultLightness', 'defaultContrast'), backgroundColor: globalConfig.backgroundColor }`
+- [x] Update `createFigmaVariables()` (`lib/figma-utils.ts`): change parameter from `Array<{ color: Color; settings: EffectiveSettings }>` to `(colors: Color[], backgroundColor: string)`. Build `ColorSettings` per color internally.
+- [x] Update imports in all three files: remove `ColorGroup`, `GroupSettings`, `EffectiveSettings`; add `ColorSettings`
 
 **Success criteria:** `npm run typecheck` passes. Export produces identical output for identical input data.
 
@@ -109,11 +109,11 @@ erDiagram
 
 **Tasks:**
 
-- [ ] Update `PluginMessage` type (`code.ts:12`): change `create-variables` branch from `{ groups: ColorGroup[] }` to `{ colors: Color[] }`
-- [ ] Update `create-variables` handler (`code.ts:49-64`): remove group iteration loop, pass `msg.colors` and `msg.globalConfig.backgroundColor` to `createFigmaVariables()` directly
-- [ ] Update `save-state` handler: no change needed (already sends `AppState` opaquely)
-- [ ] Update `load-state` handler: no change needed (`migrateState` handles version differences)
-- [ ] Update imports: remove `ColorGroup`; import `Color` if not already imported
+- [x] Update `PluginMessage` type (`code.ts:12`): change `create-variables` branch from `{ groups: ColorGroup[] }` to `{ colors: Color[] }`
+- [x] Update `create-variables` handler (`code.ts:49-64`): remove group iteration loop, pass `msg.colors` and `msg.globalConfig.backgroundColor` to `createFigmaVariables()` directly
+- [x] Update `save-state` handler: no change needed (already sends `AppState` opaquely)
+- [x] Update `load-state` handler: no change needed (`migrateState` handles version differences)
+- [x] Update imports: remove `ColorGroup`; import `Color` if not already imported
 
 **Success criteria:** `npm run typecheck` passes. `create-variables` message works with new payload shape.
 
@@ -123,24 +123,24 @@ erDiagram
 
 **Tasks:**
 
-- [ ] Update imports: remove `ColorGroup`, `createDefaultGroupSettings`, `createDefaultGroup`; add `createDefaultColor`
-- [ ] Update state destructuring (`ui.tsx:33`): `const { colors, activeColorId } = state` (remove `groups`, `activeGroupId`, `expandedGroupId`)
-- [ ] Replace derived values (`ui.tsx:36-56`):
+- [x] Update imports: remove `ColorGroup`, `createDefaultGroupSettings`, `createDefaultGroup`; add `createDefaultColor`
+- [x] Update state destructuring (`ui.tsx:33`): `const { colors, activeColorId } = state` (remove `groups`, `activeGroupId`, `expandedGroupId`)
+- [x] Replace derived values (`ui.tsx:36-56`):
   - Remove `activeGroup`, `activeGroupColors`, `mergedSettings` derivations
   - Add `activeColor = colors.find(c => c.id === activeColorId) ?? null`
   - Add `colorSettings = useMemo(() => activeColor ? { method: activeColor.method, defaultLightness: activeColor.defaultLightness, defaultContrast: activeColor.defaultContrast, backgroundColor: state.globalConfig.backgroundColor } : null, [activeColor, state.globalConfig.backgroundColor])`
-- [ ] Keep `activeColorId` selection changes outside undo history — use `replaceState()` (from `useHistory`) for selection changes only, use `setState()` for data changes. This preserves the current behavior where clicking a color is not undo-able.
-- [ ] Auto-select logic (`ui.tsx:64-78`): simplify to single `useEffect` — if `activeColorId` is null or points to a deleted color, select `colors[0]?.id ?? null`
-- [ ] Remove all group callbacks (`ui.tsx:148-197`): `selectGroup`, `toggleGroupExpansion`, `addGroup`, `updateGroup`, `deleteGroup`
-- [ ] Rewrite color operations (`ui.tsx:202-234`):
+- [x] Keep `activeColorId` selection changes outside undo history — use `replaceState()` (from `useHistory`) for selection changes only, use `setState()` for data changes. This preserves the current behavior where clicking a color is not undo-able.
+- [x] Auto-select logic (`ui.tsx:64-78`): simplify to single `useEffect` — if `activeColorId` is null or points to a deleted color, select `colors[0]?.id ?? null`
+- [x] Remove all group callbacks (`ui.tsx:148-197`): `selectGroup`, `toggleGroupExpansion`, `addGroup`, `updateGroup`, `deleteGroup`
+- [x] Rewrite color operations (`ui.tsx:202-234`):
   - `addColor()`: create new color via `createDefaultColor()`, append to `colors[]`, auto-select it
   - `updateColor(colorId, updates)`: map over `colors[]`, spread updates onto matching color
   - `removeColor(colorId)`: filter `colors[]`, if deleted color was active, select color at same index or previous (if it was last), if list is empty set `activeColorId = null`
   - `duplicateColor(colorId)`: deep copy color with new id, label = `originalName + " copy"`, insert immediately after the original in `colors[]`, auto-select the duplicate
-- [ ] Update `createVariables()` (`ui.tsx:239-251`): send `{ type: 'create-variables', colors, globalConfig }` instead of `{ type: 'create-variables', groups }`
-- [ ] Update left panel props (`ui.tsx:268-278`): pass `colors`, `activeColorId`, `activeColor`, `onSelectColor`, `onUpdateColor`, `onAddColor`, `onDeleteColor`, `onDuplicateColor`
-- [ ] Update middle panel rendering (`ui.tsx:280-309`): render only `activeColor`'s stops, remove `activeGroupColors.map()` loop, keep `ColorRow` component for each stop
-- [ ] Update `ExportModal` props: change from `groups` to `colors`
+- [x] Update `createVariables()` (`ui.tsx:239-251`): send `{ type: 'create-variables', colors, globalConfig }` instead of `{ type: 'create-variables', groups }`
+- [x] Update left panel props (`ui.tsx:268-278`): pass `colors`, `activeColorId`, `activeColor`, `onSelectColor`, `onUpdateColor`, `onAddColor`, `onDeleteColor`, `onDuplicateColor`
+- [x] Update middle panel rendering (`ui.tsx:280-309`): render only `activeColor`'s stops, remove `activeGroupColors.map()` loop, keep `ColorRow` component for each stop
+- [x] Update `ExportModal` props: change from `groups` to `colors`
 
 **Success criteria:** `npm run typecheck` passes. All user flows work: add, select, edit, duplicate, delete, undo/redo.
 
@@ -151,40 +151,40 @@ erDiagram
 **Tasks:**
 
 ##### LeftPanel (`components/panels/LeftPanel.tsx`) — complete rewrite
-- [ ] New props: `colors: Color[]`, `activeColorId: string | null`, `activeColor: Color | null`, `onSelectColor`, `onUpdateColor`, `onAddColor`, `onDeleteColor`, `onDuplicateColor`
-- [ ] Render flat color list (each row: color dot + name, click to select, highlight active)
-- [ ] Below list: "Add Color" button
-- [ ] Below button: if `activeColor` exists, render base color picker, method toggle, `DefaultsTable`
-- [ ] Remove all group-related rendering (GroupAccordionItem loop, "Add Group" button)
+- [x] New props: `colors: Color[]`, `activeColorId: string | null`, `activeColor: Color | null`, `onSelectColor`, `onUpdateColor`, `onAddColor`, `onDeleteColor`, `onDuplicateColor`
+- [x] Render flat color list (each row: color dot + name, click to select, highlight active)
+- [x] Below list: "Add Color" button
+- [x] Below button: if `activeColor` exists, render base color picker, method toggle, `DefaultsTable`
+- [x] Remove all group-related rendering (GroupAccordionItem loop, "Add Group" button)
 
 ##### DefaultsTable (`components/groups/DefaultsTable.tsx`) — moved, props changed
-- [ ] Move from `components/groups/` to `components/panels/` or `components/color-settings/` (wherever makes sense in the component tree)
-- [ ] Change props from `{ settings: GroupSettings, onUpdate: (settings: GroupSettings) => void }` to `{ color: Color, onUpdate: (updates: Partial<Color>) => void }`
-- [ ] When "Add Stop" adds a stop number: add to both `Color.defaultLightness`/`defaultContrast` (with interpolated values) AND to `Color.stops[]` (new Stop object). When removing a stop: remove from both.
-- [ ] Internal logic stays the same — it already handles method toggle, value editing, interpolation
+- [x] Move from `components/groups/` to `components/panels/` or `components/color-settings/` (wherever makes sense in the component tree)
+- [x] Change props from `{ settings: GroupSettings, onUpdate: (settings: GroupSettings) => void }` to `{ color: Color, onUpdate: (updates: Partial<Color>) => void }`
+- [x] When "Add Stop" adds a stop number: add to both `Color.defaultLightness`/`defaultContrast` (with interpolated values) AND to `Color.stops[]` (new Stop object). When removing a stop: remove from both.
+- [x] Internal logic stays the same — it already handles method toggle, value editing, interpolation
 
 ##### GroupAccordionItem (`components/groups/GroupAccordionItem.tsx`) — delete entirely
-- [ ] Delete file
-- [ ] Remove from `components/groups/index.ts`
+- [x] Delete file
+- [x] Remove from `components/groups/index.ts`
 
 ##### ExportModal (`components/export/ExportModal.tsx`)
-- [ ] Change props: `groups: ColorGroup[]` → `colors: Color[]`
-- [ ] Update `prepareExportData()` call to pass `colors` instead of `groups`
-- [ ] Update color count: `colors.length` instead of reducing over groups
+- [x] Change props: `groups: ColorGroup[]` → `colors: Color[]`
+- [x] Update `prepareExportData()` call to pass `colors` instead of `groups`
+- [x] Update color count: `colors.length` instead of reducing over groups
 
 ##### ColorRow (`components/colors/ColorRow.tsx`)
-- [ ] Add Duplicate button next to existing Delete button
-- [ ] Receive `onDuplicate` callback prop
+- [x] Add Duplicate button next to existing Delete button
+- [x] Receive `onDuplicate` callback prop
 
 ##### RightSettingsPanel / ColorSettingsContent
-- [ ] No structural changes needed — already per-color
-- [ ] Remove any reference to `EffectiveSettings` if present
-- [ ] Confirm "Preserve Color Identity" toggle is in the right panel (it should be, alongside HK/BB)
+- [x] No structural changes needed — already per-color
+- [x] Remove any reference to `EffectiveSettings` if present
+- [x] Confirm "Preserve Color Identity" toggle is in the right panel (it should be, alongside HK/BB)
 
 ##### Cleanup
-- [ ] Delete `components/groups/GroupAccordionItem.tsx`
-- [ ] Delete or repurpose `components/groups/index.ts`
-- [ ] Delete `components/color-settings/ColorSettingsPopup.tsx` (unused — dead code from prior design)
+- [x] Delete `components/groups/GroupAccordionItem.tsx`
+- [x] Delete or repurpose `components/groups/index.ts`
+- [x] Delete `components/color-settings/ColorSettingsPopup.tsx` (unused — dead code from prior design)
 
 **Success criteria:** Full plugin builds (`npm run build`), all panels render correctly.
 
@@ -192,12 +192,12 @@ erDiagram
 
 **Tasks:**
 
-- [ ] Update `docs/FEATURES.md`: remove all group references, update UI layout description, update generation methods section
-- [ ] Update `PLAN.md`: remove group references from Import Figma Variables section
-- [ ] Add entry to `docs/removed-features.md` for Groups: What It Did, Why Removed, Current Behavior, If Revisiting
-- [ ] Update `components/CLAUDE.md` if it references group components
-- [ ] Update root `CLAUDE.md` UI layout diagram
-- [ ] Grep codebase for any remaining "group" references: `grep -ri "group" --include="*.ts" --include="*.tsx"`
+- [x] Update `docs/FEATURES.md`: remove all group references, update UI layout description, update generation methods section
+- [x] Update `PLAN.md`: remove group references from Import Figma Variables section
+- [x] Add entry to `docs/removed-features.md` for Groups: What It Did, Why Removed, Current Behavior, If Revisiting
+- [x] Update `components/CLAUDE.md` if it references group components
+- [x] Update root `CLAUDE.md` UI layout diagram
+- [x] Grep codebase for any remaining "group" references: `grep -ri "group" --include="*.ts" --include="*.tsx"`
 
 **Success criteria:** `npm run validate` passes. No stale group references in docs or code.
 
@@ -244,33 +244,33 @@ User exports to Figma variables
 
 ### Functional Requirements
 
-- [ ] No `ColorGroup`, `GroupSettings`, or group-related UI remains in the codebase
-- [ ] Each color independently owns method, defaultLightness, defaultContrast, stops, corrections, curves
-- [ ] Left panel: flat color list + base color picker + method toggle + defaults table for selected color
-- [ ] Middle panel: swatches for selected color only
-- [ ] Right panel: advanced settings (HK/BB, hue shift, chroma, preserve identity) for selected color
-- [ ] "Add Color" creates a new color with hardcoded defaults
-- [ ] "Duplicate Color" deep-copies a color, inserts after original, auto-selects it
-- [ ] "Delete Color" removes color, auto-selects adjacent color or goes to null
-- [ ] Undo/redo works for data changes (add, edit, delete, duplicate) but NOT for selection changes
-- [ ] App starts with one default color on first launch
-- [ ] Export to CSS/JSON/Figma variables works identically (same output for same data)
-- [ ] Adding a stop via defaults table adds to both `defaultLightness`/`defaultContrast` AND `stops[]`
+- [x] No `ColorGroup`, `GroupSettings`, or group-related UI remains in the codebase
+- [x] Each color independently owns method, defaultLightness, defaultContrast, stops, corrections, curves
+- [x] Left panel: flat color list + base color picker + method toggle + defaults table for selected color
+- [x] Middle panel: swatches for selected color only
+- [x] Right panel: advanced settings (HK/BB, hue shift, chroma, preserve identity) for selected color
+- [x] "Add Color" creates a new color with hardcoded defaults
+- [x] "Duplicate Color" deep-copies a color, inserts after original, auto-selects it
+- [x] "Delete Color" removes color, auto-selects adjacent color or goes to null
+- [x] Undo/redo works for data changes (add, edit, delete, duplicate) but NOT for selection changes
+- [x] App starts with one default color on first launch
+- [x] Export to CSS/JSON/Figma variables works identically (same output for same data)
+- [x] Adding a stop via defaults table adds to both `defaultLightness`/`defaultContrast` AND `stops[]`
 
 ### Migration Requirements
 
-- [ ] `STORAGE_VERSION` = 7
-- [ ] v6 state (with groups) migrates correctly to v7 (flat colors)
-- [ ] `methodOverride` resolved: override wins if set, else group method used
-- [ ] `methodOverride` field stripped from migrated colors
-- [ ] v1→v5 states still migrate correctly (chain through existing handlers to v6, then v6→v7)
-- [ ] Corrupt/missing state falls back to `createInitialAppState()`
+- [x] `STORAGE_VERSION` = 7
+- [x] v6 state (with groups) migrates correctly to v7 (flat colors)
+- [x] `methodOverride` resolved: override wins if set, else group method used
+- [x] `methodOverride` field stripped from migrated colors
+- [x] v1→v5 states still migrate correctly (chain through existing handlers to v6, then v6→v7)
+- [x] Corrupt/missing state falls back to `createInitialAppState()`
 
 ### Build Requirements
 
-- [ ] `npm run typecheck` passes
-- [ ] `npm run build` produces valid `code.js` and `ui.html`
-- [ ] `npm run validate` passes
+- [x] `npm run typecheck` passes
+- [x] `npm run build` produces valid `code.js` and `ui.html`
+- [x] `npm run validate` passes
 
 ## Dependencies & Prerequisites
 

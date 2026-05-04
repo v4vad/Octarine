@@ -9,9 +9,33 @@
 ## Active Roadmap
 
 ### Performance Improvements
+
+**Tier 1 — High-impact, user-visible**
+- [ ] Cache OKLCH gradient picker output; redraw only when hue changes (avoids ~40k culori conversions per drag tick) — `components/color-picker/GradientPicker.tsx`
+- [ ] Restore gamut lookup table — replaces ~25 culori binary searches per stop with O(1) lookup — `lib/gamut-utils.ts`, new `lib/gamut-table.ts`
+- [ ] `React.memo` heavy panels and stabilize callbacks via `useReducer` so a slider tick doesn't re-render the whole tree — `App.tsx`, `components/`
+- [ ] Wrap palette regeneration in `useTransition` so slider drags stay at 60fps — `App.tsx`, `components/colors/ColorRow.tsx`
+- [ ] Minify build output and audit culori tree-shaking; replace blocked Google Fonts `@import` with embedded `@font-face` — `build.js`
+- [ ] Batch Figma variable export (hoist `getLocalVariablesAsync` out of per-stop loop) — `platform/figma/figma-utils.ts`
+
+**Tier 2 — Medium-impact**
 - [ ] Faster duplicate detection (Set-based lookup instead of array scanning)
 - [ ] Smarter contrast refinement (adaptive step sizing, early exit)
 - [ ] Skip unnecessary color conversions (direct OKLCH contrast calculation)
+- [ ] Cache parsed `bgOklch` across one palette gen — `lib/contrast-utils.ts`, `lib/color-distinctness.ts`
+- [ ] Memoize `getMaxLightnessForMinChroma` (pure function of `hue`, `minChroma`) — `lib/gamut-utils.ts`
+- [ ] Hoist hue-only invariants (HK `hueFactor`, BB `maxShift`) out of the per-stop loop — `lib/perceptual-corrections.ts`
+- [ ] Eliminate `{ ...color }` allocations in tight loops — `lib/contrast-utils.ts`, `lib/perceptual-corrections.ts`, `lib/artistic-curves.ts`
+- [ ] Throttle `Slider.tsx` `onChange` to `requestAnimationFrame` — `components/primitives/Slider.tsx`
+- [ ] Stabilize `GradientPicker` mousemove handler so the listener isn't re-bound every render — `components/color-picker/GradientPicker.tsx`
+
+**Tier 3 — Polish & scale**
+- [ ] Delta-based undo history (replace 50 full-state snapshots with action/inverse pairs) — `lib/useHistory.ts`
+- [ ] Diff state on `saveState` (partial snapshots after first save) — `platform/figma/adapter.ts`, `App.tsx`
+- [ ] Hydrate before first paint (kill default-state flash on plugin open) — `App.tsx`, `platform/figma/code.ts`
+- [ ] Web stub: idle-time `localStorage` writes or IndexedDB migration — `platform/web/adapter.ts`
+
+> Tier classification and file references derive from a 2026-04-26 audit. See the brainstorm at `~/.claude/plans/we-wrote-down-a-sunny-sonnet.md` for evidence and per-item implementation sketches.
 
 ### Polish & Quality
 - [ ] Import/export JSON
