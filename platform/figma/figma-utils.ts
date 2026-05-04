@@ -31,23 +31,19 @@ async function getOrCreateCollection(name: string): Promise<VariableCollection> 
   return figma.variables.createVariableCollection(name);
 }
 
-// Get or create a color variable in a collection
-async function getOrCreateColorVariable(
+// Get or create a color variable using a pre-built map (O(1) lookup, no API call per stop)
+function getOrCreateColorVariable(
   collection: VariableCollection,
-  name: string
-): Promise<Variable> {
-  // Check if variable already exists in this collection
-  const existingVariables = await figma.variables.getLocalVariablesAsync('COLOR');
-  const existing = existingVariables.find(
-    v => v.name === name && v.variableCollectionId === collection.id
-  );
+  name: string,
+  variableMap: Map<string, Variable>
+): Variable {
+  const key = `${collection.id}::${name}`;
+  const existing = variableMap.get(key);
+  if (existing) return existing;
 
-  if (existing) {
-    return existing;
-  }
-
-  // Create new variable
-  return figma.variables.createVariable(name, collection, 'COLOR');
+  const variable = figma.variables.createVariable(name, collection, 'COLOR');
+  variableMap.set(key, variable);
+  return variable;
 }
 
 // Main function: Create Figma variables from color data
@@ -58,6 +54,12 @@ export async function createFigmaVariables(
 ): Promise<{ created: number; updated: number }> {
   const collection = await getOrCreateCollection(collectionName);
   const modeId = collection.modes[0].modeId;  // Use the default mode
+
+  // Fetch all existing COLOR variables once and index by collectionId::name
+  const allVariables = await figma.variables.getLocalVariablesAsync('COLOR');
+  const variableMap = new Map<string, Variable>(
+    allVariables.map(v => [`${v.variableCollectionId}::${v.name}`, v])
+  );
 
   let created = 0;
   let updated = 0;
@@ -82,12 +84,9 @@ export async function createFigmaVariables(
       // Variable name: "ColorLabel/StopNumber" format (no group prefix)
       const variableName = `${color.label}/${stop.number}`;
 
-      // Get or create the variable
-      const variable = await getOrCreateColorVariable(collection, variableName);
-
-      // Check if this is a new variable or update
-      const isNew = variable.name === variableName &&
-        Object.keys(variable.valuesByMode).length === 0;
+      // Get or create the variable via the in-memory map (no API call per stop)
+      const isNew = !variableMap.has(`${collection.id}::${variableName}`);
+      const variable = getOrCreateColorVariable(collection, variableName, variableMap);
 
       // Set the color value (using the hex from palette generation)
       const figmaColor = hexToFigmaRgba(generatedStop.hex);
