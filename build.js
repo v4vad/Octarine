@@ -13,6 +13,7 @@ async function build() {
     bundle: true,
     outfile: 'code.js',
     target: 'es6',
+    minify: true,
     supported: {
       'object-rest-spread': false,  // Transform {...obj} to Object.assign
     },
@@ -25,6 +26,7 @@ async function build() {
     bundle: true,
     outfile: 'ui.js.tmp',
     target: 'es2020',
+    minify: true,
   });
   console.log('Built UI JavaScript');
 
@@ -67,6 +69,7 @@ async function build() {
     bundle: true,
     outfile: 'web/web.js.tmp',
     target: 'es2020',
+    minify: true,
   });
 
   const webJs = fs.readFileSync('web/web.js.tmp', 'utf8');
