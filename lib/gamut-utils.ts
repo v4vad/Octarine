@@ -11,6 +11,7 @@
 
 import { clampChroma, displayable } from "culori"
 import type { OKLCH } from "./color-conversions"
+import { lookupMaxChroma } from "./gamut-table"
 
 /**
  * Check if an OKLCH color is within the sRGB gamut
@@ -35,22 +36,8 @@ export function isInGamut(l: number, c: number, h: number): boolean {
  * @returns Maximum chroma that will stay in sRGB gamut
  */
 export function getMaxChroma(l: number, h: number): number {
-  // Exact black and white have no chroma
   if (l <= 0 || l >= 1) return 0
-
-  // Start with a high chroma value and let culori find the max
-  const maxPossibleChroma = 0.4 // Max OKLCH chroma for sRGB is ~0.37
-
-  // Create a color with high chroma and clamp it
-  const color = { mode: 'oklch' as const, l, c: maxPossibleChroma, h }
-  const clamped = clampChroma(color, 'oklch')
-
-  // Return the clamped chroma value
-  if (!clamped || clamped.c === undefined) {
-    console.warn(`[getMaxChroma] clampChroma returned invalid result for L=${l}, H=${h}`)
-    return 0
-  }
-  return clamped.c
+  return lookupMaxChroma(l, h)
 }
 
 /**
