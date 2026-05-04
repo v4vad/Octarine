@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useReducer, useCallback } from 'react'
 import { AppState } from './types'
 
 const MAX_HISTORY_SIZE = 50
@@ -7,7 +7,7 @@ export interface UseHistoryReturn {
   // Current state
   state: AppState
   // Actions
-  setState: (newState: AppState) => void
+  setState: (newState: AppState | ((prev: AppState) => AppState)) => void
   replaceState: (newState: AppState) => void  // Set state without creating undo history
   undo: () => void
   redo: () => void
@@ -16,52 +16,76 @@ export interface UseHistoryReturn {
   canRedo: boolean
 }
 
-export function useHistory(initialState: AppState): UseHistoryReturn {
-  const [past, setPast] = useState<AppState[]>([])
-  const [present, setPresent] = useState<AppState>(initialState)
-  const [future, setFuture] = useState<AppState[]>([])
+type HistoryState = {
+  past: AppState[]
+  present: AppState
+  future: AppState[]
+}
 
-  const setState = useCallback((newState: AppState) => {
-    setPast(prev => {
-      const newPast = [...prev, present]
-      // Limit history size
-      if (newPast.length > MAX_HISTORY_SIZE) {
-        return newPast.slice(-MAX_HISTORY_SIZE)
+type HistoryAction =
+  | { type: 'SET'; newState: AppState | ((prev: AppState) => AppState) }
+  | { type: 'REPLACE'; newState: AppState }
+  | { type: 'UNDO' }
+  | { type: 'REDO' }
+
+function historyReducer(state: HistoryState, action: HistoryAction): HistoryState {
+  switch (action.type) {
+    case 'SET': {
+      const nextPresent = typeof action.newState === 'function'
+        ? action.newState(state.present)
+        : action.newState
+      const newPast = [...state.past, state.present]
+      return {
+        past: newPast.length > MAX_HISTORY_SIZE ? newPast.slice(-MAX_HISTORY_SIZE) : newPast,
+        present: nextPresent,
+        future: [],
       }
-      return newPast
-    })
-    setPresent(newState)
-    setFuture([]) // Clear redo stack on new action
-  }, [present])
+    }
+    case 'REPLACE':
+      return { past: [], present: action.newState, future: [] }
+    case 'UNDO': {
+      if (state.past.length === 0) return state
+      const previous = state.past[state.past.length - 1]
+      return {
+        past: state.past.slice(0, -1),
+        present: previous,
+        future: [state.present, ...state.future],
+      }
+    }
+    case 'REDO': {
+      if (state.future.length === 0) return state
+      return {
+        past: [...state.past, state.present],
+        present: state.future[0],
+        future: state.future.slice(1),
+      }
+    }
+  }
+}
 
-  // Set state without creating undo history (for loading saved data)
+export function useHistory(initialState: AppState): UseHistoryReturn {
+  const [{ past, present, future }, dispatch] = useReducer(historyReducer, {
+    past: [],
+    present: initialState,
+    future: [],
+  })
+
+  // dispatch is permanently stable — no deps needed on any of these
+  const setState = useCallback((newState: AppState | ((prev: AppState) => AppState)) => {
+    dispatch({ type: 'SET', newState })
+  }, [])
+
   const replaceState = useCallback((newState: AppState) => {
-    setPresent(newState)
-    setPast([])
-    setFuture([])
+    dispatch({ type: 'REPLACE', newState })
   }, [])
 
   const undo = useCallback(() => {
-    if (past.length === 0) return
-
-    const previous = past[past.length - 1]
-    const newPast = past.slice(0, -1)
-
-    setPast(newPast)
-    setPresent(previous)
-    setFuture(prev => [present, ...prev])
-  }, [past, present])
+    dispatch({ type: 'UNDO' })
+  }, [])
 
   const redo = useCallback(() => {
-    if (future.length === 0) return
-
-    const next = future[0]
-    const newFuture = future.slice(1)
-
-    setPast(prev => [...prev, present])
-    setPresent(next)
-    setFuture(newFuture)
-  }, [future, present])
+    dispatch({ type: 'REDO' })
+  }, [])
 
   return {
     state: present,
