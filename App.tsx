@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, startTransition, useDeferredValue } from 'react';
 
 import {
   Color,
@@ -18,6 +18,15 @@ import { findClosestCSSColorName } from './lib/color-utils';
 import { useHistory } from './lib/useHistory';
 import { usePlatform } from './platform/context';
 
+// Pure helper — no closure deps, can be called from inside functional setState
+function makeUniqueColorName(colors: Color[], baseName: string, excludeId?: string): string {
+  const otherNames = colors.filter(c => c.id !== excludeId).map(c => c.label)
+  if (!otherNames.includes(baseName)) return baseName
+  let i = 2
+  while (otherNames.includes(`${baseName} ${i}`)) i++
+  return `${baseName} ${i}`
+}
+
 // ============================================
 // MAIN APP
 // ============================================
@@ -35,10 +44,11 @@ export default function App() {
   // Track export modal visibility
   const [showExportModal, setShowExportModal] = useState(false);
 
-  // Get the active color object
-  const activeColor = activeColorId
-    ? colors.find(c => c.id === activeColorId) ?? null
-    : null;
+  // Get the active color object — memoized so it only changes when colors or selection changes
+  const activeColor = useMemo(
+    () => (activeColorId ? colors.find(c => c.id === activeColorId) ?? null : null),
+    [colors, activeColorId]
+  );
 
   // Build ColorSettings for the active color (for palette generation)
   const activeColorSettings: ColorSettings | null = useMemo(() => {
@@ -50,6 +60,11 @@ export default function App() {
       backgroundColor: globalConfig.backgroundColor,
     };
   }, [activeColor, globalConfig.backgroundColor]);
+
+  // Deferred active color: ColorRow uses this so its expensive palette render
+  // is skipped during rapid slider drags (receives stale value → memo bailout)
+  const deferredActiveColor = useDeferredValue(activeColor);
+  const deferredColorSettings = useDeferredValue(activeColorSettings);
 
   // Auto-select first color if none selected or selection is invalid
   useEffect(() => {
@@ -121,83 +136,99 @@ export default function App() {
   // GLOBAL CONFIG OPERATIONS
   // ============================================
   const updateGlobalConfig = useCallback((newConfig: GlobalConfig) => {
-    setState({ ...state, globalConfig: newConfig });
-  }, [setState, state]);
+    setState(prev => ({ ...prev, globalConfig: newConfig }));
+  }, [setState]);
 
   // ============================================
   // COLOR OPERATIONS
   // ============================================
 
-  // Generate a unique color name, appending a number if the name is already taken
-  const uniqueColorName = useCallback((baseName: string, excludeId?: string) => {
-    const otherNames = colors
-      .filter(c => c.id !== excludeId)
-      .map(c => c.label);
-    if (!otherNames.includes(baseName)) return baseName;
-    let i = 2;
-    while (otherNames.includes(`${baseName} ${i}`)) i++;
-    return `${baseName} ${i}`;
-  }, [colors]);
-
   const addColor = useCallback(() => {
     const id = `color-${Date.now()}`;
-    const baseColor = '#0066CC';
-    const cssName = findClosestCSSColorName(baseColor);
-    const label = uniqueColorName(cssName);
-    const newColor: Color = { ...createDefaultColor(id, label, baseColor), autoLabel: true };
-    setState({ ...state, colors: [...colors, newColor] });
-    setActiveColorId(id);
-  }, [setState, state, colors, uniqueColorName]);
-
-  const updateColor = useCallback((colorId: string, updatedColor: Color) => {
-    const original = colors.find(c => c.id === colorId);
-    if (original) {
-      // If user manually edited the label, mark autoLabel as false
-      if (updatedColor.label !== original.label && original.autoLabel) {
-        updatedColor = { ...updatedColor, autoLabel: false };
-      }
-      // If base color changed and autoLabel is still true, auto-rename
-      if (updatedColor.baseColor !== original.baseColor && updatedColor.autoLabel) {
-        const cssName = findClosestCSSColorName(updatedColor.baseColor);
-        updatedColor = { ...updatedColor, label: uniqueColorName(cssName, colorId) };
-      }
-    }
-    setState({
-      ...state,
-      colors: colors.map(c => c.id === colorId ? updatedColor : c)
+    setState(prev => {
+      const baseColor = '#0066CC';
+      const cssName = findClosestCSSColorName(baseColor);
+      const label = makeUniqueColorName(prev.colors, cssName);
+      const newColor: Color = { ...createDefaultColor(id, label, baseColor), autoLabel: true };
+      return { ...prev, colors: [...prev.colors, newColor] };
     });
-  }, [setState, state, colors, uniqueColorName]);
+    setActiveColorId(id);
+  }, [setState]);
+
+  // Marked as startTransition — the palette recompute is non-urgent so React can
+  // interrupt and batch rapid drag events before committing the swatch re-render.
+  const updateColor = useCallback((colorId: string, updatedColor: Color) => {
+    startTransition(() => {
+      setState(prev => {
+        const original = prev.colors.find(c => c.id === colorId);
+        if (original) {
+          if (updatedColor.label !== original.label && original.autoLabel) {
+            updatedColor = { ...updatedColor, autoLabel: false };
+          }
+          if (updatedColor.baseColor !== original.baseColor && updatedColor.autoLabel) {
+            const cssName = findClosestCSSColorName(updatedColor.baseColor);
+            updatedColor = { ...updatedColor, label: makeUniqueColorName(prev.colors, cssName, colorId) };
+          }
+        }
+        return {
+          ...prev,
+          colors: prev.colors.map(c => c.id === colorId ? updatedColor : c)
+        };
+      });
+    });
+  }, [setState]);
 
   const removeColor = useCallback((colorId: string) => {
-    const newColors = colors.filter(c => c.id !== colorId);
-    setState({ ...state, colors: newColors });
-    // Auto-select adjacent color
-    if (colorId === activeColorId) {
-      const oldIndex = colors.findIndex(c => c.id === colorId);
-      const newActiveId = newColors[Math.min(oldIndex, newColors.length - 1)]?.id ?? null;
-      setActiveColorId(newActiveId);
-    }
-  }, [setState, state, colors, activeColorId]);
+    setState(prev => ({
+      ...prev,
+      colors: prev.colors.filter(c => c.id !== colorId)
+    }));
+    // Clear active selection if removing the active color; useEffect will re-select
+    setActiveColorId(prev => prev === colorId ? null : prev);
+  }, [setState]);
 
   const duplicateColor = useCallback((colorId: string) => {
-    const original = colors.find(c => c.id === colorId);
-    if (!original) return;
-    const newId = `color-${Date.now()}`;
-    const cssName = findClosestCSSColorName(original.baseColor);
-    const label = uniqueColorName(cssName, colorId);
-    const duplicate: Color = {
-      ...JSON.parse(JSON.stringify(original)),
-      id: newId,
-      label,
-      autoLabel: true,
-    };
-    // Insert after original
-    const index = colors.findIndex(c => c.id === colorId);
-    const newColors = [...colors];
-    newColors.splice(index + 1, 0, duplicate);
-    setState({ ...state, colors: newColors });
-    setActiveColorId(newId);
-  }, [setState, state, colors, uniqueColorName]);
+    const id = `color-${Date.now()}`;
+    setState(prev => {
+      const original = prev.colors.find(c => c.id === colorId);
+      if (!original) return prev;
+      const cssName = findClosestCSSColorName(original.baseColor);
+      const label = makeUniqueColorName(prev.colors, cssName, colorId);
+      const duplicate: Color = {
+        ...JSON.parse(JSON.stringify(original)),
+        id,
+        label,
+        autoLabel: true,
+      };
+      const index = prev.colors.findIndex(c => c.id === colorId);
+      const newColors = [...prev.colors];
+      newColors.splice(index + 1, 0, duplicate);
+      return { ...prev, colors: newColors };
+    });
+    setActiveColorId(id);
+  }, [setState]);
+
+  // ============================================
+  // STABLE CALLBACKS FOR MIDDLE PANEL (ColorRow)
+  // These depend on activeColorId (primitive), not activeColor (object).
+  // They change only when the user switches which color is selected.
+  // ============================================
+  const updateActiveColor = useCallback((updatedColor: Color) => {
+    updateColor(activeColorId!, updatedColor);
+  }, [updateColor, activeColorId]);
+
+  const removeActiveColor = useCallback(() => {
+    removeColor(activeColorId!);
+  }, [removeColor, activeColorId]);
+
+  const duplicateActiveColor = useCallback(() => {
+    duplicateColor(activeColorId!);
+  }, [duplicateColor, activeColorId]);
+
+  // RightSettingsPanel: color.id comes from the argument, no activeColorId closure needed
+  const updateColorById = useCallback((updatedColor: Color) => {
+    updateColor(updatedColor.id, updatedColor);
+  }, [updateColor]);
 
   // ============================================
   // EXPORT
@@ -239,15 +270,15 @@ export default function App() {
 
         {/* Middle Panel: Swatches for selected color */}
         <div className="middle-panel">
-          {!activeColor || !activeColorSettings ? (
+          {!deferredActiveColor || !deferredColorSettings ? (
             <p className="empty-state p-4">Add a color to get started.</p>
           ) : (
             <ColorRow
-              color={activeColor}
-              colorSettings={activeColorSettings}
-              onUpdate={(updatedColor) => updateColor(activeColor.id, updatedColor)}
-              onRemove={() => removeColor(activeColor.id)}
-              onDuplicate={() => duplicateColor(activeColor.id)}
+              color={deferredActiveColor}
+              colorSettings={deferredColorSettings}
+              onUpdate={updateActiveColor}
+              onRemove={removeActiveColor}
+              onDuplicate={duplicateActiveColor}
             />
           )}
         </div>
@@ -256,9 +287,9 @@ export default function App() {
         {activeColor ? (
           <RightSettingsPanel
             color={activeColor}
-            onUpdate={(updatedColor) => updateColor(updatedColor.id, updatedColor)}
-            onDelete={() => removeColor(activeColor.id)}
-            onDuplicate={() => duplicateColor(activeColor.id)}
+            onUpdate={updateColorById}
+            onDelete={removeActiveColor}
+            onDuplicate={duplicateActiveColor}
           />
         ) : (
           <div className="right-panel-empty">

@@ -10,7 +10,7 @@ interface RightSettingsPanelProps {
   onDuplicate: () => void;
 }
 
-export function RightSettingsPanel({
+function RightSettingsPanelComponent({
   color,
   onUpdate,
   onDelete,
@@ -60,3 +60,5 @@ export function RightSettingsPanel({
     </div>
   );
 }
+
+export const RightSettingsPanel = React.memo(RightSettingsPanelComponent);
