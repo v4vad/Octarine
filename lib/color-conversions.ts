@@ -18,18 +18,27 @@ export interface OKLCH {
   h: number
 }
 
+// Small cache: palette gen calls hexToOklch(backgroundColor) ~26× per run
+// (once directly + once per stop inside findLightnessForContrast/refineContrastToTarget).
+// The set of unique hex values in a session is tiny, so unbounded Map is fine.
+const hexToOklchCache = new Map<string, OKLCH>()
+
 // Convert hex to OKLCH using culori (accurate)
 export function hexToOklch(hex: string): OKLCH {
+  const cached = hexToOklchCache.get(hex)
+  if (cached) return cached
   const color = oklch(hex)
   if (!color) {
     console.warn(`[hexToOklch] Failed to parse color: "${hex}". Returning default.`)
     return { l: 0.5, c: 0.1, h: 0 }
   }
-  return {
+  const result: OKLCH = {
     l: color.l ?? 0,
     c: color.c ?? 0,
     h: color.h ?? 0,
   }
+  hexToOklchCache.set(hex, result)
+  return result
 }
 
 // Convert OKLCH to hex using culori (accurate)

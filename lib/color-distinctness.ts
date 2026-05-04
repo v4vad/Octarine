@@ -121,7 +121,7 @@ export function ensureUniqueHexColors(
     isManualOverride: boolean
     targetContrast?: number  // Target contrast ratio (if using contrast mode)
   }>,
-  baseChroma: number,
+  _baseChroma: number,
   backgroundColor: string
 ): Array<{
   stopNumber: number
@@ -180,10 +180,9 @@ export function ensureUniqueHexColors(
       let newHex = stop.hex
       let foundUnique = false
 
-      // Helper to check if hex is unique
-      const isHexUnique = (hex: string) => !result.some(
-        (s, sIdx) => sIdx !== idx && s.hex === hex
-      )
+      // O(1) uniqueness check — build once per duplicate stop, exclude self
+      const existingHexes = new Set(result.filter((_, sIdx) => sIdx !== idx).map(s => s.hex))
+      const isHexUnique = (hex: string) => !existingHexes.has(hex)
 
       // PHASE 1: Try hue nudges first (minimal contrast impact)
       const hueOffsets = [1, -1, 2, -2, 3, -3, 4, -4, 5, -5]

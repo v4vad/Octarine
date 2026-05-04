@@ -112,10 +112,17 @@ export function getMinChromaForHue(hue: number): number {
  * @param minChroma - Minimum chroma required
  * @returns Maximum lightness that can achieve the minimum chroma
  */
+const maxLightnessCache = new Map<string, number>()
+
 export function getMaxLightnessForMinChroma(
   hue: number,
   minChroma: number
 ): number {
+  // Round hue to 1° (matches LUT resolution) so nearby hue values share cache entries
+  const key = `${Math.round(hue) % 360}:${minChroma}`
+  const cached = maxLightnessCache.get(key)
+  if (cached !== undefined) return cached
+
   // Binary search for the highest L where getMaxChroma(L, hue) >= minChroma
   let low = 0.5
   let high = 1.0
@@ -131,6 +138,7 @@ export function getMaxLightnessForMinChroma(
     }
   }
 
+  maxLightnessCache.set(key, low)
   return low
 }
 
