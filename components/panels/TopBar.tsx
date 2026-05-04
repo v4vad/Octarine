@@ -15,7 +15,7 @@ interface TopBarProps {
   onToggleTheme: () => void;
 }
 
-export function TopBar({
+function TopBarComponent({
   globalConfig,
   onUpdateGlobalConfig,
   onOpenExportModal,
@@ -108,3 +108,5 @@ export function TopBar({
     </div>
   );
 }
+
+export const TopBar = React.memo(TopBarComponent);

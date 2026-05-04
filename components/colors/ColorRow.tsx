@@ -16,12 +16,10 @@ interface ColorRowProps {
   onDuplicate: () => void;
 }
 
-export function ColorRow({
+function ColorRowComponent({
   color,
   colorSettings,
   onUpdate,
-  onRemove,
-  onDuplicate,
 }: ColorRowProps) {
   const [selectedStop, setSelectedStop] = useState<{
     index: number;
@@ -166,3 +164,5 @@ export function ColorRow({
     </div>
   );
 }
+
+export const ColorRow = React.memo(ColorRowComponent);

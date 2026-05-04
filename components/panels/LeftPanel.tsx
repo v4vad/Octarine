@@ -13,13 +13,12 @@ interface LeftPanelProps {
   onDuplicateColor: (colorId: string) => void;
 }
 
-export function LeftPanel({
+function LeftPanelComponent({
   colors,
   activeColorId,
   onSelectColor,
   onUpdateColor,
   onAddColor,
-  onDuplicateColor,
 }: LeftPanelProps) {
   const [pickerColorId, setPickerColorId] = useState<string | null>(null);
 
@@ -113,3 +112,5 @@ export function LeftPanel({
     </div>
   );
 }
+
+export const LeftPanel = React.memo(LeftPanelComponent);
