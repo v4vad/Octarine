@@ -24,8 +24,8 @@
 - [x] Memoize `getMaxLightnessForMinChroma` (pure function of `hue`, `minChroma`) — `lib/gamut-utils.ts` — PR #16
 - [x] Throttle `Slider.tsx` `onChange` to `requestAnimationFrame` — `components/primitives/Slider.tsx` — PR #16
 - [x] Skip unnecessary color conversions (direct OKLCH contrast calculation in binary search loops) — `lib/contrast-utils.ts` — PR #17
-- [ ] Hoist hue-only invariants (HK `hueFactor`, BB `maxShift`) out of the per-stop loop — `lib/perceptual-corrections.ts`
-- [ ] Stabilize `GradientPicker` mousemove handler so the listener isn't re-bound every render — `components/color-picker/GradientPicker.tsx`
+- [x] Stabilize `GradientPicker` mousemove handler (callback ref pattern) — `components/color-picker/GradientPicker.tsx` — PR #18
+- ~~Hoist hue-only invariants (HK `hueFactor`, BB `maxShift`) out of per-stop loop~~ — dropped: premise breaks when hue shift curve is active (hue varies per stop); savings ≤ 1 µs/stop anyway
 
 **Tier 3 — Polish & scale**
 - [ ] Delta-based undo history (replace 50 full-state snapshots with action/inverse pairs) — `lib/useHistory.ts`
