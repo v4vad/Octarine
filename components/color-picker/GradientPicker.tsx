@@ -14,6 +14,9 @@ export function GradientPicker({ hue, saturation, brightness, mode, onChange }: 
   const isDraggingRef = useRef(false);
   // Cached grid pixels — only invalidated when hue or mode changes, not on cursor drag
   const cachedImageDataRef = useRef<ImageData | null>(null);
+  // Store onChange in a ref, updated synchronously each render
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
   // Effect 1: draw the pixel grid (expensive). Re-runs only when hue or mode changes.
   useEffect(() => {
@@ -104,11 +107,11 @@ export function GradientPicker({ hue, saturation, brightness, mode, onChange }: 
     const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
 
     if (mode === 'hsb') {
-      onChange(x * 100, (1 - y) * 100);
+      onChangeRef.current(x * 100, (1 - y) * 100);
     } else {
-      onChange(x * 0.4, 1 - y);
+      onChangeRef.current(x * 0.4, 1 - y);
     }
-  }, [mode, onChange]);
+  }, [mode]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
