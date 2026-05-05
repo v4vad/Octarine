@@ -14,17 +14,29 @@ type PluginMessage =
   | { type: 'request-state' }
   | { type: 'get-selection-color' }
 
-// Show the plugin UI
-// The size can be adjusted later based on UI needs
-figma.showUI(__html__, {
+// Read saved state synchronously before showing UI so it can be embedded
+// directly into the HTML — App.tsx reads window.__OCTARINE_INITIAL_STATE__
+// on first render, eliminating the default-state flash.
+const _savedData = figma.root.getPluginData(STORAGE_KEY);
+let _embeddedState: { version: number; state: AppState } | null = null;
+if (_savedData) {
+  try {
+    const _parsed = JSON.parse(_savedData);
+    if (_parsed?.state) _embeddedState = _parsed;
+  } catch (e) { /* corrupted data — start fresh */ }
+}
+// Escape </script> in JSON values so injected state can't break the script tag
+const _stateJson = JSON.stringify(_embeddedState).replace(/<\/script>/gi, '<\\/script>');
+const _hydratedHtml = __html__.replace(
+  '</head>',
+  `<script>window.__OCTARINE_INITIAL_STATE__=${_stateJson};</script></head>`
+);
+
+figma.showUI(_hydratedHtml, {
   width: 980,  // Includes always-visible 280px settings panel
   height: 500,
   themeColors: true  // Use Figma's theme colors
 });
-
-// Note: We no longer load state immediately on startup.
-// Instead, we use a request/response pattern - the UI requests state
-// when it's ready (after React mounts), avoiding race conditions.
 
 // Listen for messages from the UI
 figma.ui.onmessage = async (msg: PluginMessage) => {

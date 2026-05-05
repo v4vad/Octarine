@@ -18,6 +18,13 @@ import { findClosestCSSColorName } from './lib/color-utils';
 import { useHistory } from './lib/useHistory';
 import { usePlatform } from './platform/context';
 
+declare global {
+  interface Window {
+    // Injected by code.ts before figma.showUI — undefined in web/test environments
+    __OCTARINE_INITIAL_STATE__?: { version: number; state: AppState } | null;
+  }
+}
+
 // Pure helper — no closure deps, can be called from inside functional setState
 function makeUniqueColorName(colors: Color[], baseName: string, excludeId?: string): string {
   const otherNames = colors.filter(c => c.id !== excludeId).map(c => c.label)
@@ -34,7 +41,15 @@ export default function App() {
   const platform = usePlatform();
 
   // Use history hook for undo/redo support
-  const initialState: AppState = createInitialAppState();
+  // On Figma, code.ts embeds saved state into window before showUI — use it directly
+  // so the first render shows the correct state without a loadState() round-trip.
+  const initialState: AppState = (() => {
+    const embedded = window.__OCTARINE_INITIAL_STATE__;
+    if (embedded?.state) {
+      return migrateState({ version: embedded.version ?? 1, state: embedded.state });
+    }
+    return createInitialAppState();
+  })();
   const { state, setState, replaceState, undo, redo, canUndo, canRedo } = useHistory(initialState);
   const { globalConfig, colors } = state;
 
@@ -92,8 +107,14 @@ export default function App() {
   // Track whether we've received the initial load response
   const hasLoadedRef = useRef(false);
 
-  // Load saved state via platform adapter when component mounts
+  // Load saved state via platform adapter when component mounts.
+  // Skipped on Figma because code.ts already embedded state before first paint.
   useEffect(() => {
+    if (typeof window.__OCTARINE_INITIAL_STATE__ !== 'undefined') {
+      // State was hydrated synchronously — mark loaded so auto-save fires normally
+      hasLoadedRef.current = true;
+      return;
+    }
     let cancelled = false;
     platform.loadState().then((result) => {
       if (cancelled) return;
