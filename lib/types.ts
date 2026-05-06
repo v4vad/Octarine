@@ -233,11 +233,15 @@ export function createDefaultGlobalConfig(): GlobalConfig {
 
 // Helper to create initial app state
 export function createInitialAppState(): AppState {
-  const defaultColor: Color = { ...createDefaultColor('color-1', 'RoyalBlue', '#0066CC'), autoLabel: true }
-  return {
-    globalConfig: createDefaultGlobalConfig(),
-    colors: [defaultColor],
-  }
+  const colors: Color[] = [
+    { ...createDefaultColor('color-primary', 'Primary', '#3B82F6'), autoLabel: true },
+    { ...createDefaultColor('color-secondary', 'Secondary', '#8B5CF6'), autoLabel: true },
+    { ...createDefaultColor('color-neutral', 'Neutral', '#6B7280'), autoLabel: true },
+    { ...createDefaultColor('color-error', 'Error', '#EF4444'), autoLabel: true },
+    { ...createDefaultColor('color-warning', 'Warning', '#F59E0B'), autoLabel: true },
+    { ...createDefaultColor('color-success', 'Success', '#10B981'), autoLabel: true },
+  ]
+  return { globalConfig: createDefaultGlobalConfig(), colors }
 }
 
 // ============================================
