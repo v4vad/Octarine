@@ -3114,4 +3114,45 @@ input[type="range"]::-moz-range-thumb {
   /* These are no longer used but kept for safety */
 }
 
+/* ============================================
+   WEB MODE - Full-width responsive layout
+   Applied only in standalone browser via platform/web/entry.tsx
+   ============================================ */
+
+body.web-mode,
+body.web-mode html {
+  width: 100%;
+  height: 100%;
+}
+
+body.web-mode #root {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+body.web-mode .app-container {
+  width: 100vw;
+  height: 100vh;
+}
+
+body.web-mode .app-layout {
+  grid-template-columns: minmax(200px, 240px) 1fr minmax(240px, 320px);
+}
+
+body.web-mode .left-panel {
+  width: auto;
+}
+
+body.web-mode .middle-panel {
+  flex: 1;
+  min-width: 0;
+}
+
+body.web-mode .right-settings-panel,
+body.web-mode .right-panel-empty {
+  min-width: 240px;
+  width: auto;
+}
+
 

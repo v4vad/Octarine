@@ -6,6 +6,8 @@ import {
   generateCSS,
   generateJSON,
   generateOKLCH,
+  generateTailwindConfig,
+  generateSCSS,
   copyToClipboard,
   downloadFile,
   getFileExtension,
@@ -25,11 +27,14 @@ const ALL_FORMATS: {
   icon: string
   name: string
   requiresFigma?: boolean
+  webOnly?: boolean
 }[] = [
   { id: "figma", icon: "◇", name: "Figma Variables", requiresFigma: true },
   { id: "css", icon: "{ }", name: "CSS" },
   { id: "json", icon: "{ }", name: "Design Tokens" },
-  { id: "oklch-raw", icon: "☰", name: "CSV" }
+  { id: "oklch-raw", icon: "☰", name: "CSV" },
+  { id: "tailwind", icon: "{ }", name: "Tailwind Config", webOnly: true },
+  { id: "scss", icon: "$", name: "SCSS Variables", webOnly: true },
 ]
 
 // CSS color format options
@@ -52,7 +57,11 @@ export function ExportModal({
 }: ExportModalProps) {
   const platform = usePlatform()
   const formats = useMemo(() =>
-    ALL_FORMATS.filter(f => !f.requiresFigma || platform.capabilities.canExportVariables),
+    ALL_FORMATS.filter(f => {
+      if (f.requiresFigma && !platform.capabilities.canExportVariables) return false
+      if (f.webOnly && platform.capabilities.canExportVariables) return false
+      return true
+    }),
     [platform.capabilities.canExportVariables]
   )
   const [collectionName, setCollectionName] = useState("Octarine")
@@ -84,11 +93,17 @@ export function ExportModal({
       case "oklch-raw":
         fullContent = generateOKLCH(exportData)
         break
+      case "tailwind":
+        fullContent = generateTailwindConfig(colors, globalConfig)
+        break
+      case "scss":
+        fullContent = generateSCSS(colors, globalConfig)
+        break
       default:
         fullContent = ""
     }
     return fullContent
-  }, [exportFormat, cssColorFormat, exportData])
+  }, [exportFormat, cssColorFormat, exportData, colors, globalConfig])
 
   const handleCopy = async () => {
     const success = await copyToClipboard(previewContent)
@@ -100,8 +115,18 @@ export function ExportModal({
 
   const handleDownload = () => {
     if (exportFormat === "figma") return
-    const ext = getFileExtension(exportFormat)
-    const mime = getMimeType(exportFormat)
+    let ext: string
+    let mime: string
+    if (exportFormat === "tailwind") {
+      ext = "js"
+      mime = "application/javascript"
+    } else if (exportFormat === "scss") {
+      ext = "scss"
+      mime = "text/plain"
+    } else {
+      ext = getFileExtension(exportFormat)
+      mime = getMimeType(exportFormat)
+    }
     const filename = `${collectionName.toLowerCase().replace(/\s+/g, "-")}-colors.${ext}`
     downloadFile(previewContent, filename, mime)
   }
@@ -125,6 +150,10 @@ export function ExportModal({
         return "JSON Design Tokens"
       case "oklch-raw":
         return "OKLCH Raw Data"
+      case "tailwind":
+        return "tailwind.config.js"
+      case "scss":
+        return "SCSS Variables"
       default:
         return "Preview"
     }
@@ -193,6 +222,28 @@ export function ExportModal({
             CSV format with color name, stop, and L/C/H values.
             <br /><br />
             Useful for spreadsheets or data analysis.
+          </div>
+        )
+
+      case "tailwind":
+        return (
+          <div className="export-options-description">
+            <strong>Tailwind CSS Config</strong>
+            <br /><br />
+            Exports a <code>tailwind.config.js</code> file with your color palette in the <code>theme.extend.colors</code> section.
+            <br /><br />
+            Drop it into any Tailwind project to use your colors as utility classes.
+          </div>
+        )
+
+      case "scss":
+        return (
+          <div className="export-options-description">
+            <strong>SCSS Variables</strong>
+            <br /><br />
+            Exports SCSS variables in the format <code>$color-stop: #hex;</code>.
+            <br /><br />
+            Import into any SCSS project to use your color palette.
           </div>
         )
 

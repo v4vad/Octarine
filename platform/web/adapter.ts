@@ -37,7 +37,11 @@ export class WebAdapter implements PlatformAdapter {
   }
 
   notify(message: string): void {
-    console.log('[Octarine]', message);
+    const toast = document.createElement('div')
+    toast.textContent = message
+    toast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#333;color:#fff;padding:10px 16px;border-radius:6px;font-size:13px;z-index:9999;pointer-events:none;'
+    document.body.appendChild(toast)
+    setTimeout(() => toast.remove(), 3000)
   }
 
   resize(_width: number, _height: number): void {

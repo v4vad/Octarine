@@ -433,7 +433,7 @@ export function migrateState(persisted: { version: number; state: unknown }): Ap
 export type CSSColorFormat = "hex" | "rgb" | "oklch" | "hsl"
 
 // Export format options
-export type ExportFormat = "css" | "json" | "oklch-raw" | "figma"
+export type ExportFormat = "css" | "json" | "oklch-raw" | "figma" | "tailwind" | "scss"
 
 // Structured color data for export (includes all formats needed)
 export type ExportableStop = {
