@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { GlobalConfig } from '../../lib/types';
+import { FrameworkPreset, FRAMEWORK_PRESETS } from '../../lib/framework-presets';
 import { ColorPickerPopup } from '../color-picker';
 import { SwatchHexInput } from '../primitives';
 
@@ -13,6 +14,7 @@ interface TopBarProps {
   canRedo: boolean;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
+  onLoadPreset: (preset: FrameworkPreset) => void;
 }
 
 function TopBarComponent({
@@ -25,6 +27,7 @@ function TopBarComponent({
   canRedo,
   theme,
   onToggleTheme,
+  onLoadPreset,
 }: TopBarProps) {
   const [showBgPicker, setShowBgPicker] = useState(false);
 
@@ -59,6 +62,21 @@ function TopBarComponent({
             <path d="M21 10l-4 4" />
           </svg>
         </button>
+
+        {/* Preset Dropdown */}
+        <select
+          className="top-bar-preset-select"
+          value=""
+          onChange={(e) => {
+            const preset = FRAMEWORK_PRESETS.find(p => p.id === e.target.value);
+            if (preset) onLoadPreset(preset);
+          }}
+        >
+          <option value="" disabled>Load preset…</option>
+          {FRAMEWORK_PRESETS.map(p => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
 
         {/* Background Color Picker */}
         <div className="top-bar-bg-color">

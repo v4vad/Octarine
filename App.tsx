@@ -267,6 +267,7 @@ export default function App() {
         canRedo={canRedo}
         theme={theme}
         onToggleTheme={toggleTheme}
+        onLoadPreset={loadPreset}
       />
 
       {/* Main Three-Panel Layout */}
@@ -278,7 +279,6 @@ export default function App() {
           onSelectColor={setActiveColorId}
           onUpdateColor={updateColor}
           onAddColor={addColor}
-          onLoadPreset={loadPreset}
         />
 
         {/* Middle Panel: Swatches for selected color */}
