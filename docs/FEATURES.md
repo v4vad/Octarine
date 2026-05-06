@@ -1,6 +1,6 @@
 # Octarine Features Guide
 
-Octarine is a Figma plugin for creating professional color palettes. This guide explains all the features available to help you build beautiful, accessible color systems.
+Octarine is a Figma plugin (and standalone web app) for creating professional color palettes. This guide explains all the features available to help you build beautiful, accessible color systems.
 
 ---
 
@@ -8,15 +8,18 @@ Octarine is a Figma plugin for creating professional color palettes. This guide 
 
 1. [Getting Started](#getting-started)
 2. [Creating Color Palettes](#creating-color-palettes)
-3. [Color Picker](#color-picker)
-4. [Generation Methods](#generation-methods)
-5. [The Defaults Table](#the-defaults-table)
-6. [Customizing Individual Stops](#customizing-individual-stops)
-7. [Color-Level Settings](#color-level-settings)
-8. [Global Settings](#global-settings)
-9. [Artistic Controls](#artistic-controls)
-10. [Advanced Features](#advanced-features)
-11. [Exporting to Figma](#exporting-to-figma)
+3. [Framework Presets](#framework-presets)
+4. [Color Picker](#color-picker)
+5. [Transparency (Alpha)](#transparency-alpha)
+6. [Generation Methods](#generation-methods)
+7. [The Defaults Table](#the-defaults-table)
+8. [Customizing Individual Stops](#customizing-individual-stops)
+9. [Color-Level Settings](#color-level-settings)
+10. [Global Settings](#global-settings)
+11. [Artistic Controls](#artistic-controls)
+12. [Advanced Features](#advanced-features)
+13. [Exporting Colors](#exporting-colors)
+14. [Web App](#web-app)
 
 ---
 
@@ -27,7 +30,7 @@ Octarine is a Figma plugin for creating professional color palettes. This guide 
 The plugin window has four main areas:
 
 - **Top Bar** - Undo/redo buttons, background color picker with hex input, and export button
-- **Left Panel** - Flat color list (click a color to select it), base color picker, Lightness/Contrast method toggle, and Defaults table showing stop values for the selected color
+- **Left Panel** - Framework preset buttons, flat color list (click a color to select it), base color picker, Lightness/Contrast method toggle, and Defaults table showing stop values for the selected color
 - **Middle Panel** - Swatches for the selected color (50-900) with hex codes and contrast ratios
 - **Right Panel** - Advanced per-color settings for the selected color: HK/BB corrections, hue shift curve, and chroma curve
 
@@ -36,6 +39,21 @@ You can resize the plugin window by dragging the bottom-right corner.
 ---
 
 ## Creating Color Palettes
+
+### Smart Default Palette
+
+When you open Octarine fresh (or reset your state), it starts with a complete 6-color starter palette covering typical design system needs:
+
+| Color | Role |
+|-------|------|
+| Primary | Main brand / action color |
+| Secondary | Supporting brand color |
+| Neutral | Grays, text, borders |
+| Error | Destructive actions, errors |
+| Warning | Caution states |
+| Success | Positive feedback |
+
+You can rename, replace, or delete any of these and add your own.
 
 ### Adding a New Color
 
@@ -74,6 +92,24 @@ Click the **"Delete"** button at the bottom of the right settings panel. A confi
 
 ---
 
+---
+
+## Framework Presets
+
+Three preset buttons appear at the top of the left panel. Clicking one **replaces your entire current palette** with colors from that framework.
+
+| Preset | Colors included | Base stop used |
+|--------|----------------|----------------|
+| **Tailwind v3** | 13 colors (Slate, Red, Orange, Amber, Yellow, Green, Teal, Blue, Indigo, Violet, Purple, Pink, Rose) | -500 |
+| **Radix UI** | 21 colors (full Radix palette) | Step 9 (solid) |
+| **Material 3** | 5 key colors (Primary, Secondary, Tertiary, Error, Neutral) | M3 baseline |
+
+After loading a preset, each color uses Octarine's default lightness curves — you can then customize curves, corrections, and individual stops as normal.
+
+**Undo works:** Cmd+Z / Ctrl+Z restores your previous palette if you load a preset by mistake.
+
+---
+
 ## Color Picker
 
 ### Three Ways to Pick Colors
@@ -101,6 +137,37 @@ The **"Pick from selection"** button lets you grab colors from your Figma canvas
 2. Open the color picker in Octarine
 3. Click "Pick from selection"
 4. The color from your selected shape will be applied
+
+---
+
+## Transparency (Alpha)
+
+Each color can have a global opacity that applies to all of its generated stops.
+
+### Setting Opacity
+
+Inside the color picker, next to the hex input, there is an **"A: [100]%"** number field. Type a value from 0 to 100:
+- **100** — fully opaque (default)
+- **50** — 50% transparent
+- **0** — fully invisible
+
+### How Alpha Appears
+
+When a color has opacity below 100%, its swatches show a **checkerboard pattern** behind the color to indicate transparency — in both the left panel and the main swatch grid.
+
+### How Alpha Exports
+
+Alpha is respected across all export formats:
+
+| Format | With alpha < 100% |
+|--------|-------------------|
+| CSS Hex | 8-digit hex (`#3B82F680`) |
+| CSS RGB | `rgba(59, 130, 246, 0.50)` |
+| CSS OKLCH | `oklch(0.63 0.19 264 / 0.50)` |
+| CSS HSL | `hsla(217, 91%, 60%, 0.50)` |
+| JSON tokens | `"alpha": 0.5` added to value object |
+| CSV | `A` column with decimal value |
+| Figma Variables | RGBA alpha channel set accordingly |
 
 ---
 
@@ -453,14 +520,25 @@ When using the Contrast Method, the plugin now achieves contrast ratios within �
 
 ## Exporting Colors
 
-Click the **"export"** button in the top bar to open the Export Modal. You can export your palette in four different formats.
+Click the **"export"** button in the top bar to open the Export Modal.
 
 ### Export Modal Layout
 
 The export modal has three columns:
-- **Left sidebar** - Choose your export format (Figma, CSS, Design Tokens, CSV)
+- **Left sidebar** - Choose your export format
 - **Middle column** - Format-specific options
 - **Right column** - Live preview of the output
+
+Available formats depend on where you're running Octarine:
+
+| Format | Figma plugin | Web app |
+|--------|-------------|---------|
+| Figma Variables | ✅ | — |
+| CSS | ✅ | ✅ |
+| Design Tokens (JSON) | ✅ | ✅ |
+| CSV (OKLCH) | ✅ | ✅ |
+| Tailwind Config | — | ✅ |
+| SCSS Variables | — | ✅ |
 
 ### Figma Variables
 
@@ -531,15 +609,63 @@ Click **Copy** to copy to clipboard, or **Download** to save as a `.json` file.
 
 Exports raw color data in CSV format for spreadsheets or data analysis.
 
-**Columns:**
-- Color name
-- Stop number
-- L (Lightness)
-- C (Chroma)
-- H (Hue)
-- Hex value
+**Columns:** Color, Stop, L, C, H, A (alpha — defaults to 1.0 for fully opaque colors)
 
 Click **Copy** to copy to clipboard, or **Download** to save as a `.csv` file.
+
+### Tailwind Config *(web app only)*
+
+Generates a `tailwind.config.js` file with your palette as a `theme.extend.colors` object.
+
+**Example output:**
+```js
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        "primary": { "50": "#eff6ff", "500": "#3b82f6", ... },
+        "error": { "50": "#fef2f2", "500": "#ef4444", ... }
+      }
+    }
+  }
+}
+```
+
+Click **Download** to save as a `.js` file.
+
+### SCSS Variables *(web app only)*
+
+Generates a `.scss` file with all color stops as SCSS variables.
+
+**Example output:**
+```scss
+// Generated by Octarine
+$primary-50: #eff6ff;
+$primary-100: #dbeafe;
+$primary-500: #3b82f6;
+```
+
+Click **Copy** to copy to clipboard, or **Download** to save as a `.scss` file.
+
+---
+
+## Web App
+
+Octarine is also available as a standalone web app (open `web/index.html` locally, or at the hosted URL when available).
+
+### Differences from the Figma plugin
+
+| Feature | Figma plugin | Web app |
+|---------|-------------|---------|
+| Export to Figma Variables | ✅ | — |
+| Eyedropper (pick from canvas) | ✅ | — |
+| Tailwind / SCSS export | — | ✅ |
+| State persistence | Figma document | Browser localStorage |
+| Window resize | Drag corner | Fills browser window |
+
+### Layout
+
+The web app uses a full-width responsive layout — all three panels expand to fill the browser window. There are no fixed pixel widths.
 
 ---
 

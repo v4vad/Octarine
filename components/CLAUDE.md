@@ -40,13 +40,14 @@ The app uses a 3-panel layout defined in `App.tsx`:
 | Component | Location | Contents |
 |-----------|----------|----------|
 | `TopBar` | Top | Undo/redo, background color picker, export button |
-| `LeftPanel` | Left column | Flat color list, base color picker, Lightness/Contrast method toggle, DefaultsTable for selected color, Add Color button |
+| `LeftPanel` | Left column | Framework preset buttons, flat color list, base color picker, Lightness/Contrast method toggle, DefaultsTable for selected color, Add Color button |
 | Middle (inline) | Center column | Swatches for the selected color only |
 | `RightSettingsPanel` | Right column | Advanced per-color settings (HK/BB corrections, hue shift curve, chroma curve) |
 
 ## Key Components
 
-- `LeftPanel` - Flat color list, base color picker, method toggle, DefaultsTable
+- `LeftPanel` - Preset buttons (`FRAMEWORK_PRESETS` from `lib/framework-presets.ts`), flat color list, base color picker, method toggle, DefaultsTable
 - `RightSettingsPanel` - Advanced per-color settings when a color is selected
 - `ColorSettingsContent` - The actual settings UI rendered inside RightSettingsPanel
 - `TopBar` - Global actions (undo/redo, export, generate)
+- `ColorPickerPopup` - Color picker with HSB and OKLCH tabs; includes "A: [100]%" alpha input next to the hex field

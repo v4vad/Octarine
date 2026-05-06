@@ -38,14 +38,18 @@
 ### Polish & Quality
 - [ ] Import/export JSON
 - [x] Error handling improvements (toast notifications, input validation feedback, helpful Figma error messages)
+- [x] Web app visible notifications (DOM toast replaces console.log)
 
 ### UI Improvements
-- [ ] Better onboarding & empty state (welcome message, quick-start presets)
+- [x] Smart default palette on fresh open (Primary, Secondary, Neutral, Error, Warning, Success)
+- [x] Framework presets: load Tailwind v3, Radix UI, or Material 3 in one click
+- [x] Responsive full-width web app layout (no longer constrained to Figma panel width)
 
 ### Export Features
-- [ ] CSS custom properties export
-- [ ] Tailwind config export
-- [ ] Raw OKLCH values export
+- [x] CSS custom properties export (hex, rgb, oklch, hsl — with alpha support)
+- [x] Tailwind config export (web app only — `theme.extend.colors`)
+- [x] SCSS variables export (web app only — `$color-stop: #hex`)
+- [x] Raw OKLCH values export (CSV with A column for alpha)
 - [ ] Generate documentation in Figma (frame with color swatches, hex values, contrast ratios)
 - [ ] Generate documentation webpage (HTML export for sharing/reference)
 
@@ -53,7 +57,8 @@
 - [ ] Figma Variable modes support (Light/Dark/Themes/ with different values per mode)
 
 ### Advanced Features
-- [ ] Preset color palettes / templates (neutral gray, warm gray, Material style)
+- [x] Preset color palettes / templates (Tailwind, Radix, Material 3 via left panel buttons)
+- [x] Per-color alpha / transparency (A: input in color picker, flows through all exports and Figma variables)
 - [ ] Color blindness preview (deuteranopia, protanopia, tritanopia simulation)
 - [ ] Bulk operations (duplicate row, drag-and-drop reorder, multi-delete)
 - [ ] P3/Wide gamut support (output P3 colors for modern displays)
