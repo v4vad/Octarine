@@ -37,7 +37,7 @@ export const FRAMEWORK_PRESETS: FrameworkPreset[] = [
       { label: 'Cyan',    baseColor: '#00a2c7' },
       { label: 'Teal',    baseColor: '#12a594' },
       { label: 'Green',   baseColor: '#46a758' },
-      { label: 'Grass',   baseColor: '#46a758' },
+      { label: 'Grass',   baseColor: '#53a857' },
       { label: 'Brown',   baseColor: '#ad7f58' },
       { label: 'Orange',  baseColor: '#f76b15' },
       { label: 'Gray',    baseColor: '#8d8d8d' },

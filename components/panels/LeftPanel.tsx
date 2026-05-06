@@ -11,7 +11,6 @@ interface LeftPanelProps {
   onSelectColor: (colorId: string) => void;
   onUpdateColor: (colorId: string, color: Color) => void;
   onAddColor: () => void;
-  onDuplicateColor: (colorId: string) => void;
   onLoadPreset: (preset: FrameworkPreset) => void;
 }
 

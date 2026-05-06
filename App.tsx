@@ -278,7 +278,6 @@ export default function App() {
           onSelectColor={setActiveColorId}
           onUpdateColor={updateColor}
           onAddColor={addColor}
-          onDuplicateColor={duplicateColor}
           onLoadPreset={loadPreset}
         />
 
