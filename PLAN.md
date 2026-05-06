@@ -30,7 +30,7 @@
 **Tier 3 — Polish & scale**
 - [ ] Delta-based undo history (replace 50 full-state snapshots with action/inverse pairs) — `lib/useHistory.ts`
 - [ ] Diff state on `saveState` (partial snapshots after first save) — `platform/figma/adapter.ts`, `App.tsx`
-- [ ] Hydrate before first paint (kill default-state flash on plugin open) — `App.tsx`, `platform/figma/code.ts`
+- ~~Hydrate before first paint~~ — dropped: `figma.root.getPluginData` must run before `figma.showUI` to embed state, but that call blocks the plugin window from appearing (~2s delay); user never observed a flash in practice
 - [ ] Web stub: idle-time `localStorage` writes or IndexedDB migration — `platform/web/adapter.ts`
 
 > Tier classification and file references derive from a 2026-04-26 audit. See the brainstorm at `~/.claude/plans/we-wrote-down-a-sunny-sonnet.md` for evidence and per-item implementation sketches.
