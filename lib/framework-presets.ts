@@ -1,0 +1,62 @@
+export type FrameworkPresetColor = { label: string; baseColor: string }
+export type FrameworkPreset = { id: string; name: string; colors: FrameworkPresetColor[] }
+
+export const FRAMEWORK_PRESETS: FrameworkPreset[] = [
+  {
+    id: 'tailwind',
+    name: 'Tailwind v3',
+    colors: [
+      { label: 'Slate',   baseColor: '#64748b' },
+      { label: 'Red',     baseColor: '#ef4444' },
+      { label: 'Orange',  baseColor: '#f97316' },
+      { label: 'Amber',   baseColor: '#f59e0b' },
+      { label: 'Yellow',  baseColor: '#eab308' },
+      { label: 'Green',   baseColor: '#22c55e' },
+      { label: 'Teal',    baseColor: '#14b8a6' },
+      { label: 'Blue',    baseColor: '#3b82f6' },
+      { label: 'Indigo',  baseColor: '#6366f1' },
+      { label: 'Violet',  baseColor: '#8b5cf6' },
+      { label: 'Purple',  baseColor: '#a855f7' },
+      { label: 'Pink',    baseColor: '#ec4899' },
+      { label: 'Rose',    baseColor: '#f43f5e' },
+    ],
+  },
+  {
+    id: 'radix',
+    name: 'Radix UI',
+    colors: [
+      { label: 'Tomato',  baseColor: '#e54d2e' },
+      { label: 'Red',     baseColor: '#e5484d' },
+      { label: 'Crimson', baseColor: '#e93d82' },
+      { label: 'Pink',    baseColor: '#d6409f' },
+      { label: 'Plum',    baseColor: '#ab4aba' },
+      { label: 'Purple',  baseColor: '#8e4ec6' },
+      { label: 'Violet',  baseColor: '#6e56cf' },
+      { label: 'Indigo',  baseColor: '#3e63dd' },
+      { label: 'Blue',    baseColor: '#0090ff' },
+      { label: 'Cyan',    baseColor: '#00a2c7' },
+      { label: 'Teal',    baseColor: '#12a594' },
+      { label: 'Green',   baseColor: '#46a758' },
+      { label: 'Grass',   baseColor: '#53a857' },
+      { label: 'Brown',   baseColor: '#ad7f58' },
+      { label: 'Orange',  baseColor: '#f76b15' },
+      { label: 'Gray',    baseColor: '#8d8d8d' },
+      { label: 'Mauve',   baseColor: '#8b8792' },
+      { label: 'Slate',   baseColor: '#8b9198' },
+      { label: 'Sage',    baseColor: '#84908e' },
+      { label: 'Olive',   baseColor: '#888d87' },
+      { label: 'Sand',    baseColor: '#8d8d86' },
+    ],
+  },
+  {
+    id: 'material',
+    name: 'Material 3',
+    colors: [
+      { label: 'Primary',   baseColor: '#6750a4' },
+      { label: 'Secondary', baseColor: '#958da5' },
+      { label: 'Tertiary',  baseColor: '#b58392' },
+      { label: 'Error',     baseColor: '#b3261e' },
+      { label: 'Neutral',   baseColor: '#938f99' },
+    ],
+  },
+]
