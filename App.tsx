@@ -9,6 +9,7 @@ import {
   createInitialAppState,
   migrateState,
 } from './lib/types';
+import { FrameworkPreset } from './lib/framework-presets';
 
 import { TopBar, LeftPanel, ResizeHandle } from './components/panels';
 import { RightSettingsPanel } from './components/color-settings';
@@ -225,6 +226,18 @@ export default function App() {
     duplicateColor(activeColorId!);
   }, [duplicateColor, activeColorId]);
 
+  const loadPreset = useCallback((preset: FrameworkPreset) => {
+    const id = `color-${Date.now()}`;
+    setState(prev => {
+      const colors = preset.colors.map((pc, i) => ({
+        ...createDefaultColor(`${id}-${i}`, pc.label, pc.baseColor),
+        autoLabel: false,
+      }));
+      return { ...prev, colors };
+    });
+    setActiveColorId(`${id}-0`);
+  }, [setState]);
+
   // RightSettingsPanel: color.id comes from the argument, no activeColorId closure needed
   const updateColorById = useCallback((updatedColor: Color) => {
     updateColor(updatedColor.id, updatedColor);
@@ -266,6 +279,7 @@ export default function App() {
           onUpdateColor={updateColor}
           onAddColor={addColor}
           onDuplicateColor={duplicateColor}
+          onLoadPreset={loadPreset}
         />
 
         {/* Middle Panel: Swatches for selected color */}

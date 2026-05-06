@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Color } from '../../lib/types';
+import { FrameworkPreset, FRAMEWORK_PRESETS } from '../../lib/framework-presets';
 import { DefaultsTable } from './DefaultsTable';
 import { SwatchHexInput } from '../primitives';
 import { ColorPickerPopup } from '../color-picker';
@@ -11,6 +12,7 @@ interface LeftPanelProps {
   onUpdateColor: (colorId: string, color: Color) => void;
   onAddColor: () => void;
   onDuplicateColor: (colorId: string) => void;
+  onLoadPreset: (preset: FrameworkPreset) => void;
 }
 
 function LeftPanelComponent({
@@ -19,6 +21,7 @@ function LeftPanelComponent({
   onSelectColor,
   onUpdateColor,
   onAddColor,
+  onLoadPreset,
 }: LeftPanelProps) {
   const [pickerColorId, setPickerColorId] = useState<string | null>(null);
 
@@ -33,6 +36,18 @@ function LeftPanelComponent({
   return (
     <div className="left-panel">
       <div className="group-accordion">
+        <div className="preset-buttons">
+          {FRAMEWORK_PRESETS.map(preset => (
+            <button
+              key={preset.id}
+              className="preset-button"
+              onClick={() => onLoadPreset(preset)}
+            >
+              {preset.name}
+            </button>
+          ))}
+        </div>
+
         {colors.map(color => {
           const isExpanded = color.id === activeColorId;
           const showPicker = pickerColorId === color.id;
