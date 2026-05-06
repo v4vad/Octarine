@@ -3084,6 +3084,24 @@ input[type="range"]::-moz-range-thumb {
   color: var(--oct-text);
 }
 
+/* Checkerboard background for swatches with alpha < 1 */
+.swatch-alpha {
+  background-image: linear-gradient(45deg, #ccc 25%, transparent 25%),
+    linear-gradient(-45deg, #ccc 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #ccc 75%),
+    linear-gradient(-45deg, transparent 75%, #ccc 75%);
+  background-size: 8px 8px;
+  background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+}
+
+/* Alpha input field inside the color picker hex row */
+.picker-alpha-field {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
 /* Legacy classes for backwards compatibility - can be removed */
 .export-modal-body,
 .export-modal-section,

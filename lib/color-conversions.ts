@@ -159,6 +159,11 @@ export function hsbToRgb(h: number, s: number, b: number): { r: number; g: numbe
   return { r: r * 255, g: g * 255, b: bl * 255 }
 }
 
+// Convert an alpha value (0–1) to a 2-digit uppercase hex string (e.g. 0.5 → "80")
+export function alphaToHex(alpha: number): string {
+  return Math.round(alpha * 255).toString(16).padStart(2, '0').toUpperCase()
+}
+
 export function rgbToOklch(r: number, g: number, b: number): OKLCH {
   return hexToOklch(rgbToHex(r, g, b))
 }

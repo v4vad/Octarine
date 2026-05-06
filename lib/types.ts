@@ -154,6 +154,9 @@ export type Color = {
   // Chroma curve - controls saturation distribution across lightness levels
   chromaCurve?: ChromaCurve
 
+  // Per-color alpha (opacity). undefined = fully opaque. Range 0–1.
+  alpha?: number
+
   // Array of stops for this color
   stops: Stop[]
 }
@@ -438,4 +441,5 @@ export type ExportableStop = {
   stopNumber: number
   hex: string
   oklch: { l: number; c: number; h: number }
+  alpha?: number  // Per-color alpha; undefined = fully opaque
 }

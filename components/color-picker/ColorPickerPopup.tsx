@@ -10,9 +10,11 @@ interface ColorPickerPopupProps {
   onChange: (hex: string) => void;
   onClose: () => void;
   onReset?: () => void;
+  alpha?: number;
+  onAlphaChange?: (alpha: number) => void;
 }
 
-export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopupProps) {
+export function ColorPickerPopup({ color, onChange, onClose, onReset, alpha, onAlphaChange }: ColorPickerPopupProps) {
   const popupRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<'oklch' | 'hsb'>('hsb');
   const platform = usePlatform();
@@ -147,6 +149,24 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
                 placeholder="#000000"
                 className="picker-hex-input"
               />
+              {onAlphaChange && (
+                <div className="picker-alpha-field">
+                  <label className="form-label-sm">A</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={Math.round((alpha ?? 1) * 100)}
+                    onChange={(e) => {
+                      const v = Math.max(0, Math.min(100, Number(e.target.value)));
+                      onAlphaChange(v / 100);
+                    }}
+                    className="picker-numeric-input"
+                  />
+                  <span className="form-label-sm">%</span>
+                </div>
+              )}
             </div>
           </>
         )}
@@ -199,6 +219,24 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
                 placeholder="#000000"
                 className="picker-hex-input"
               />
+              {onAlphaChange && (
+                <div className="picker-alpha-field">
+                  <label className="form-label-sm">A</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={Math.round((alpha ?? 1) * 100)}
+                    onChange={(e) => {
+                      const v = Math.max(0, Math.min(100, Number(e.target.value)));
+                      onAlphaChange(v / 100);
+                    }}
+                    className="picker-numeric-input"
+                  />
+                  <span className="form-label-sm">%</span>
+                </div>
+              )}
             </div>
           </>
         )}

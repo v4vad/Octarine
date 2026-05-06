@@ -73,6 +73,7 @@ function LeftPanelComponent({
                       color={color.baseColor}
                       onChange={(hex) => onUpdateColor(color.id, { ...color, baseColor: hex })}
                       onSwatchClick={() => handleSwatchClick(color.id)}
+                      alpha={color.alpha}
                     />
                   </div>
                 ) : (
@@ -96,6 +97,8 @@ function LeftPanelComponent({
                         color={color.baseColor}
                         onChange={(hex) => onUpdateColor(color.id, { ...color, baseColor: hex })}
                         onClose={() => setPickerColorId(null)}
+                        alpha={color.alpha}
+                        onAlphaChange={(a) => onUpdateColor(color.id, { ...color, alpha: a < 1 ? a : undefined })}
                       />
                     </div>
                   </>
