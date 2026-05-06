@@ -11,7 +11,7 @@
 
 import type { Color, GlobalConfig, ExportableStop, CSSColorFormat } from "./types"
 import { generateColorPalette } from "./color-utils"
-import { hexToOklch, hexToRgb } from "./color-conversions"
+import { hexToOklch, hexToRgb, alphaToHex } from "./color-conversions"
 
 // ============================================
 // DATA PREPARATION
@@ -49,7 +49,8 @@ export function prepareExportData(
           l: oklch.l,
           c: oklch.c,
           h: oklch.h
-        }
+        },
+        alpha: color.alpha,
       })
     }
   }
@@ -65,18 +66,26 @@ export function prepareExportData(
  * Format a color value in the specified CSS format
  */
 export function formatCSSValue(stop: ExportableStop, format: CSSColorFormat): string {
+  const hasAlpha = stop.alpha !== undefined && stop.alpha < 1
+
   switch (format) {
-    case "hex":
-      return stop.hex.toUpperCase()
+    case "hex": {
+      const base = stop.hex.toUpperCase()
+      return hasAlpha ? base + alphaToHex(stop.alpha!) : base
+    }
 
     case "rgb": {
       const rgb = hexToRgb(stop.hex)
+      if (hasAlpha) {
+        return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${stop.alpha!.toFixed(2)})`
+      }
       return `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`
     }
 
     case "oklch": {
       const { l, c, h } = stop.oklch
-      return `oklch(${(l * 100).toFixed(1)}% ${c.toFixed(3)} ${h.toFixed(1)})`
+      const base = `oklch(${(l * 100).toFixed(1)}% ${c.toFixed(3)} ${h.toFixed(1)})`
+      return hasAlpha ? `oklch(${(l * 100).toFixed(1)}% ${c.toFixed(3)} ${h.toFixed(1)} / ${stop.alpha!.toFixed(2)})` : base
     }
 
     case "hsl": {
@@ -109,6 +118,9 @@ export function formatCSSValue(stop: ExportableStop, format: CSSColorFormat): st
         }
       }
 
+      if (hasAlpha) {
+        return `hsla(${Math.round(h * 360)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%, ${stop.alpha!.toFixed(2)})`
+      }
       return `hsl(${Math.round(h * 360)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`
     }
 
@@ -170,6 +182,7 @@ export function generateJSON(stops: ExportableStop[]): string {
   for (const [label, colorStops] of Object.entries(grouped)) {
     tokens[label] = {}
     for (const stop of colorStops) {
+      const hasAlpha = stop.alpha !== undefined && stop.alpha < 1
       tokens[label][String(stop.stopNumber)] = {
         $type: "color",
         $value: {
@@ -179,7 +192,8 @@ export function generateJSON(stops: ExportableStop[]): string {
             c: Number(stop.oklch.c.toFixed(4)),
             h: Number(stop.oklch.h.toFixed(1))
           },
-          hex: stop.hex.toUpperCase()
+          hex: stop.hex.toUpperCase(),
+          ...(hasAlpha ? { alpha: stop.alpha } : {}),
         }
       }
     }
@@ -209,11 +223,12 @@ function escapeCSVField(field: string): string {
  * Format: Color,Stop,L,C,H
  */
 export function generateOKLCH(stops: ExportableStop[]): string {
-  const lines: string[] = ["Color,Stop,L,C,H"]
+  const lines: string[] = ["Color,Stop,L,C,H,A"]
 
   for (const stop of stops) {
     const { l, c, h } = stop.oklch
-    lines.push(`${escapeCSVField(stop.colorLabel)},${stop.stopNumber},${l.toFixed(4)},${c.toFixed(4)},${h.toFixed(1)}`)
+    const a = stop.alpha !== undefined ? stop.alpha.toFixed(4) : "1.0000"
+    lines.push(`${escapeCSVField(stop.colorLabel)},${stop.stopNumber},${l.toFixed(4)},${c.toFixed(4)},${h.toFixed(1)},${a}`)
   }
 
   return lines.join("\n")

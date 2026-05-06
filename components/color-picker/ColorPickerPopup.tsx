@@ -5,14 +5,26 @@ import { usePlatform } from '../../platform/context';
 import { GradientPicker } from './GradientPicker';
 import { HueSlider } from './HueSlider';
 
+function buildSwatchStyle(hex: string, alpha?: number): React.CSSProperties {
+  if (alpha !== undefined && alpha < 1) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return { backgroundColor: `rgba(${r}, ${g}, ${b}, ${alpha})` };
+  }
+  return { backgroundColor: hex };
+}
+
 interface ColorPickerPopupProps {
   color: string;
   onChange: (hex: string) => void;
   onClose: () => void;
   onReset?: () => void;
+  alpha?: number;
+  onAlphaChange?: (alpha: number) => void;
 }
 
-export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPickerPopupProps) {
+export function ColorPickerPopup({ color, onChange, onClose, onReset, alpha, onAlphaChange }: ColorPickerPopupProps) {
   const popupRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<'oklch' | 'hsb'>('hsb');
   const platform = usePlatform();
@@ -137,7 +149,7 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
               </div>
             </div>
             <div className="picker-swatch-hex-row">
-              <div className="picker-swatch" style={{ backgroundColor: hex }} />
+              <div className={`picker-swatch${alpha !== undefined && alpha < 1 ? ' swatch-alpha' : ''}`} style={buildSwatchStyle(hex, alpha)} />
               <input
                 type="text"
                 value={hexInput}
@@ -147,6 +159,26 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
                 placeholder="#000000"
                 className="picker-hex-input"
               />
+              {onAlphaChange && (
+                <div className="picker-alpha-field">
+                  <label className="form-label-sm">A</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={Math.round((alpha ?? 1) * 100)}
+                    onChange={(e) => {
+                      const raw = Number(e.target.value);
+                      if (isNaN(raw)) return;
+                      const v = Math.max(0, Math.min(100, raw));
+                      onAlphaChange(v / 100);
+                    }}
+                    className="picker-numeric-input"
+                  />
+                  <span className="form-label-sm">%</span>
+                </div>
+              )}
             </div>
           </>
         )}
@@ -189,7 +221,7 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
               </div>
             </div>
             <div className="picker-swatch-hex-row">
-              <div className="picker-swatch" style={{ backgroundColor: hex }} />
+              <div className={`picker-swatch${alpha !== undefined && alpha < 1 ? ' swatch-alpha' : ''}`} style={buildSwatchStyle(hex, alpha)} />
               <input
                 type="text"
                 value={hexInput}
@@ -199,6 +231,26 @@ export function ColorPickerPopup({ color, onChange, onClose, onReset }: ColorPic
                 placeholder="#000000"
                 className="picker-hex-input"
               />
+              {onAlphaChange && (
+                <div className="picker-alpha-field">
+                  <label className="form-label-sm">A</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={Math.round((alpha ?? 1) * 100)}
+                    onChange={(e) => {
+                      const raw = Number(e.target.value);
+                      if (isNaN(raw)) return;
+                      const v = Math.max(0, Math.min(100, raw));
+                      onAlphaChange(v / 100);
+                    }}
+                    className="picker-numeric-input"
+                  />
+                  <span className="form-label-sm">%</span>
+                </div>
+              )}
             </div>
           </>
         )}

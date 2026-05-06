@@ -14,6 +14,16 @@ interface LeftPanelProps {
   onLoadPreset: (preset: FrameworkPreset) => void;
 }
 
+function buildSwatchStyle(hex: string, alpha?: number): React.CSSProperties {
+  if (alpha !== undefined && alpha < 1) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return { backgroundColor: `rgba(${r}, ${g}, ${b}, ${alpha})` };
+  }
+  return { backgroundColor: hex };
+}
+
 function LeftPanelComponent({
   colors,
   activeColorId,
@@ -73,6 +83,7 @@ function LeftPanelComponent({
                       color={color.baseColor}
                       onChange={(hex) => onUpdateColor(color.id, { ...color, baseColor: hex })}
                       onSwatchClick={() => handleSwatchClick(color.id)}
+                      alpha={color.alpha}
                     />
                   </div>
                 ) : (
@@ -80,8 +91,8 @@ function LeftPanelComponent({
                   <div className="color-header-row">
                     <span className="color-header-name" title={color.label}>{color.label}</span>
                     <div
-                      className="color-header-swatch"
-                      style={{ backgroundColor: color.baseColor }}
+                      className={`color-header-swatch${color.alpha !== undefined && color.alpha < 1 ? ' swatch-alpha' : ''}`}
+                      style={buildSwatchStyle(color.baseColor, color.alpha)}
                     />
                     <span className="color-header-hex">{color.baseColor.toUpperCase()}</span>
                   </div>
@@ -96,6 +107,8 @@ function LeftPanelComponent({
                         color={color.baseColor}
                         onChange={(hex) => onUpdateColor(color.id, { ...color, baseColor: hex })}
                         onClose={() => setPickerColorId(null)}
+                        alpha={color.alpha}
+                        onAlphaChange={(a) => onUpdateColor(color.id, { ...color, alpha: a < 1 ? a : undefined })}
                       />
                     </div>
                   </>

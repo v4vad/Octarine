@@ -1,5 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { Color, ColorSettings, Stop } from '../../lib/types';
+
+function hexToRgbaStyle(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
 import {
   hexToOklch,
   oklchToHex,
@@ -88,6 +95,8 @@ function ColorRowComponent({
           const isNudged = generatedStop?.wasNudged && !stop.manualOverride;
           const isTooSimilar = generatedStop?.tooSimilar && !stop.manualOverride;
 
+          const hasAlpha = color.alpha !== undefined && color.alpha < 1
+
           return (
             <div
               key={stop.number}
@@ -96,8 +105,8 @@ function ColorRowComponent({
             >
               <span className="stop-strip-number">{stop.number}</span>
               <div
-                className={`stop-strip-swatch ${hasOverride ? 'has-override' : ''} ${isNudged ? 'was-nudged' : ''} ${isTooSimilar ? 'too-similar' : ''}`}
-                style={{ backgroundColor: displayColor }}
+                className={`stop-strip-swatch ${hasOverride ? 'has-override' : ''} ${isNudged ? 'was-nudged' : ''} ${isTooSimilar ? 'too-similar' : ''} ${hasAlpha ? 'swatch-alpha' : ''}`}
+                style={{ backgroundColor: hasAlpha ? hexToRgbaStyle(displayColor, color.alpha!) : displayColor }}
                 title={isTooSimilar && i > 0 ? `This color looks very similar to stop ${color.stops[i - 1].number} — they may be hard to tell apart` : undefined}
               >
                 {isTooSimilar && (
