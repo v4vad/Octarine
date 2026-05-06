@@ -13,6 +13,8 @@ import { PlatformProvider } from '../context';
 
 const adapter = new WebAdapter();
 
+document.body.classList.add('web-mode');
+
 const container = document.getElementById('root');
 if (container) {
   const root = createRoot(container);
