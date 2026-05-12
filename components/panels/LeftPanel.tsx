@@ -11,6 +11,7 @@ interface LeftPanelProps {
   onSelectColor: (colorId: string) => void;
   onUpdateColor: (colorId: string, color: Color) => void;
   onAddColor: () => void;
+  backgroundColor: string;
 }
 
 function LeftPanelComponent({
@@ -19,6 +20,7 @@ function LeftPanelComponent({
   onSelectColor,
   onUpdateColor,
   onAddColor,
+  backgroundColor,
 }: LeftPanelProps) {
   const [pickerColorId, setPickerColorId] = useState<string | null>(null);
 
@@ -90,7 +92,7 @@ function LeftPanelComponent({
                 <>
                   <div className="group-accordion-separator" />
                   <div className="group-accordion-content">
-                    <div className="alpha-toggle-row">
+                    <div className="toggle-row">
                       <Toggle
                         label="Alpha palette"
                         checked={color.alphaEnabled ?? false}
@@ -104,6 +106,7 @@ function LeftPanelComponent({
                     </div>
                     <DefaultsTable
                       color={color}
+                      backgroundColor={backgroundColor}
                       onUpdate={(updates) => onUpdateColor(color.id, { ...color, ...updates })}
                     />
                   </div>

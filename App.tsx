@@ -279,6 +279,7 @@ export default function App() {
           onSelectColor={setActiveColorId}
           onUpdateColor={updateColor}
           onAddColor={addColor}
+          backgroundColor={globalConfig.backgroundColor}
         />
 
         {/* Middle Panel: Swatches for selected color */}
