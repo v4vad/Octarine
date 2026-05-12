@@ -2,13 +2,15 @@ import React, { useState, useMemo } from 'react';
 import type { Color, ColorMethod, Stop } from '../../lib/types';
 import { DEFAULT_ALPHA } from '../../lib/types';
 import { MethodToggle, RefBasedNumericInput } from '../primitives';
+import { generateColorPalette } from '../../lib/color-utils';
 
 interface DefaultsTableProps {
   color: Color;
+  backgroundColor: string;
   onUpdate: (updates: Partial<Color>) => void;
 }
 
-export function DefaultsTable({ color, onUpdate }: DefaultsTableProps) {
+export function DefaultsTable({ color, backgroundColor, onUpdate }: DefaultsTableProps) {
   const [newStopNumber, setNewStopNumber] = useState('');
 
   const stopNumbers = useMemo(
@@ -19,6 +21,17 @@ export function DefaultsTable({ color, onUpdate }: DefaultsTableProps) {
   );
 
   const isLightnessActive = color.method === 'lightness';
+
+  const radixAlphas = useMemo(() => {
+    if (!color.alphaEnabled || color.alphaMethod !== 'radix') return null;
+    const result = generateColorPalette(color, {
+      method: color.method,
+      defaultLightness: color.defaultLightness,
+      defaultContrast: color.defaultContrast,
+      backgroundColor,
+    });
+    return Object.fromEntries(result.stops.map(s => [s.stopNumber, s.alpha ?? 1]));
+  }, [color, backgroundColor]);
 
   const handleAlphaEdit = (stopNum: number, newValue: number) => {
     onUpdate({ defaultAlpha: { ...color.defaultAlpha, [stopNum]: newValue } });
@@ -82,11 +95,11 @@ export function DefaultsTable({ color, onUpdate }: DefaultsTableProps) {
       {color.alphaEnabled ? (
         <div className="method-toggle">
           <button
-            className={`method-btn${color.alphaMethod === 'direct' ? ' active' : ''}`}
+            className={`method-toggle-btn${color.alphaMethod === 'direct' ? ' active' : ''}`}
             onClick={() => onUpdate({ alphaMethod: 'direct' })}
           >Direct</button>
           <button
-            className={`method-btn${color.alphaMethod !== 'direct' ? ' active' : ''}`}
+            className={`method-toggle-btn${color.alphaMethod !== 'direct' ? ' active' : ''}`}
             onClick={() => onUpdate({ alphaMethod: 'radix' })}
           >Radix</button>
         </div>
@@ -131,7 +144,9 @@ export function DefaultsTable({ color, onUpdate }: DefaultsTableProps) {
                       decimals={2}
                     />
                   ) : (
-                    <span className="form-label-sm" style={{ color: 'var(--text-tertiary)' }}>auto</span>
+                    <span className="form-label-sm" style={{ color: 'var(--oct-text-tertiary)' }}>
+                      {radixAlphas?.[num] !== undefined ? radixAlphas[num].toFixed(2) : '—'}
+                    </span>
                   )
                 ) : isLightnessActive ? (
                   <RefBasedNumericInput

@@ -118,7 +118,7 @@
 
   --oct-text: var(--oct-gray-100);
   --oct-text-secondary: var(--oct-gray-400);
-  --oct-text-tertiary: var(--oct-gray-600);
+  --oct-text-tertiary: var(--oct-gray-500);
   --oct-text-brand: var(--oct-violet-400);
   --oct-text-danger: var(--oct-danger);
   --oct-text-warning: var(--oct-warning);
@@ -151,7 +151,7 @@
 
   --oct-text: var(--oct-gray-900);
   --oct-text-secondary: var(--oct-gray-600);
-  --oct-text-tertiary: var(--oct-gray-400);
+  --oct-text-tertiary: var(--oct-gray-500);
   --oct-text-brand: var(--oct-violet-600);
   --oct-text-danger: var(--oct-danger);
   --oct-text-warning: var(--oct-warning);
