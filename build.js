@@ -72,16 +72,16 @@ async function build() {
     minify: true,
   });
 
-  const webJs = fs.readFileSync('web/web.js.tmp', 'utf8');
+  // Write JS as a separate file to avoid </script> parsing issues with inlined bundles
+  fs.renameSync('web/web.js.tmp', 'web/bundle.js');
 
-  // Read the web HTML template and inline JS + CSS
+  // Read the web HTML template and inline CSS only; reference JS via <script src>
   const webTemplate = fs.readFileSync('platform/web/index.html', 'utf8');
   const webHtml = webTemplate
     .replace('<!-- CSS_PLACEHOLDER -->', `<style>${customCSS}</style>`)
-    .replace('<!-- JS_PLACEHOLDER -->', `<script>${webJs}</script>`);
+    .replace('<!-- JS_PLACEHOLDER -->', `<script src="bundle.js"></script>`);
 
   fs.writeFileSync('web/index.html', webHtml);
-  fs.unlinkSync('web/web.js.tmp');
 
   console.log('Built web/index.html');
   console.log('Build complete!');

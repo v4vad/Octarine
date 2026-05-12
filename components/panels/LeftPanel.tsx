@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Color } from '../../lib/types';
+import { DEFAULT_ALPHA } from '../../lib/types';
 import { DefaultsTable } from './DefaultsTable';
-import { SwatchHexInput } from '../primitives';
+import { SwatchHexInput, Toggle } from '../primitives';
 import { ColorPickerPopup } from '../color-picker';
 
 interface LeftPanelProps {
@@ -10,16 +11,6 @@ interface LeftPanelProps {
   onSelectColor: (colorId: string) => void;
   onUpdateColor: (colorId: string, color: Color) => void;
   onAddColor: () => void;
-}
-
-function buildSwatchStyle(hex: string, alpha?: number): React.CSSProperties {
-  if (alpha !== undefined && alpha < 1) {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return { backgroundColor: `rgba(${r}, ${g}, ${b}, ${alpha})` };
-  }
-  return { backgroundColor: hex };
 }
 
 function LeftPanelComponent({
@@ -68,17 +59,13 @@ function LeftPanelComponent({
                       color={color.baseColor}
                       onChange={(hex) => onUpdateColor(color.id, { ...color, baseColor: hex })}
                       onSwatchClick={() => handleSwatchClick(color.id)}
-                      alpha={color.alpha}
                     />
                   </div>
                 ) : (
                   /* Collapsed: name + static swatch + hex */
                   <div className="color-header-row">
                     <span className="color-header-name" title={color.label}>{color.label}</span>
-                    <div
-                      className={`color-header-swatch${color.alpha !== undefined && color.alpha < 1 ? ' swatch-alpha' : ''}`}
-                      style={buildSwatchStyle(color.baseColor, color.alpha)}
-                    />
+                    <div className="color-header-swatch" style={{ backgroundColor: color.baseColor }} />
                     <span className="color-header-hex">{color.baseColor.toUpperCase()}</span>
                   </div>
                 )}
@@ -92,19 +79,29 @@ function LeftPanelComponent({
                         color={color.baseColor}
                         onChange={(hex) => onUpdateColor(color.id, { ...color, baseColor: hex })}
                         onClose={() => setPickerColorId(null)}
-                        alpha={color.alpha}
-                        onAlphaChange={(a) => onUpdateColor(color.id, { ...color, alpha: a < 1 ? a : undefined })}
                       />
                     </div>
                   </>
                 )}
               </div>
 
-              {/* Expanded: defaults table */}
+              {/* Expanded: alpha toggle + defaults table */}
               {isExpanded && (
                 <>
                   <div className="group-accordion-separator" />
                   <div className="group-accordion-content">
+                    <div className="alpha-toggle-row">
+                      <Toggle
+                        label="Alpha palette"
+                        checked={color.alphaEnabled ?? false}
+                        onChange={(v: boolean) => onUpdateColor(color.id, {
+                          ...color,
+                          alphaEnabled: v || undefined,
+                          alphaMethod: v ? (color.alphaMethod ?? 'direct') : undefined,
+                          defaultAlpha: v ? (color.defaultAlpha ?? { ...DEFAULT_ALPHA }) : undefined,
+                        })}
+                      />
+                    </div>
                     <DefaultsTable
                       color={color}
                       onUpdate={(updates) => onUpdateColor(color.id, { ...color, ...updates })}

@@ -1,4 +1,5 @@
 import type { GeneratedStop, PaletteResult, Color, ColorSettings } from "./types"
+import { DEFAULT_ALPHA } from "./types"
 
 // Re-export all color conversions for backward compatibility
 export {
@@ -67,8 +68,8 @@ export {
 export { findClosestCSSColorName } from "./css-color-names"
 
 // Import for internal use
-import { OKLCH, hexToOklch, oklchToHex } from "./color-conversions"
-import { applyPerceptualCorrections, PerceptualCorrectionOptions } from "./perceptual-corrections"
+import { OKLCH, hexToOklch, oklchToHex, hexToRgb } from "./color-conversions"
+import { applyPerceptualCorrections } from "./perceptual-corrections"
 import { getHueShiftValues, applyHueShift, applyChromaCurve } from "./artistic-curves"
 import { getContrastRatio, findLightnessForContrast, refineContrastToTarget } from "./contrast-utils"
 import { clampChromaToGamut, getMinChromaForHue, getMaxLightnessForMinChroma, validateAndClampToGamut } from "./gamut-utils"
@@ -103,7 +104,6 @@ export function generateColorPalette(
   // First pass: generate all colors with expansion
   const intermediateStops = color.stops.map(stop => {
     const stopNum = stop.number
-    const stopKey = String(stopNum)
 
     // Check for manual override first
     if (stop.manualOverride) {
@@ -265,10 +265,53 @@ export function generateColorPalette(
     return stop
   })
 
-  return {
+  const paletteResult: PaletteResult = {
     colorId: color.id,
     stops: generatedStops,
     hadDuplicates
   }
+
+  // Alpha mode: override stop hex and add alpha values
+  if (color.alphaEnabled) {
+    if (color.alphaMethod === 'direct') {
+      return {
+        ...paletteResult,
+        stops: color.stops.map((stop, i) => {
+          const targetAlpha = stop.alphaOverride ??
+            color.defaultAlpha?.[stop.number] ??
+            DEFAULT_ALPHA[stop.number] ??
+            0.5
+          return {
+            ...paletteResult.stops[i],
+            hex: color.baseColor,
+            alpha: targetAlpha,
+          }
+        })
+      }
+    }
+
+    if (color.alphaMethod === 'radix') {
+      const bgRgb = hexToRgb(colorSettings.backgroundColor)
+      const baseRgb = hexToRgb(color.baseColor)
+      return {
+        ...paletteResult,
+        stops: paletteResult.stops.map(generatedStop => {
+          const solidRgb = hexToRgb(generatedStop.hex)
+          const channels = (['r', 'g', 'b'] as const).filter(
+            ch => Math.abs(baseRgb[ch] - bgRgb[ch]) > 2
+          )
+          const alphas = channels.map(
+            ch => (solidRgb[ch] - bgRgb[ch]) / (baseRgb[ch] - bgRgb[ch])
+          )
+          const computedAlpha = alphas.length > 0
+            ? Math.min(1, Math.max(0, alphas.reduce((a, b) => a + b) / alphas.length))
+            : 1
+          return { ...generatedStop, hex: color.baseColor, alpha: computedAlpha }
+        })
+      }
+    }
+  }
+
+  return paletteResult
 }
 

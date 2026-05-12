@@ -95,7 +95,7 @@ function ColorRowComponent({
           const isNudged = generatedStop?.wasNudged && !stop.manualOverride;
           const isTooSimilar = generatedStop?.tooSimilar && !stop.manualOverride;
 
-          const hasAlpha = color.alpha !== undefined && color.alpha < 1
+          const hasAlpha = generatedStop?.alpha !== undefined && generatedStop.alpha < 1
 
           return (
             <div
@@ -106,7 +106,7 @@ function ColorRowComponent({
               <span className="stop-strip-number">{stop.number}</span>
               <div
                 className={`stop-strip-swatch ${hasOverride ? 'has-override' : ''} ${isNudged ? 'was-nudged' : ''} ${isTooSimilar ? 'too-similar' : ''} ${hasAlpha ? 'swatch-alpha' : ''}`}
-                style={{ backgroundColor: hasAlpha ? hexToRgbaStyle(displayColor, color.alpha!) : displayColor }}
+                style={{ backgroundColor: hasAlpha ? hexToRgbaStyle(displayColor, generatedStop.alpha!) : displayColor }}
                 title={isTooSimilar && i > 0 ? `This color looks very similar to stop ${color.stops[i - 1].number} — they may be hard to tell apart` : undefined}
               >
                 {isTooSimilar && (
@@ -165,6 +165,10 @@ function ColorRowComponent({
                 onChange={handleColorChange}
                 onClose={() => setSelectedStop(null)}
                 onReset={hasManualOverride ? handleReset : undefined}
+                alpha={color.alphaEnabled && color.alphaMethod === 'direct' ? paletteResult.stops[selectedStop.index]?.alpha : undefined}
+                onAlphaChange={color.alphaEnabled && color.alphaMethod === 'direct'
+                  ? (a: number) => handleUpdateStop(selectedStop.index, { alphaOverride: a < 1 ? a : undefined })
+                  : undefined}
               />
             </div>
           </>

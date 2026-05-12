@@ -4,6 +4,7 @@
 
 // Color method determines how color stops are calculated
 export type ColorMethod = "lightness" | "contrast"
+export type AlphaMethod = "direct" | "radix"
 
 // ============================================
 // CHROMA CURVES
@@ -88,6 +89,12 @@ export const DEFAULT_CONTRAST: Record<number, number> = {
   900: 15,
 }
 
+// Default alpha values for each stop (0-1) — used by Direct alpha method
+export const DEFAULT_ALPHA: Record<number, number> = {
+  50: 0.05, 100: 0.10, 200: 0.20, 300: 0.30, 400: 0.40,
+  500: 0.50, 600: 0.60, 700: 0.70, 800: 0.80, 900: 0.90,
+}
+
 // ============================================
 // COLOR STOP (used by generateColor function)
 // ============================================
@@ -112,6 +119,7 @@ export type Stop = {
   // Override lightness/contrast for this specific stop
   lightnessOverride?: number
   contrastOverride?: number
+  alphaOverride?: number  // Per-stop alpha override for Direct method (0–1)
 
   // Manual color override (via color picker)
   manualOverride?: {
@@ -154,8 +162,10 @@ export type Color = {
   // Chroma curve - controls saturation distribution across lightness levels
   chromaCurve?: ChromaCurve
 
-  // Per-color alpha (opacity). undefined = fully opaque. Range 0–1.
-  alpha?: number
+  // Alpha palette mode
+  alphaEnabled?: boolean                       // true = generate an alpha palette for this color
+  alphaMethod?: AlphaMethod                   // "direct" or "radix"; only when alphaEnabled=true
+  defaultAlpha?: Record<number, number>       // per-stop alpha for Direct method (0–1)
 
   // Array of stops for this color
   stops: Stop[]
@@ -205,6 +215,7 @@ export type GeneratedStop = {
   }
   tooSimilar?: boolean     // Is this stop too similar to previous stop (Delta-E < 5)?
   deltaE?: number          // Delta-E to previous stop (for debugging/display)
+  alpha?: number         // Computed alpha for alpha-mode colors; undefined = fully opaque
 }
 
 // Result for an entire palette (all stops for one color)
@@ -251,7 +262,7 @@ export function createInitialAppState(): AppState {
 // STATE PERSISTENCE & MIGRATION
 // ============================================
 export const STORAGE_KEY = 'octarine-state'
-export const STORAGE_VERSION = 8  // Bumped: added autoLabel for CSS color naming
+export const STORAGE_VERSION = 9  // Bumped: moved alpha from Color-level to alpha mode system
 
 export type PersistedState = {
   version: number
@@ -417,7 +428,28 @@ export function migrateState(persisted: { version: number; state: unknown }): Ap
     }
   }
 
-  // v7 or newer - validate basic shape before casting
+  // v8: had Color.alpha (single value). Migrate to alphaEnabled + Direct method.
+  if (persisted.version === 8) {
+    const candidate = persisted.state as Record<string, unknown>
+    if (!Array.isArray(candidate.colors) || !candidate.globalConfig) {
+      return createInitialAppState()
+    }
+    const migratedColors = (candidate.colors as any[]).map((color: any) => {
+      if (color.alpha === undefined || color.alpha >= 1) {
+        const { alpha: _, ...rest } = color
+        return rest
+      }
+      const { alpha: colorAlpha, ...rest } = color
+      const uniformAlpha: Record<number, number> = {}
+      for (const stop of (color.stops ?? [])) {
+        uniformAlpha[stop.number] = colorAlpha
+      }
+      return { ...rest, alphaEnabled: true, alphaMethod: 'direct', defaultAlpha: uniformAlpha }
+    })
+    return { globalConfig: candidate.globalConfig as GlobalConfig, colors: migratedColors }
+  }
+
+  // v9 or newer - validate basic shape before casting
   const candidate = persisted.state as Record<string, unknown>
   if (!Array.isArray(candidate.colors) || !candidate.globalConfig) {
     return createInitialAppState()

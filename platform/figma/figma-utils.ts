@@ -89,7 +89,7 @@ export async function createFigmaVariables(
       const variable = getOrCreateColorVariable(collection, variableName, variableMap);
 
       // Set the color value (using the hex from palette generation, with per-color alpha)
-      const figmaColor = hexToFigmaRgba(generatedStop.hex, color.alpha);
+      const figmaColor = hexToFigmaRgba(generatedStop.hex, generatedStop.alpha);
       variable.setValueForMode(modeId, figmaColor);
 
       if (isNew) {

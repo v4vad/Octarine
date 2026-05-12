@@ -50,7 +50,7 @@ export function prepareExportData(
           c: oklch.c,
           h: oklch.h
         },
-        alpha: color.alpha,
+        alpha: generatedStop.alpha,
       })
     }
   }

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import type { Color, ColorMethod, Stop } from '../../lib/types';
+import { DEFAULT_ALPHA } from '../../lib/types';
 import { MethodToggle, RefBasedNumericInput } from '../primitives';
 
 interface DefaultsTableProps {
@@ -19,6 +20,10 @@ export function DefaultsTable({ color, onUpdate }: DefaultsTableProps) {
 
   const isLightnessActive = color.method === 'lightness';
 
+  const handleAlphaEdit = (stopNum: number, newValue: number) => {
+    onUpdate({ defaultAlpha: { ...color.defaultAlpha, [stopNum]: newValue } });
+  };
+
   const handleValueEdit = (stopNum: number, newValue: number) => {
     if (isLightnessActive) {
       onUpdate({
@@ -35,8 +40,9 @@ export function DefaultsTable({ color, onUpdate }: DefaultsTableProps) {
     if (stopNumbers.length <= 2) return;
     const { [stopNum]: _l, ...newLightness } = color.defaultLightness;
     const { [stopNum]: _c, ...newContrast } = color.defaultContrast;
+    const { [stopNum]: _a, ...newAlpha } = color.defaultAlpha ?? {};
     const newStops = color.stops.filter(s => s.number !== stopNum);
-    onUpdate({ defaultLightness: newLightness, defaultContrast: newContrast, stops: newStops });
+    onUpdate({ defaultLightness: newLightness, defaultContrast: newContrast, defaultAlpha: newAlpha, stops: newStops });
   };
 
   const handleAddStop = () => {
@@ -52,6 +58,10 @@ export function DefaultsTable({ color, onUpdate }: DefaultsTableProps) {
       ...color.defaultContrast,
       [num]: interpolateValue(num, color.defaultContrast, 4.5),
     };
+    const newAlpha = {
+      ...color.defaultAlpha,
+      [num]: interpolateValue(num, color.defaultAlpha ?? DEFAULT_ALPHA, 0.5),
+    };
 
     // Add stop to both defaults and stops array
     const newStop: Stop = { number: num };
@@ -60,6 +70,7 @@ export function DefaultsTable({ color, onUpdate }: DefaultsTableProps) {
     onUpdate({
       defaultLightness: newLightness,
       defaultContrast: newContrast,
+      defaultAlpha: newAlpha,
       stops: newStops,
     });
     setNewStopNumber('');
@@ -68,10 +79,23 @@ export function DefaultsTable({ color, onUpdate }: DefaultsTableProps) {
   return (
     <div className="defaults-section">
       {/* Method toggle above table */}
-      <MethodToggle
-        method={color.method}
-        onChange={(method: ColorMethod) => onUpdate({ method })}
-      />
+      {color.alphaEnabled ? (
+        <div className="method-toggle">
+          <button
+            className={`method-btn${color.alphaMethod === 'direct' ? ' active' : ''}`}
+            onClick={() => onUpdate({ alphaMethod: 'direct' })}
+          >Direct</button>
+          <button
+            className={`method-btn${color.alphaMethod !== 'direct' ? ' active' : ''}`}
+            onClick={() => onUpdate({ alphaMethod: 'radix' })}
+          >Radix</button>
+        </div>
+      ) : (
+        <MethodToggle
+          method={color.method}
+          onChange={(method: ColorMethod) => onUpdate({ method })}
+        />
+      )}
 
       {/* Table with single active column */}
       <table className="defaults-table">
@@ -79,7 +103,7 @@ export function DefaultsTable({ color, onUpdate }: DefaultsTableProps) {
           <tr>
             <th className="stop-col">stop</th>
             <th className="value-col" style={{ textAlign: 'right' }}>
-              {isLightnessActive ? 'Lightness' : 'Contrast'}
+              {color.alphaEnabled ? 'Alpha' : isLightnessActive ? 'Lightness' : 'Contrast'}
             </th>
           </tr>
         </thead>
@@ -97,7 +121,19 @@ export function DefaultsTable({ color, onUpdate }: DefaultsTableProps) {
                 )}
               </td>
               <td className="value-col">
-                {isLightnessActive ? (
+                {color.alphaEnabled ? (
+                  color.alphaMethod === 'direct' ? (
+                    <RefBasedNumericInput
+                      value={color.defaultAlpha?.[num] ?? DEFAULT_ALPHA[num] ?? 0.5}
+                      onChange={(val) => handleAlphaEdit(num, val)}
+                      min={0}
+                      max={1}
+                      decimals={2}
+                    />
+                  ) : (
+                    <span className="form-label-sm" style={{ color: 'var(--text-tertiary)' }}>auto</span>
+                  )
+                ) : isLightnessActive ? (
                   <RefBasedNumericInput
                     value={color.defaultLightness[num] ?? 0.5}
                     onChange={(val) => handleValueEdit(num, val)}
