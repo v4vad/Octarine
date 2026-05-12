@@ -21,12 +21,14 @@ interface ColorRowProps {
   onUpdate: (color: Color) => void;
   onRemove: () => void;
   onDuplicate: () => void;
+  onActivate?: () => void;
 }
 
 function ColorRowComponent({
   color,
   colorSettings,
   onUpdate,
+  onActivate,
 }: ColorRowProps) {
   const [selectedStop, setSelectedStop] = useState<{
     index: number;
@@ -40,6 +42,7 @@ function ColorRowComponent({
 
   const handleStopClick = (index: number, e: React.MouseEvent) => {
     e.stopPropagation();
+    onActivate?.();
     const rect = (e.target as HTMLElement).getBoundingClientRect();
     setSelectedStop({
       index,
