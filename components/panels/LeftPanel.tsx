@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Color } from '../../lib/types';
+import { DEFAULT_ALPHA } from '../../lib/types';
 import { DefaultsTable } from './DefaultsTable';
-import { SwatchHexInput } from '../primitives';
+import { SwatchHexInput, Toggle } from '../primitives';
 import { ColorPickerPopup } from '../color-picker';
 
 interface LeftPanelProps {
@@ -10,7 +11,7 @@ interface LeftPanelProps {
   onSelectColor: (colorId: string) => void;
   onUpdateColor: (colorId: string, color: Color) => void;
   onAddColor: () => void;
-  onDuplicateColor: (colorId: string) => void;
+  backgroundColor: string;
 }
 
 function LeftPanelComponent({
@@ -19,6 +20,7 @@ function LeftPanelComponent({
   onSelectColor,
   onUpdateColor,
   onAddColor,
+  backgroundColor,
 }: LeftPanelProps) {
   const [pickerColorId, setPickerColorId] = useState<string | null>(null);
 
@@ -65,10 +67,7 @@ function LeftPanelComponent({
                   /* Collapsed: name + static swatch + hex */
                   <div className="color-header-row">
                     <span className="color-header-name" title={color.label}>{color.label}</span>
-                    <div
-                      className="color-header-swatch"
-                      style={{ backgroundColor: color.baseColor }}
-                    />
+                    <div className="color-header-swatch" style={{ backgroundColor: color.baseColor }} />
                     <span className="color-header-hex">{color.baseColor.toUpperCase()}</span>
                   </div>
                 )}
@@ -88,13 +87,26 @@ function LeftPanelComponent({
                 )}
               </div>
 
-              {/* Expanded: defaults table */}
+              {/* Expanded: alpha toggle + defaults table */}
               {isExpanded && (
                 <>
                   <div className="group-accordion-separator" />
                   <div className="group-accordion-content">
+                    <div className="toggle-row">
+                      <Toggle
+                        label="Alpha palette"
+                        checked={color.alphaEnabled ?? false}
+                        onChange={(v: boolean) => onUpdateColor(color.id, {
+                          ...color,
+                          alphaEnabled: v || undefined,
+                          alphaMethod: v ? (color.alphaMethod ?? 'direct') : undefined,
+                          defaultAlpha: v ? (color.defaultAlpha ?? { ...DEFAULT_ALPHA }) : undefined,
+                        })}
+                      />
+                    </div>
                     <DefaultsTable
                       color={color}
+                      backgroundColor={backgroundColor}
                       onUpdate={(updates) => onUpdateColor(color.id, { ...color, ...updates })}
                     />
                   </div>

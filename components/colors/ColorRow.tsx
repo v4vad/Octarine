@@ -1,5 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { Color, ColorSettings, Stop } from '../../lib/types';
+
+function hexToRgbaStyle(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
 import {
   hexToOklch,
   oklchToHex,
@@ -14,12 +21,16 @@ interface ColorRowProps {
   onUpdate: (color: Color) => void;
   onRemove: () => void;
   onDuplicate: () => void;
+  onActivate?: () => void;
+  isActive?: boolean;
 }
 
 function ColorRowComponent({
   color,
   colorSettings,
   onUpdate,
+  onActivate,
+  isActive,
 }: ColorRowProps) {
   const [selectedStop, setSelectedStop] = useState<{
     index: number;
@@ -33,6 +44,7 @@ function ColorRowComponent({
 
   const handleStopClick = (index: number, e: React.MouseEvent) => {
     e.stopPropagation();
+    onActivate?.();
     const rect = (e.target as HTMLElement).getBoundingClientRect();
     setSelectedStop({
       index,
@@ -52,7 +64,7 @@ function ColorRowComponent({
 
   return (
     <div
-      className="color-row"
+      className={`color-row${isActive ? ' color-row--active' : ''}`}
       onClick={handleRowClick}
     >
       {/* Header: Just the name input */}
@@ -88,6 +100,8 @@ function ColorRowComponent({
           const isNudged = generatedStop?.wasNudged && !stop.manualOverride;
           const isTooSimilar = generatedStop?.tooSimilar && !stop.manualOverride;
 
+          const hasAlpha = generatedStop?.alpha !== undefined && generatedStop.alpha < 1
+
           return (
             <div
               key={stop.number}
@@ -96,8 +110,8 @@ function ColorRowComponent({
             >
               <span className="stop-strip-number">{stop.number}</span>
               <div
-                className={`stop-strip-swatch ${hasOverride ? 'has-override' : ''} ${isNudged ? 'was-nudged' : ''} ${isTooSimilar ? 'too-similar' : ''}`}
-                style={{ backgroundColor: displayColor }}
+                className={`stop-strip-swatch ${hasOverride ? 'has-override' : ''} ${isNudged ? 'was-nudged' : ''} ${isTooSimilar ? 'too-similar' : ''} ${hasAlpha ? 'swatch-alpha' : ''}`}
+                style={{ backgroundColor: hasAlpha ? hexToRgbaStyle(displayColor, generatedStop.alpha!) : displayColor }}
                 title={isTooSimilar && i > 0 ? `This color looks very similar to stop ${color.stops[i - 1].number} — they may be hard to tell apart` : undefined}
               >
                 {isTooSimilar && (
@@ -156,6 +170,10 @@ function ColorRowComponent({
                 onChange={handleColorChange}
                 onClose={() => setSelectedStop(null)}
                 onReset={hasManualOverride ? handleReset : undefined}
+                alpha={color.alphaEnabled && color.alphaMethod === 'direct' ? paletteResult.stops[selectedStop.index]?.alpha : undefined}
+                onAlphaChange={color.alphaEnabled && color.alphaMethod === 'direct'
+                  ? (a: number) => handleUpdateStop(selectedStop.index, { alphaOverride: a < 1 ? a : undefined })
+                  : undefined}
               />
             </div>
           </>

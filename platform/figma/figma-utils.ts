@@ -7,13 +7,13 @@ import { Color, ColorSettings } from '../../lib/types';
 import { hexToRgb, generateColorPalette } from '../../lib/color-utils';
 
 // Convert hex color to Figma's RGBA format (values from 0-1)
-function hexToFigmaRgba(hex: string): RGBA {
+function hexToFigmaRgba(hex: string, alpha?: number): RGBA {
   const rgb = hexToRgb(hex);
   return {
     r: rgb.r / 255,
     g: rgb.g / 255,
     b: rgb.b / 255,
-    a: 1,
+    a: alpha ?? 1,
   };
 }
 
@@ -88,8 +88,8 @@ export async function createFigmaVariables(
       const isNew = !variableMap.has(`${collection.id}::${variableName}`);
       const variable = getOrCreateColorVariable(collection, variableName, variableMap);
 
-      // Set the color value (using the hex from palette generation)
-      const figmaColor = hexToFigmaRgba(generatedStop.hex);
+      // Set the color value (using the hex from palette generation, with per-color alpha)
+      const figmaColor = hexToFigmaRgba(generatedStop.hex, generatedStop.alpha);
       variable.setValueForMode(modeId, figmaColor);
 
       if (isNew) {

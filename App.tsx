@@ -9,6 +9,7 @@ import {
   createInitialAppState,
   migrateState,
 } from './lib/types';
+import { FrameworkPreset } from './lib/framework-presets';
 
 import { TopBar, LeftPanel, ResizeHandle } from './components/panels';
 import { RightSettingsPanel } from './components/color-settings';
@@ -43,6 +44,9 @@ export default function App() {
 
   // Track export modal visibility
   const [showExportModal, setShowExportModal] = useState(false);
+
+  // Track middle panel view mode: show selected color or all colors
+  const [viewMode, setViewMode] = useState<'all' | 'selected'>('selected');
 
   // Get the active color object — memoized so it only changes when colors or selection changes
   const activeColor = useMemo(
@@ -225,6 +229,18 @@ export default function App() {
     duplicateColor(activeColorId!);
   }, [duplicateColor, activeColorId]);
 
+  const loadPreset = useCallback((preset: FrameworkPreset) => {
+    const id = `color-${Date.now()}`;
+    setState(prev => {
+      const colors = preset.colors.map((pc, i) => ({
+        ...createDefaultColor(`${id}-${i}`, pc.label, pc.baseColor),
+        autoLabel: false,
+      }));
+      return { ...prev, colors };
+    });
+    setActiveColorId(`${id}-0`);
+  }, [setState]);
+
   // RightSettingsPanel: color.id comes from the argument, no activeColorId closure needed
   const updateColorById = useCallback((updatedColor: Color) => {
     updateColor(updatedColor.id, updatedColor);
@@ -254,6 +270,9 @@ export default function App() {
         canRedo={canRedo}
         theme={theme}
         onToggleTheme={toggleTheme}
+        onLoadPreset={loadPreset}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
       />
 
       {/* Main Three-Panel Layout */}
@@ -265,21 +284,48 @@ export default function App() {
           onSelectColor={setActiveColorId}
           onUpdateColor={updateColor}
           onAddColor={addColor}
-          onDuplicateColor={duplicateColor}
+          backgroundColor={globalConfig.backgroundColor}
         />
 
-        {/* Middle Panel: Swatches for selected color */}
+        {/* Middle Panel: Swatches — all colors or selected color */}
         <div className="middle-panel">
-          {!deferredActiveColor || !deferredColorSettings ? (
-            <p className="empty-state p-4">Add a color to get started.</p>
+          {viewMode === 'selected' ? (
+            !deferredActiveColor || !deferredColorSettings ? (
+              <p className="empty-state p-4">Add a color to get started.</p>
+            ) : (
+              <ColorRow
+                color={deferredActiveColor}
+                colorSettings={deferredColorSettings}
+                onUpdate={updateActiveColor}
+                onRemove={removeActiveColor}
+                onDuplicate={duplicateActiveColor}
+              />
+            )
           ) : (
-            <ColorRow
-              color={deferredActiveColor}
-              colorSettings={deferredColorSettings}
-              onUpdate={updateActiveColor}
-              onRemove={removeActiveColor}
-              onDuplicate={duplicateActiveColor}
-            />
+            colors.length === 0 ? (
+              <p className="empty-state p-4">Add a color to get started.</p>
+            ) : (
+              colors.map(color => {
+                const colorSettings: ColorSettings = {
+                  method: color.method,
+                  defaultLightness: color.defaultLightness,
+                  defaultContrast: color.defaultContrast,
+                  backgroundColor: globalConfig.backgroundColor,
+                };
+                return (
+                  <ColorRow
+                    key={color.id}
+                    color={color}
+                    colorSettings={colorSettings}
+                    onUpdate={(updated) => updateColor(color.id, updated)}
+                    onRemove={() => removeColor(color.id)}
+                    onDuplicate={() => duplicateColor(color.id)}
+                    onActivate={() => setActiveColorId(color.id)}
+                    isActive={color.id === activeColorId}
+                  />
+                );
+              })
+            )
           )}
         </div>
 

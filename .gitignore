@@ -11,6 +11,9 @@ ui.js.css
 # Claude Code internal files
 .claude/
 
+# Git worktrees
+.worktrees/
+
 # macOS
 .DS_Store
 
