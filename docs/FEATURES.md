@@ -31,7 +31,7 @@ The plugin window has four main areas:
 
 - **Top Bar** - Undo/redo buttons, background color picker with hex input, and export button
 - **Left Panel** - Framework preset buttons, flat color list (click a color to select it), base color picker, Lightness/Contrast method toggle, and Defaults table showing stop values for the selected color
-- **Middle Panel** - Swatches for the selected color (50-900) with hex codes and contrast ratios
+- **Middle Panel** - Swatches with hex codes and contrast ratios. Use the **All Colors / Selected** toggle at the top to switch between viewing all colors at once or just the selected color
 - **Right Panel** - Advanced per-color settings for the selected color: HK/BB corrections, hue shift curve, and chroma curve
 
 You can resize the plugin window by dragging the bottom-right corner.

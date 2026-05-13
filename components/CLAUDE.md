@@ -41,7 +41,7 @@ The app uses a 3-panel layout defined in `App.tsx`:
 |-----------|----------|----------|
 | `TopBar` | Top | Undo/redo, background color picker, export button |
 | `LeftPanel` | Left column | Framework preset buttons, flat color list, base color picker, Lightness/Contrast method toggle, DefaultsTable for selected color, Add Color button |
-| Middle (inline) | Center column | Swatches for the selected color only |
+| Middle (inline) | Center column | Swatches for selected color or all colors; toggled by `ViewModeToggle` at top of panel |
 | `RightSettingsPanel` | Right column | Advanced per-color settings (HK/BB corrections, hue shift curve, chroma curve) |
 
 ## Key Components
