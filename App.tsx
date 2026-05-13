@@ -11,7 +11,7 @@ import {
 } from './lib/types';
 import { FrameworkPreset } from './lib/framework-presets';
 
-import { TopBar, LeftPanel, ResizeHandle } from './components/panels';
+import { TopBar, LeftPanel, ResizeHandle, ViewModeToggle } from './components/panels';
 import { RightSettingsPanel } from './components/color-settings';
 import { ColorRow } from './components/colors';
 import { ExportModal } from './components/export';
@@ -44,6 +44,9 @@ export default function App() {
 
   // Track export modal visibility
   const [showExportModal, setShowExportModal] = useState(false);
+
+  // Track middle panel view mode: show selected color or all colors
+  const [viewMode, setViewMode] = useState<'all' | 'selected'>('selected');
 
   // Get the active color object — memoized so it only changes when colors or selection changes
   const activeColor = useMemo(
@@ -282,18 +285,45 @@ export default function App() {
           backgroundColor={globalConfig.backgroundColor}
         />
 
-        {/* Middle Panel: Swatches for selected color */}
+        {/* Middle Panel: Swatches — all colors or selected color */}
         <div className="middle-panel">
-          {!deferredActiveColor || !deferredColorSettings ? (
-            <p className="empty-state p-4">Add a color to get started.</p>
+          <ViewModeToggle mode={viewMode} onChange={setViewMode} />
+          {viewMode === 'selected' ? (
+            !deferredActiveColor || !deferredColorSettings ? (
+              <p className="empty-state p-4">Add a color to get started.</p>
+            ) : (
+              <ColorRow
+                color={deferredActiveColor}
+                colorSettings={deferredColorSettings}
+                onUpdate={updateActiveColor}
+                onRemove={removeActiveColor}
+                onDuplicate={duplicateActiveColor}
+              />
+            )
           ) : (
-            <ColorRow
-              color={deferredActiveColor}
-              colorSettings={deferredColorSettings}
-              onUpdate={updateActiveColor}
-              onRemove={removeActiveColor}
-              onDuplicate={duplicateActiveColor}
-            />
+            colors.length === 0 ? (
+              <p className="empty-state p-4">Add a color to get started.</p>
+            ) : (
+              colors.map(color => {
+                const colorSettings: ColorSettings = {
+                  method: color.method,
+                  defaultLightness: color.defaultLightness,
+                  defaultContrast: color.defaultContrast,
+                  backgroundColor: globalConfig.backgroundColor,
+                };
+                return (
+                  <ColorRow
+                    key={color.id}
+                    color={color}
+                    colorSettings={colorSettings}
+                    onUpdate={(updated) => updateColor(color.id, updated)}
+                    onRemove={() => removeColor(color.id)}
+                    onDuplicate={() => duplicateColor(color.id)}
+                    onActivate={() => setActiveColorId(color.id)}
+                  />
+                );
+              })
+            )
           )}
         </div>
 
