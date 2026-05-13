@@ -15,6 +15,8 @@ interface TopBarProps {
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
   onLoadPreset: (preset: FrameworkPreset) => void;
+  viewMode: 'all' | 'selected';
+  onViewModeChange: (mode: 'all' | 'selected') => void;
 }
 
 function TopBarComponent({
@@ -28,14 +30,16 @@ function TopBarComponent({
   theme,
   onToggleTheme,
   onLoadPreset,
+  viewMode,
+  onViewModeChange,
 }: TopBarProps) {
   const [showBgPicker, setShowBgPicker] = useState(false);
 
   return (
     <div className="top-bar">
-      {/* Left side: Undo/Redo + Background Color */}
+      {/* Left side: Undo/Redo + Preset + View Mode toggle */}
       <div className="top-bar-left">
-        {/* Undo Button (icon only) */}
+        {/* Undo Button */}
         <button
           onClick={onUndo}
           disabled={!canUndo}
@@ -49,7 +53,7 @@ function TopBarComponent({
           </svg>
         </button>
 
-        {/* Redo Button (icon only) */}
+        {/* Redo Button */}
         <button
           onClick={onRedo}
           disabled={!canRedo}
@@ -78,6 +82,36 @@ function TopBarComponent({
           ))}
         </select>
 
+        {/* View Mode: All Colors */}
+        <button
+          onClick={() => onViewModeChange('all')}
+          className={`top-bar-icon-btn${viewMode === 'all' ? ' top-bar-icon-btn--active' : ''}`}
+          title="Show all colors"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="3" width="8" height="8" rx="1" />
+            <rect x="13" y="3" width="8" height="8" rx="1" />
+            <rect x="3" y="13" width="8" height="8" rx="1" />
+            <rect x="13" y="13" width="8" height="8" rx="1" />
+          </svg>
+        </button>
+
+        {/* View Mode: Selected Only */}
+        <button
+          onClick={() => onViewModeChange('selected')}
+          className={`top-bar-icon-btn${viewMode === 'selected' ? ' top-bar-icon-btn--active' : ''}`}
+          title="Show selected color only"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="2" y="9" width="6" height="6" rx="1" />
+            <rect x="9" y="9" width="6" height="6" rx="1" />
+            <rect x="16" y="9" width="6" height="6" rx="1" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Right side: Background color + Theme toggle + Export */}
+      <div className="top-bar-right">
         {/* Background Color Picker */}
         <div className="top-bar-bg-color">
           <span className="color-field-label">Background color</span>
@@ -99,10 +133,8 @@ function TopBarComponent({
             </>
           )}
         </div>
-      </div>
 
-      {/* Right side: Theme toggle + Export button */}
-      <div className="top-bar-right">
+        {/* Theme Toggle */}
         <button
           onClick={onToggleTheme}
           className="top-bar-icon-btn theme-toggle-btn"
@@ -119,6 +151,8 @@ function TopBarComponent({
             </svg>
           )}
         </button>
+
+        {/* Export Button */}
         <button onClick={onOpenExportModal} className="export-btn">
           export
         </button>
