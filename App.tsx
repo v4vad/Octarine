@@ -11,7 +11,7 @@ import {
 } from './lib/types';
 import { FrameworkPreset } from './lib/framework-presets';
 
-import { TopBar, LeftPanel, ResizeHandle, ViewModeToggle } from './components/panels';
+import { TopBar, LeftPanel, ResizeHandle } from './components/panels';
 import { RightSettingsPanel } from './components/color-settings';
 import { ColorRow } from './components/colors';
 import { ExportModal } from './components/export';
@@ -271,6 +271,8 @@ export default function App() {
         theme={theme}
         onToggleTheme={toggleTheme}
         onLoadPreset={loadPreset}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
       />
 
       {/* Main Three-Panel Layout */}
@@ -287,7 +289,6 @@ export default function App() {
 
         {/* Middle Panel: Swatches — all colors or selected color */}
         <div className="middle-panel">
-          <ViewModeToggle mode={viewMode} onChange={setViewMode} />
           {viewMode === 'selected' ? (
             !deferredActiveColor || !deferredColorSettings ? (
               <p className="empty-state p-4">Add a color to get started.</p>
@@ -320,6 +321,7 @@ export default function App() {
                     onRemove={() => removeColor(color.id)}
                     onDuplicate={() => duplicateColor(color.id)}
                     onActivate={() => setActiveColorId(color.id)}
+                    isActive={color.id === activeColorId}
                   />
                 );
               })
