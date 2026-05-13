@@ -373,6 +373,12 @@ input, select, textarea {
   outline-offset: 1px;
 }
 
+.top-bar-icon-btn--active {
+  background: var(--oct-bg-hover);
+  border-color: var(--oct-border-brand);
+  color: var(--oct-text);
+}
+
 .app-title {
   font-size: var(--text-xl);
   font-weight: 600;
@@ -1407,6 +1413,12 @@ input[type="range"]::-moz-range-thumb {
 .color-row.active {
   background: var(--oct-bg-secondary);
   border-color: var(--oct-border);
+}
+
+.color-row--active {
+  border-color: var(--oct-border-brand);
+  background: var(--oct-bg-hover);
+  box-shadow: var(--oct-shadow-md), inset 3px 0 0 var(--oct-border-brand);
 }
 
 .color-row-header {
