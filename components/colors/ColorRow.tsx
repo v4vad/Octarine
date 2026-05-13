@@ -22,6 +22,7 @@ interface ColorRowProps {
   onRemove: () => void;
   onDuplicate: () => void;
   onActivate?: () => void;
+  isActive?: boolean;
 }
 
 function ColorRowComponent({
@@ -29,6 +30,7 @@ function ColorRowComponent({
   colorSettings,
   onUpdate,
   onActivate,
+  isActive,
 }: ColorRowProps) {
   const [selectedStop, setSelectedStop] = useState<{
     index: number;
@@ -62,7 +64,7 @@ function ColorRowComponent({
 
   return (
     <div
-      className="color-row"
+      className={`color-row${isActive ? ' color-row--active' : ''}`}
       onClick={handleRowClick}
     >
       {/* Header: Just the name input */}
